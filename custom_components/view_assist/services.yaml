@@ -1,0 +1,21 @@
+navigate:
+  name: Navigate to a view
+  description: >
+    Command device to navigate to a certain view
+  fields:
+    device:
+      name: Device
+      description: The device to change screen on
+      example: "123434"
+      required: true
+      selector:
+        entity:
+          filter:
+            integration: view_assist
+    path:
+      name: View Path
+      description: Path in dashboard view
+      example: "view_assist/clock"
+      required: true
+      selector:
+        text:
