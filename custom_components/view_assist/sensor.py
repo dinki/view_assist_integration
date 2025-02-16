@@ -78,7 +78,7 @@ class ViewAssistSensor(SensorEntity):
             "status_icons_size": r.status_icons_size,
             "assist_prompt": r.assist_prompt,
             "font_style": r.font_style,
-            "use_24_hour_time": r.use_24h_time,
+            "use_24_hour_time": r.use_24_hour_time,
             "use_announce": r.use_announce,
             "background": r.background,
             "weather_entity": r.weather_entity,

@@ -1,16 +1,18 @@
-import logging  # noqa: I001
+"""View Assist custom integration."""
+
+import logging
 
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, RuntimeData, VAConfigEntry
+from .const import RuntimeData, VAConfigEntry
 from .entity_listeners import EntityListeners
 from .frontend import FrontendConfig
-from .helpers import ensure_list, is_first_instance
+from .helpers import ensure_list, get_loaded_instance_count, is_first_instance
+from .js_modules import JSModuleRegistration
 from .services import VAServices
 from .timers import VATimers
 from .websocket import async_register_websockets
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +62,10 @@ async def run_if_first_instance(hass: HomeAssistant, entry: VAConfigEntry):
     await timers.load()
     entry.runtime_data._timers = timers  # noqa: SLF001
 
+    # Load javascript modules
+    jsloader = JSModuleRegistration(hass)
+    await jsloader.async_register()
+
 
 async def run_if_first_display_instance(hass: HomeAssistant, entry: VAConfigEntry):
     """Things to run only one when multiple instances exist."""
@@ -97,4 +103,12 @@ async def _async_update_listener(hass: HomeAssistant, config_entry: VAConfigEntr
 
 async def async_unload_entry(hass: HomeAssistant, entry: VAConfigEntry):
     """Unload a config entry."""
+
+    # Unload js resources
+    if get_loaded_instance_count(hass) <= 1:
+        # Unload lovelace module resource if only instance
+        _LOGGER.debug("Removing javascript modules cards")
+        jsloader = JSModuleRegistration(hass)
+        await jsloader.async_unregister()
+
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -59,7 +59,7 @@ class FrontendConfig:
 
         dc = dashboard.DashboardsCollection(self.hass)
         await dc.async_load()
-        dashboard_exists = any([e["url_path"] == self.path for e in dc.async_items()])
+        dashboard_exists = any(e["url_path"] == self.path for e in dc.async_items())
 
         if not dashboard_exists:
             # Create entry in dashboard collection
@@ -119,6 +119,7 @@ class FrontendConfig:
             ]
 
             # Iterate list of views to add
+            modified = False
             for view in views_to_load:
                 # If view already exists, skip adding it
                 if view in existing_views:
@@ -139,9 +140,11 @@ class FrontendConfig:
                 }
 
                 dashboard_config["views"].append(new_view)
+                modified = True
 
             # Save dashboard config back to HA
-            await dashboard_store.async_save(dashboard_config)
+            if modified:
+                await dashboard_store.async_save(dashboard_config)
 
     async def _delete_home_view(self):
         # Get lovelace (frontend) config data
@@ -155,10 +158,13 @@ class FrontendConfig:
             dashboard_config = await dashboard_store.async_load(True)
 
             # Remove view with title of home
+            modified = False
             for i, view in enumerate(dashboard_config["views"]):
                 if view.get("title", "").lower() == "home":
                     del dashboard_config["views"][i]
+                    modified = True
                     break
 
             # Save dashboard config back to HA
-            await dashboard_store.async_save(dashboard_config)
+            if modified:
+                await dashboard_store.async_save(dashboard_config)

@@ -35,6 +35,16 @@ def is_first_instance(
     return False
 
 
+def get_loaded_instance_count(hass: HomeAssistant) -> int:
+    """Return number of loaded instances."""
+    entries = [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if not entry.disabled_by
+    ]
+    return len(entries)
+
+
 def ensure_list(value: str | list[str]):
     """Ensure that a value is a list."""
     if isinstance(value, list):

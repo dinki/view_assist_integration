@@ -7,6 +7,13 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 
 DOMAIN = "view_assist"
+URL_BASE = "/view_assist"
+JSMODULES = [
+    {
+        "filename": "view_assist.js",
+        "version": "1.0.0",
+    },
+]
 
 type VAConfigEntry = ConfigEntry[RuntimeData]
 
@@ -222,7 +229,7 @@ class RuntimeData:
         self.status_icons_size: VAIconSizes = DEFAULT_STATUS_ICON_SIZE
         self.font_style: str = DEFAULT_FONT_STYLE
         self.status_icons: list[str] = DEFAULT_STATUS_ICONS
-        self.use_24h_time: bool = DEFAULT_USE_24H_TIME
+        self.use_24_hour_time: bool = DEFAULT_USE_24H_TIME
 
         # Default options
         self.weather_entity: str = DEFAULT_WEATHER_ENITITY
