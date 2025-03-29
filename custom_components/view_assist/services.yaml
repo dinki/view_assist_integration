@@ -200,44 +200,30 @@ load_view:
       required: true
       selector:
         text:
+    download_from_repo:
+      name: "Download from respository"
+      description: "Download from the github repository, overwriting any existing copy"
+      required: false
+      default: false
+      selector:
+        boolean:
     community_view:
       name: "Community view"
-      description: "If this should be downloaded form the community views folder"
+      description: "If this should be downloaded from the community views folder"
       required: false
       default: false
       selector:
         boolean:
-    download_if_missing:
-      name: "Download if missing"
-      description: "Get the view from the github repo if not in your folder"
-      required: false
-      default: true
-      selector:
-        boolean:
-    force_download:
-      name: "Force download"
-      description: "Download from the repo regardless"
-      required: false
-      default: false
-      selector:
-        boolean:
-    backup_existing_dir:
-      name: "Backup existing directory"
-      description: "Backup any existing directory before overwriting"
-      required: false
-      default: true
-      selector:
-        boolean:
-    overwrite:
-      name: "Overwrite"
-      description: "Overwrite the view if it already exists"
+    backup_current_view:
+      name: "Backup current view"
+      description: "Backup yaml of view if it exists before updating"
       required: false
       default: false
       selector:
         boolean:
 save_view:
   name: "Save View"
-  description: "Save a view to the View Assist directory"
+  description: "Save a view to the View Assist views directory"
   fields:
     name:
       name: "View name"
@@ -245,19 +231,6 @@ save_view:
       required: true
       selector:
         text:
-    overwrite:
-      name: "Overwrite"
-      description: "Overwrite if already exists"
-      required: false
-      selector:
-        boolean:
-    backup_existing_dir:
-      name: "Backup existing directory"
-      description: "Backup any existing directory before overwriting"
-      required: false
-      default: true
-      selector:
-        boolean:
 set_master_config:
   name: "Set View Assist master config"
   descritpion: "Set config parameters for all View Assist devices"

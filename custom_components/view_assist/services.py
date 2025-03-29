@@ -22,18 +22,15 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .alarm_repeater import ALARMS, VAAlarmRepeater
 from .const import (
-    ATTR_BACKUP_EXISTING_DIR,
+    ATTR_REDOWNLOAD_FROM_REPO,
     ATTR_COMMUNITY_VIEW,
     ATTR_DEVICE,
-    ATTR_DOWNLOAD_IF_MISSING,
     ATTR_EVENT_DATA,
     ATTR_EVENT_NAME,
     ATTR_EXTRA,
-    ATTR_FORCE_DOWNLOAD,
     ATTR_INCLUDE_EXPIRED,
     ATTR_MAX_REPEATS,
     ATTR_MEDIA_FILE,
-    ATTR_OVERWRITE,
     ATTR_PATH,
     ATTR_REMOVE_ALL,
     ATTR_RESUME_MEDIA,
@@ -41,6 +38,7 @@ from .const import (
     ATTR_TYPE,
     DOMAIN,
     VAConfigEntry,
+    ATTR_BACKUP_CURRENT_VIEW,
 )
 from .dashboard import (
     DASHBOARD_MANAGER,
@@ -127,18 +125,17 @@ BROADCAST_EVENT_SERVICE_SCHEMA = vol.Schema(
     }
 )
 
-VIEW_SERVICE_SCHEMA = vol.Schema(
+DASHVIEW_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_NAME): str,
-        vol.Optional(ATTR_OVERWRITE, default=False): bool,
-        vol.Optional(ATTR_BACKUP_EXISTING_DIR, default=False): bool,
     }
 )
-LOAD_VIEW_SERVICE_SCHEMA = VIEW_SERVICE_SCHEMA.extend(
+LOAD_DASHVIEW_SERVICE_SCHEMA = DASHVIEW_SERVICE_SCHEMA.extend(
     {
+        vol.Required(ATTR_NAME): str,
+        vol.Required(ATTR_REDOWNLOAD_FROM_REPO, default=False): bool,
         vol.Optional(ATTR_COMMUNITY_VIEW, default=False): bool,
-        vol.Optional(ATTR_DOWNLOAD_IF_MISSING, default=True): bool,
-        vol.Optional(ATTR_FORCE_DOWNLOAD, default=False): bool,
+        vol.Required(ATTR_BACKUP_CURRENT_VIEW, default=False): bool,
     }
 )
 
@@ -220,14 +217,14 @@ class VAServices:
             DOMAIN,
             "load_view",
             self.async_handle_load_view,
-            schema=LOAD_VIEW_SERVICE_SCHEMA,
+            schema=LOAD_DASHVIEW_SERVICE_SCHEMA,
         )
 
         self.hass.services.async_register(
             DOMAIN,
             "save_view",
             self.async_handle_save_view,
-            schema=VIEW_SERVICE_SCHEMA,
+            schema=DASHVIEW_SERVICE_SCHEMA,
         )
 
     # -----------------------------------------------------------------------
@@ -398,23 +395,20 @@ class VAServices:
         """Handle load of a view from view_assist dir."""
 
         view_name = call.data.get(ATTR_NAME)
-        download = call.data.get(ATTR_DOWNLOAD_IF_MISSING)
-        force_download = call.data.get(ATTR_FORCE_DOWNLOAD)
-        overwrite = call.data.get(ATTR_OVERWRITE)
-        backup = call.data.get(ATTR_BACKUP_EXISTING_DIR, False)
+        download = call.data.get(ATTR_REDOWNLOAD_FROM_REPO, False)
         community_view = call.data.get(ATTR_COMMUNITY_VIEW, False)
+        backup = call.data.get(ATTR_BACKUP_CURRENT_VIEW, False)
+
         dm: DashboardManager = self.hass.data[DOMAIN][DASHBOARD_MANAGER]
         try:
             if view_name == "dashboard":
-                await dm.update_dashboard()
+                await dm.update_dashboard(download_from_repo=download)
             else:
                 await dm.add_update_view(
-                    view_name,
-                    download_if_missing=download,
-                    force_download=force_download,
-                    overwrite=overwrite,
-                    backup_existing_dir=backup,
+                    name=view_name,
+                    download_from_repo=download,
                     community_view=community_view,
+                    backup_current_view=backup,
                 )
         except (DownloadManagerException, DashboardManagerException) as ex:
             raise HomeAssistantError(ex) from ex
@@ -423,11 +417,9 @@ class VAServices:
         """Handle saving view to view_assit dir."""
 
         view_name = call.data.get(ATTR_NAME)
-        overwrite = call.data.get(ATTR_OVERWRITE)
-        backup = call.data.get(ATTR_BACKUP_EXISTING_DIR, False)
 
         dm: DashboardManager = self.hass.data[DOMAIN][DASHBOARD_MANAGER]
         try:
-            await dm.save_view(view_name, overwrite=overwrite, backup_if_exists=backup)
+            await dm.save_view(view_name)
         except (DownloadManagerException, DashboardManagerException) as ex:
             raise HomeAssistantError(ex) from ex
