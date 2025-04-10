@@ -69,6 +69,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: VAConfigEntry):
     # make accessible throughout integration
     entry.runtime_data = RuntimeData()
     set_runtime_data_from_config(entry)
+    
+    # Handle intent_device specially - if not in config, don't set it
+    if "intent_device" not in entry.data:
+        entry.runtime_data.intent_device = ""
 
     # Add config change listener
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -94,7 +98,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: VAConfigEntry):
     )
 
     return True
-
 
 async def run_if_first_instance(hass: HomeAssistant, entry: VAConfigEntry):
     """Things to run only for first instance of integration."""
