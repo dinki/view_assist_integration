@@ -1,6 +1,7 @@
 """Integration services."""
 
 from asyncio import TimerHandle
+import json
 import logging
 
 import voluptuous as vol
@@ -149,14 +150,14 @@ TOGGLE_MENU_SERVICE_SCHEMA = vol.Schema(
 ADD_MENU_ITEM_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id, 
-        vol.Required("menu_item"): str,
+        vol.Required("menu_item"): vol.Any(str, [str]),
         vol.Optional("timeout"): vol.Any(int, None),
     }
 )
 REMOVE_MENU_ITEM_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required("menu_item"): str,
+        vol.Required("menu_item"): vol.Any(str, [str]),
     }
 )
 
@@ -493,13 +494,33 @@ class VAServices:
         menu_item = call.data.get("menu_item")
         timeout = call.data.get("timeout")
 
+        # Support both single string and list of strings
+        menu_items = menu_item
+        if isinstance(menu_item, str):
+            # Check if it's a list in string format
+            if menu_item.startswith("[") and menu_item.endswith("]"):
+                try:
+                    menu_items = json.loads(menu_item)
+                except json.JSONDecodeError:
+                    menu_items = menu_item
+
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
-        await menu_manager.add_menu_item(entity_id, menu_item, timeout)
+        await menu_manager.add_menu_item(entity_id, menu_items, timeout)
 
     async def async_handle_remove_menu_item(self, call: ServiceCall):
         """Handle remove menu item service call."""
         entity_id = call.data.get(ATTR_ENTITY_ID)
         menu_item = call.data.get("menu_item")
 
+        # Support both single string and list of strings
+        menu_items = menu_item
+        if isinstance(menu_item, str):
+            # Check if it's a list in string format
+            if menu_item.startswith("[") and menu_item.endswith("]"):
+                try:
+                    menu_items = json.loads(menu_item)
+                except json.JSONDecodeError:
+                    menu_items = menu_item
+
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
-        await menu_manager.remove_menu_item(entity_id, menu_item)
+        await menu_manager.remove_menu_item(entity_id, menu_items)
