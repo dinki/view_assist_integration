@@ -289,7 +289,7 @@ toggle_menu:
           step: 1
 add_menu_item:
   name: Add menu item
-  description: Add a single item to the menu/status bar of a View Assist entity
+  description: Add one or more items to the menu/status bar of a View Assist entity
   fields:
     entity_id:
       name: "Entity ID"
@@ -301,14 +301,14 @@ add_menu_item:
           domain:
             - sensor
     menu_item:
-      name: "Menu Item"
-      description: "The menu item to add. Can be a system item name like 'weather' or a custom action format like 'view:weather|cloud'"
+      name: "Menu Item(s)"
+      description: "The menu item(s) to add. Can be a single item or a list of items. Each item can be a system item name like 'weather' or a custom action format like 'view:weather|cloud'"
       required: true
       selector:
-        text:
+        object:
     timeout:
       name: "Timeout"
-      description: "Optional timeout in seconds after which the item will be automatically removed"
+      description: "Optional timeout in seconds after which the item(s) will be automatically removed"
       required: false
       selector:
         number:
@@ -317,7 +317,7 @@ add_menu_item:
           step: 1
 remove_menu_item:
   name: Remove menu item
-  description: Remove a single item from the menu/status bar of a View Assist entity
+  description: Remove one or more items from the menu/status bar of a View Assist entity
   fields:
     entity_id:
       name: "Entity ID"
@@ -329,8 +329,8 @@ remove_menu_item:
           domain:
             - sensor
     menu_item:
-      name: "Menu Item"
-      description: "The menu item to remove"
+      name: "Menu Item(s)"
+      description: "The menu item(s) to remove. Can be a single item or a list of items."
       required: true
       selector:
-        text:
+        object:
