@@ -63,6 +63,11 @@ def ensure_list(value: str | list[str]):
         return value if value else []
     return []
 
+def ensure_menu_button_at_end(status_icons: list[str]) -> None:
+    """Ensure menu button is always the rightmost (last) status icon."""
+    if "menu" in status_icons:
+        status_icons.remove("menu")
+        status_icons.append("menu")
 
 def get_entity_attribute(hass: HomeAssistant, entity_id: str, attribute: str) -> Any:
     """Get attribute from entity by entity_id."""
