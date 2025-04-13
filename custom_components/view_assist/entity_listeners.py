@@ -44,6 +44,7 @@ from .helpers import (
     async_get_filesystem_images,
     get_device_name_from_id,
     get_display_type_from_browser_id,
+    ensure_menu_button_at_end,
     get_entity_attribute,
     get_entity_id_from_conversation_device_id,
     get_key,
@@ -406,14 +407,6 @@ class EntityListeners:
             f"{DOMAIN}_{self.config_entry.entry_id}_update",
         )
 
-    def _ensure_menu_button_at_end(self, status_icons: list[str]) -> None:
-        """Ensure menu button is always the rightmost (last) status icon."""
-        if "menu" in status_icons:
-            # Remove menu from current position
-            status_icons.remove("menu")
-            # Add menu at the end
-            status_icons.append("menu")
-
     # ---------------------------------------------------------------------------------------
     # Actions for monitoring changes to external entities
     # ---------------------------------------------------------------------------------------
@@ -437,7 +430,7 @@ class EntityListeners:
         elif mic_mute_new_state == "off" and "mic" in status_icons:
             status_icons.remove("mic")
 
-        self._ensure_menu_button_at_end(status_icons)
+        ensure_menu_button_at_end(status_icons)
 
         self.config_entry.runtime_data.status_icons = status_icons
         self.update_entity()
@@ -470,7 +463,7 @@ class EntityListeners:
         elif not mp_mute_new_state and "mediaplayer" in status_icons:
             status_icons.remove("mediaplayer")
 
-        self._ensure_menu_button_at_end(status_icons)
+        ensure_menu_button_at_end(status_icons)
 
         self.config_entry.runtime_data.status_icons = status_icons
         self.update_entity()
@@ -621,7 +614,7 @@ class EntityListeners:
         elif not dnd_new_state and "dnd" in status_icons:
             status_icons.remove("dnd")
 
-        self._ensure_menu_button_at_end(status_icons)
+        ensure_menu_button_at_end(status_icons)
 
         self.config_entry.runtime_data.status_icons = status_icons
         self.update_entity()
@@ -645,7 +638,7 @@ class EntityListeners:
         if new_mode in modes and new_mode not in status_icons:
             status_icons.append(new_mode)
 
-        self._ensure_menu_button_at_end(status_icons)
+        ensure_menu_button_at_end(status_icons)
 
         self.config_entry.runtime_data.status_icons = status_icons
         self.update_entity()
