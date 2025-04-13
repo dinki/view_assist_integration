@@ -143,7 +143,6 @@ TOGGLE_MENU_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Optional("show", default=True): cv.boolean,
-        vol.Optional("menu_items"): vol.Any(cv.ensure_list, None),
         vol.Optional("timeout"): vol.Any(int, None),
     }
 )
@@ -480,15 +479,10 @@ class VAServices:
             return
 
         show = call.data.get("show", True)
-        menu_items = call.data.get("menu_items")
         timeout = call.data.get("timeout")
         
-        # Convert empty dict to empty list if needed
-        if isinstance(menu_items, dict) and not menu_items:
-            menu_items = []
-
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
-        await menu_manager.toggle_menu(entity_id, show, menu_items, timeout)
+        await menu_manager.toggle_menu(entity_id, show, timeout=timeout)
 
     async def async_handle_add_menu_item(self, call: ServiceCall):
         """Handle add menu item service call."""
