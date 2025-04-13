@@ -118,7 +118,6 @@ class MenuManager:
             _LOGGER.debug("Current view for filtering: %s", current_view)
             
             # Identify system icons (not menu items) to preserve them
-            # We need to know all possible menu items
             all_menu_items = set()
             try:
                 all_menu_items.update(config_items)
@@ -151,7 +150,12 @@ class MenuManager:
             updated_icons = menu_icons + system_icons
             
             # Ensure the permanent menu button is present if configured
-            if show_menu_button and "menu" not in updated_icons:
+            # AND always place it at the end of the list
+            if show_menu_button:
+                # Remove if already in list
+                if "menu" in updated_icons:
+                    updated_icons.remove("menu")
+                # Add at the end
                 updated_icons.append("menu")
             
             # Update entity with new status icons
@@ -193,6 +197,7 @@ class MenuManager:
             updated_icons = system_icons
             
             # Ensure the permanent menu button remains if configured
+            # AND always place it at the end
             if show_menu_button:
                 updated_icons.append("menu")
             
@@ -223,9 +228,29 @@ class MenuManager:
         # Get current status icons
         current_icons = current_state.attributes.get("status_icons", [])
         
+        # Handle menu button position
+        show_menu_button = config_entry.options.get(CONF_SHOW_MENU_BUTTON, DEFAULT_SHOW_MENU_BUTTON)
+        has_menu = "menu" in current_icons
+        
         # Only add if not already present
         if menu_item not in current_icons:
-            updated_icons = [menu_item] + current_icons
+            updated_icons = current_icons.copy()
+            
+            # If adding menu item and we have a menu button, ensure menu stays at end
+            if menu_item != "menu":
+                if has_menu:
+                    # Remove menu button
+                    updated_icons.remove("menu")
+                    # Add new item
+                    updated_icons.append(menu_item)
+                    # Re-add menu button at end
+                    updated_icons.append("menu")
+                else:
+                    # No menu button present, just add item
+                    updated_icons.append(menu_item)
+            elif show_menu_button:
+                # Adding a menu button, ensure it's at the end
+                updated_icons.append(menu_item)
             
             # Update entity with new status icons
             await self.hass.services.async_call(
