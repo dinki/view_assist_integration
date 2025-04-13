@@ -272,12 +272,6 @@ toggle_menu:
       default: true
       selector:
         boolean:
-    menu_items:
-      name: "Menu Items"
-      description: "Optional list of menu items to display (overrides configured items). Set to empty list [] to use configured items."
-      required: false
-      selector:
-        object:
     timeout:
       name: "Timeout"
       description: "Optional timeout in seconds to automatically close the menu (overrides configured timeout)"
