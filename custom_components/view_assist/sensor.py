@@ -14,6 +14,12 @@ from homeassistant.helpers.config_validation import make_entity_service_schema
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
+    CONF_ENABLE_MENU,
+    CONF_MENU_ITEMS,
+    CONF_SHOW_MENU_BUTTON,
+    DEFAULT_ENABLE_MENU,
+    DEFAULT_MENU_ITEMS,
+    DEFAULT_SHOW_MENU_BUTTON,
     DOMAIN,
     OPTION_KEY_MIGRATIONS,
     VA_ATTRIBUTE_UPDATE_EVENT,
@@ -120,6 +126,10 @@ class ViewAssistSensor(SensorEntity):
             "weather_entity": r.weather_entity,
             "mic_type": self.get_option_key_migration_value(r.mic_type),
             "voice_device_id": self._voice_device_id,
+            "enable_menu": self.config.options.get(CONF_ENABLE_MENU, DEFAULT_ENABLE_MENU),
+            "menu_items": self.config.options.get(CONF_MENU_ITEMS, DEFAULT_MENU_ITEMS),
+            "show_menu_button": self.config.options.get(CONF_SHOW_MENU_BUTTON, DEFAULT_SHOW_MENU_BUTTON),
+            "menu_active": self.hass.data[DOMAIN].get("menu_manager", {})._active_menus.get(self.entity_id, False),
         }
 
         # Only add these attributes if they exist
