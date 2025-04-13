@@ -306,6 +306,13 @@ add_menu_item:
       required: true
       selector:
         object:
+    to_menu_items:
+      name: "Add to Menu Items"
+      description: "If true, adds the item(s) to the configured menu items list that appears when the menu is toggled. If false, adds to status icons (always visible)."
+      required: false
+      default: false
+      selector:
+        boolean:
     timeout:
       name: "Timeout"
       description: "Optional timeout in seconds after which the item(s) will be automatically removed"
@@ -334,3 +341,10 @@ remove_menu_item:
       required: true
       selector:
         object:
+    from_menu_items:
+      name: "Remove from Menu Items"
+      description: "If true, removes the item(s) from the configured menu items list. If false, removes from status icons."
+      required: false
+      default: false
+      selector:
+        boolean:
