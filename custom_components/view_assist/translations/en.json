@@ -96,7 +96,15 @@
           "status_icons": "Launch icons",
           "use_24_hour_time": "Use 24h time",
           "hide_sidebar": "Hide sidemenu",
-          "hide_header": "Hide header bar"
+          "hide_header": "Hide header bar",
+          "enable_menu": "Enable menu",
+          "menu_items": "Menu items",
+          "menu_auto_close": "Auto-close menu after selection",
+          "enable_menu_timeout": "Enable menu timeout",
+          "menu_timeout": "Menu timeout (seconds)",
+          "show_menu_button": "Show menu button in status bar",
+          "menu_icon_size": "Menu icon size",
+          "menu_icon_color": "Menu icon color"
         },
         "data_description": {
           "dashboard": "The base dashboard for View Assist (do not include trailing slash)",
@@ -113,7 +121,15 @@
           "status_icons": "Advanced option! List of custom launch icons to set on start up. Do not change this if you do not know what you are doing",
           "use_24_hour_time": "Sets clock display to 24 hour time when enabled",
           "hide_sidebar": "Hide the sidemenu on the display via View Assist",
-          "hide_header": "Hide the header on the display via View Assist"
+          "hide_header": "Hide the header on the display via View Assist",
+          "enable_menu": "Enable the menu system for this device",
+          "menu_items": "List of menu items to display when menu is activated. Format: type:target|icon|label",
+          "menu_auto_close": "Automatically close the menu after an item is selected",
+          "enable_menu_timeout": "Enable automatic timeout for menu",
+          "menu_timeout": "Time in seconds before menu automatically closes",
+          "show_menu_button": "Show a permanent menu button in the status bar",
+          "menu_icon_size": "Size of the menu icons (e.g., '6vw')",
+          "menu_icon_color": "Color for menu icons (e.g., 'white' or '#FFFFFF')"
         }
       },
       "default_options": {
@@ -178,6 +194,15 @@
         "local_random": "Local file path random",
         "download": "Download random image from Unsplash",
         "link_to_entity": "Linked to another View Assist device"
+      }
+    },
+    "menu_items_selector": {
+      "options": {
+        "view:weather|weather-sunny|Weather": "Weather",
+        "view:clock|clock-outline|Clock": "Clock",
+        "view:music|music|Music Player": "Music",
+        "view:thermostat|thermostat|Thermostat": "Thermostat",
+        "view:camera|cctv|Cameras": "Cameras"
       }
     }
   }
