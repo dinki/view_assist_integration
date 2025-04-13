@@ -56,7 +56,7 @@ class MenuManager:
                 # Perform initial filtering of menu icons based on current view
                 await self.refresh_menu(entity_id)
 
-    async def toggle_menu(self, entity_id: str, show: bool = None, menu_items: list[str] = None, timeout: int = None) -> None:
+    async def toggle_menu(self, entity_id: str, show: bool = None, timeout: int = None) -> None:
         """Toggle menu visibility for an entity."""
         config_entry = get_config_entry_by_entity_id(self.hass, entity_id)
         if not config_entry or not config_entry.options.get(CONF_ENABLE_MENU, DEFAULT_ENABLE_MENU):
@@ -67,7 +67,7 @@ class MenuManager:
         if not current_state:
             _LOGGER.warning("Entity %s not found", entity_id)
             return
-            
+                
         # Toggle if not specified
         current_active = current_state.attributes.get("menu_active", False)
         if show is None:
@@ -80,20 +80,13 @@ class MenuManager:
         # Get icons and config values
         current_icons = current_state.attributes.get("status_icons", []) or []
         
-        # First, identify the icons that are not part of the menu system
-        # These are system status icons that should always be visible
+        # Get configured menu items from entity attributes or config options
         configured_menu_items = current_state.attributes.get("menu_items", []) or config_entry.options.get(CONF_MENU_ITEMS, DEFAULT_MENU_ITEMS)
         show_menu_button = config_entry.options.get(CONF_SHOW_MENU_BUTTON, DEFAULT_SHOW_MENU_BUTTON)
         
-        # Process menu items
-        try:
-            menu_items_to_use = list(configured_menu_items) if menu_items is None else list(menu_items)
-        except (TypeError, ValueError):
-            menu_items_to_use = list(configured_menu_items)
-
         # Get system-only icons - these icons are not part of the menu system
         # and should always be visible regardless of menu state
-        all_menu_items = set(menu_items_to_use)
+        all_menu_items = set(configured_menu_items)
         system_only_icons = [icon for icon in current_icons 
                     if icon not in all_menu_items and icon != "menu"]
         
@@ -102,7 +95,7 @@ class MenuManager:
             current_view = self._get_current_view(current_state)
             
             # Filter out current view from menu items
-            menu_icons = [item for item in menu_items_to_use if item != current_view]
+            menu_icons = [item for item in configured_menu_items if item != current_view]
             
             # Combine lists: system icons + menu icons
             updated_icons = system_only_icons + menu_icons
