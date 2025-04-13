@@ -249,3 +249,88 @@ save_view:
       required: true
       selector:
         text:
+set_master_config:
+  name: "Set View Assist master config"
+  description: "Set config parameters for all View Assist devices"
+toggle_menu:
+  name: Toggle menu
+  description: Show or hide the menu for a View Assist entity
+  fields:
+    entity_id:
+      name: "Entity ID"
+      description: "The entity ID of the View Assist device"
+      required: true
+      selector:
+        entity:
+          integration: view_assist
+          domain:
+            - sensor
+    show:
+      name: "Show"
+      description: "Whether to show (true) or hide (false) the menu"
+      required: false
+      default: true
+      selector:
+        boolean:
+    menu_items:
+      name: "Menu Items"
+      description: "Optional list of menu items to display (overrides configured items). Set to empty list [] to use configured items."
+      required: false
+      selector:
+        object:
+    timeout:
+      name: "Timeout"
+      description: "Optional timeout in seconds to automatically close the menu (overrides configured timeout)"
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 300
+          step: 1
+add_menu_item:
+  name: Add menu item
+  description: Add a single item to the menu/status bar of a View Assist entity
+  fields:
+    entity_id:
+      name: "Entity ID"
+      description: "The entity ID of the View Assist device"
+      required: true
+      selector:
+        entity:
+          integration: view_assist
+          domain:
+            - sensor
+    menu_item:
+      name: "Menu Item"
+      description: "The menu item to add. Can be a system item name like 'weather' or a custom action format like 'view:weather|cloud'"
+      required: true
+      selector:
+        text:
+    timeout:
+      name: "Timeout"
+      description: "Optional timeout in seconds after which the item will be automatically removed"
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 3600
+          step: 1
+remove_menu_item:
+  name: Remove menu item
+  description: Remove a single item from the menu/status bar of a View Assist entity
+  fields:
+    entity_id:
+      name: "Entity ID"
+      description: "The entity ID of the View Assist device"
+      required: true
+      selector:
+        entity:
+          integration: view_assist
+          domain:
+            - sensor
+    menu_item:
+      name: "Menu Item"
+      description: "The menu item to remove"
+      required: true
+      selector:
+        text:
