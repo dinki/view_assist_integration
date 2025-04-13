@@ -151,6 +151,7 @@ ADD_MENU_ITEM_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id, 
         vol.Required("menu_item"): vol.Any(str, [str]),
+        vol.Optional("to_menu_items", default=False): cv.boolean,
         vol.Optional("timeout"): vol.Any(int, None),
     }
 )
@@ -158,6 +159,7 @@ REMOVE_MENU_ITEM_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required("menu_item"): vol.Any(str, [str]),
+        vol.Optional("from_menu_items", default=False): cv.boolean,
     }
 )
 
@@ -492,6 +494,7 @@ class VAServices:
         """Handle add menu item service call."""
         entity_id = call.data.get(ATTR_ENTITY_ID)
         menu_item = call.data.get("menu_item")
+        to_menu_items = call.data.get("to_menu_items", False)  # Default to status icons for backward compatibility
         timeout = call.data.get("timeout")
 
         # Support both single string and list of strings
@@ -505,12 +508,13 @@ class VAServices:
                     menu_items = menu_item
 
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
-        await menu_manager.add_menu_item(entity_id, menu_items, timeout)
+        await menu_manager.add_menu_item(entity_id, menu_items, to_menu_items, timeout)
 
     async def async_handle_remove_menu_item(self, call: ServiceCall):
         """Handle remove menu item service call."""
         entity_id = call.data.get(ATTR_ENTITY_ID)
         menu_item = call.data.get("menu_item")
+        from_menu_items = call.data.get("from_menu_items", False)  # Default to status icons for backward compatibility
 
         # Support both single string and list of strings
         menu_items = menu_item
@@ -523,4 +527,4 @@ class VAServices:
                     menu_items = menu_item
 
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
-        await menu_manager.remove_menu_item(entity_id, menu_items)
+        await menu_manager.remove_menu_item(entity_id, menu_items, from_menu_items)
