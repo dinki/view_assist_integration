@@ -138,6 +138,27 @@ LOAD_DASHVIEW_SERVICE_SCHEMA = DASHVIEW_SERVICE_SCHEMA.extend(
         vol.Required(ATTR_BACKUP_CURRENT_VIEW, default=False): bool,
     }
 )
+TOGGLE_MENU_SERVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Optional("show", default=True): cv.boolean,
+        vol.Optional("menu_items"): vol.Any(cv.ensure_list, None),
+        vol.Optional("timeout"): vol.Any(int, None),
+    }
+)
+ADD_MENU_ITEM_SERVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id, 
+        vol.Required("menu_item"): str,
+        vol.Optional("timeout"): vol.Any(int, None),
+    }
+)
+REMOVE_MENU_ITEM_SERVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required("menu_item"): str,
+    }
+)
 
 
 class VAServices:
@@ -225,6 +246,27 @@ class VAServices:
             "save_view",
             self.async_handle_save_view,
             schema=DASHVIEW_SERVICE_SCHEMA,
+        )
+
+        self.hass.services.async_register(
+            DOMAIN,
+            "toggle_menu",
+            self.async_handle_toggle_menu,
+            schema=TOGGLE_MENU_SERVICE_SCHEMA,
+        )
+
+        self.hass.services.async_register(
+            DOMAIN,
+            "add_menu_item",
+            self.async_handle_add_menu_item,
+            schema=ADD_MENU_ITEM_SERVICE_SCHEMA,
+        )
+
+        self.hass.services.async_register(
+            DOMAIN,
+            "remove_menu_item",
+            self.async_handle_remove_menu_item,
+            schema=REMOVE_MENU_ITEM_SERVICE_SCHEMA,
         )
 
     # -----------------------------------------------------------------------
@@ -423,3 +465,58 @@ class VAServices:
             await dm.save_view(view_name)
         except (DownloadManagerException, DashboardManagerException) as ex:
             raise HomeAssistantError(ex) from ex
+
+    # ----------------------------------------------------------------
+    # MENU
+    # ----------------------------------------------------------------
+    async def async_handle_toggle_menu(self, call: ServiceCall):
+        """Handle toggle menu service call."""
+        entity_id = call.data.get(ATTR_ENTITY_ID)
+        if not entity_id:
+            _LOGGER.error("No entity_id provided in toggle_menu service call")
+            return
+
+        show = call.data.get("show", True)
+
+        # Special handling for menu_items to avoid errors
+        try:
+            menu_items = call.data.get("menu_items")
+            # If it's an empty dict, convert to empty list
+            if menu_items is not None and not menu_items:
+                if isinstance(menu_items, dict):
+                    menu_items = []
+        except (AttributeError, TypeError):
+            # Handle case where menu_items is not properly formatted
+            menu_items = None
+
+        timeout = call.data.get("timeout")
+
+        # Make sure menu_manager exists
+        menu_manager = self.hass.data.get(DOMAIN, {}).get("menu_manager")
+        if menu_manager:
+            await menu_manager.toggle_menu(entity_id, show, menu_items, timeout)
+        else:
+            _LOGGER.error("Menu manager not initialized - cannot toggle menu")
+
+    async def async_handle_add_menu_item(self, call: ServiceCall):
+        """Handle add menu item service call."""
+        entity_id = call.data.get(ATTR_ENTITY_ID)
+        menu_item = call.data.get("menu_item")
+        timeout = call.data.get("timeout")
+
+        menu_manager = self.hass.data.get(DOMAIN, {}).get("menu_manager")
+        if menu_manager:
+            await menu_manager.add_menu_item(entity_id, menu_item, timeout)
+        else:
+            _LOGGER.error("Menu manager not initialized - cannot add menu item")
+
+    async def async_handle_remove_menu_item(self, call: ServiceCall):
+        """Handle remove menu item service call."""
+        entity_id = call.data.get(ATTR_ENTITY_ID)
+        menu_item = call.data.get("menu_item")
+
+        menu_manager = self.hass.data.get(DOMAIN, {}).get("menu_manager")
+        if menu_manager:
+            await menu_manager.remove_menu_item(entity_id, menu_item)
+        else:
+            _LOGGER.error("Menu manager not initialized - cannot remove menu item")
