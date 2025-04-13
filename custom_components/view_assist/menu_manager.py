@@ -24,7 +24,11 @@ from .const import (
     DOMAIN,
     VAConfigEntry,
 )
-from .helpers import get_config_entry_by_entity_id, get_sensor_entity_from_instance
+from .helpers import (
+    get_config_entry_by_entity_id,
+    get_sensor_entity_from_instance,
+    ensure_menu_button_at_end,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,12 +55,6 @@ class MenuManager:
             if entity_id:
                 # Perform initial filtering of menu icons based on current view
                 await self.refresh_menu(entity_id)
-
-    def _ensure_menu_button_at_end(self, icons_list: list[str]) -> None:
-        """Ensure menu button is always at the end of the status icons."""
-        if "menu" in icons_list:
-            icons_list.remove("menu")
-            icons_list.append("menu")
 
     async def toggle_menu(self, entity_id: str, show: bool = None, menu_items: list[str] = None, timeout: int = None) -> None:
         """Toggle menu visibility for an entity."""
@@ -107,7 +105,7 @@ class MenuManager:
             
             # Handle menu button
             if show_menu_button:
-                self._ensure_menu_button_at_end(updated_icons)
+                ensure_menu_button_at_end(updated_icons)
             
             # Update entity
             await self.hass.services.async_call(
