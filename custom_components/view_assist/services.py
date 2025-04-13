@@ -477,26 +477,15 @@ class VAServices:
             return
 
         show = call.data.get("show", True)
-
-        # Special handling for menu_items to avoid errors
-        try:
-            menu_items = call.data.get("menu_items")
-            # If it's an empty dict, convert to empty list
-            if menu_items is not None and not menu_items:
-                if isinstance(menu_items, dict):
-                    menu_items = []
-        except (AttributeError, TypeError):
-            # Handle case where menu_items is not properly formatted
-            menu_items = None
-
+        menu_items = call.data.get("menu_items")
         timeout = call.data.get("timeout")
+        
+        # Convert empty dict to empty list if needed
+        if isinstance(menu_items, dict) and not menu_items:
+            menu_items = []
 
-        # Make sure menu_manager exists
-        menu_manager = self.hass.data.get(DOMAIN, {}).get("menu_manager")
-        if menu_manager:
-            await menu_manager.toggle_menu(entity_id, show, menu_items, timeout)
-        else:
-            _LOGGER.error("Menu manager not initialized - cannot toggle menu")
+        menu_manager = self.hass.data[DOMAIN]["menu_manager"]
+        await menu_manager.toggle_menu(entity_id, show, menu_items, timeout)
 
     async def async_handle_add_menu_item(self, call: ServiceCall):
         """Handle add menu item service call."""
@@ -504,19 +493,13 @@ class VAServices:
         menu_item = call.data.get("menu_item")
         timeout = call.data.get("timeout")
 
-        menu_manager = self.hass.data.get(DOMAIN, {}).get("menu_manager")
-        if menu_manager:
-            await menu_manager.add_menu_item(entity_id, menu_item, timeout)
-        else:
-            _LOGGER.error("Menu manager not initialized - cannot add menu item")
+        menu_manager = self.hass.data[DOMAIN]["menu_manager"]
+        await menu_manager.add_menu_item(entity_id, menu_item, timeout)
 
     async def async_handle_remove_menu_item(self, call: ServiceCall):
         """Handle remove menu item service call."""
         entity_id = call.data.get(ATTR_ENTITY_ID)
         menu_item = call.data.get("menu_item")
 
-        menu_manager = self.hass.data.get(DOMAIN, {}).get("menu_manager")
-        if menu_manager:
-            await menu_manager.remove_menu_item(entity_id, menu_item)
-        else:
-            _LOGGER.error("Menu manager not initialized - cannot remove menu item")
+        menu_manager = self.hass.data[DOMAIN]["menu_manager"]
+        await menu_manager.remove_menu_item(entity_id, menu_item)
