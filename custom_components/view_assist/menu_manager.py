@@ -225,7 +225,7 @@ class MenuManager:
         
         # Only add if not already present
         if menu_item not in current_icons:
-            updated_icons = current_icons + [menu_item]
+            updated_icons = [menu_item] + current_icons
             
             # Update entity with new status icons
             await self.hass.services.async_call(
