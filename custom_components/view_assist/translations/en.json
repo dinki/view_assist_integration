@@ -195,13 +195,7 @@
       }
     },
     "menu_items_selector": {
-      "options": {
-        "view:weather|weather-sunny|Weather": "Weather",
-        "view:clock|clock-outline|Clock": "Clock",
-        "view:music|music|Music Player": "Music",
-        "view:thermostat|thermostat|Thermostat": "Thermostat",
-        "view:camera|cctv|Cameras": "Cameras"
-      }
+      "description": "Menu items in format: type:target|icon|label - Examples: view:weather|weather-sunny|Weather, entity:light.kitchen|lightbulb|Kitchen"
     }
   }
 }
