@@ -148,7 +148,6 @@ CONF_ROTATE_BACKGROUND_INTERVAL = "rotate_background_interval"
 # Menu configuration
 CONF_ENABLE_MENU = "enable_menu"
 CONF_MENU_ITEMS = "menu_items"
-CONF_MENU_AUTO_CLOSE = "menu_auto_close"
 CONF_ENABLE_MENU_TIMEOUT = "enable_menu_timeout"
 CONF_MENU_TIMEOUT = "menu_timeout"
 CONF_SHOW_MENU_BUTTON = "show_menu_button"
@@ -186,7 +185,6 @@ DEFAULT_ROTATE_BACKGROUND_INTERVAL = 60
 # Menu defaults
 DEFAULT_ENABLE_MENU = False
 DEFAULT_MENU_ITEMS = ["home", "weather"]
-DEFAULT_MENU_AUTO_CLOSE = True
 DEFAULT_ENABLE_MENU_TIMEOUT = False
 DEFAULT_MENU_TIMEOUT = 10
 DEFAULT_SHOW_MENU_BUTTON = False
