@@ -53,7 +53,6 @@ from .timers import TIMERS, VATimers, decode_time_sentence
 
 _LOGGER = logging.getLogger(__name__)
 
-# Type definitions
 StatusItemType = Union[str, List[str]]
 
 
@@ -499,7 +498,6 @@ class VAServices:
         menu = call.data.get("menu", False)
         timeout = call.data.get("timeout")
         
-        # Process and validate status item input
         status_items = self._process_status_item_input(raw_status_item)
         if not status_items:
             _LOGGER.error("Invalid or empty status_item provided")
@@ -518,7 +516,6 @@ class VAServices:
         raw_status_item = call.data.get("status_item")
         menu = call.data.get("menu", False)
 
-        # Process and validate status item input
         status_items = self._process_status_item_input(raw_status_item)
         if not status_items:
             _LOGGER.error("Invalid or empty status_item provided")
@@ -528,54 +525,6 @@ class VAServices:
         await menu_manager.remove_menu_item(entity_id, status_items, menu)
 
     def _process_status_item_input(self, raw_input: Any) -> Optional[StatusItemType]:
-        """Process and validate status item input.
-        
-        Handles various input formats:
-        - Single string
-        - List of strings
-        - JSON string representing a list
-        - Dictionary with attributes
-
-        Returns:
-        - Single string
-        - List of strings
-        - None if invalid input
-        """
-        # Handle None case
-        if raw_input is None:
-            return None
-
-        # If already a string or list, validate and return
-        if isinstance(raw_input, str):
-            # Check if it's a list in string format
-            if raw_input.startswith("[") and raw_input.endswith("]"):
-                try:
-                    parsed = json.loads(raw_input)
-                    if isinstance(parsed, list):
-                        # Ensure all items are strings
-                        string_items = [str(item) for item in parsed if item]
-                        return string_items if string_items else None
-                    return None
-                except json.JSONDecodeError:
-                    # Not valid JSON, treat as a single string
-                    return raw_input if raw_input else None
-            return raw_input if raw_input else None
-
-        # Handle list case
-        if isinstance(raw_input, list):
-            # Ensure all items are strings
-            string_items = [str(item) for item in raw_input if item]
-            return string_items if string_items else None
-
-        # Handle dict case
-        if isinstance(raw_input, dict):
-            # Extract appropriate fields if they exist
-            if "id" in raw_input:
-                return str(raw_input["id"])
-            if "name" in raw_input:
-                return str(raw_input["name"])
-            if "value" in raw_input:
-                return str(raw_input["value"])
-
-        # Input is not valid
-        return None
+        """Process and validate status item input."""
+        from .helpers import normalize_status_items
+        return normalize_status_items(raw_input)
