@@ -33,7 +33,7 @@ from .helpers import (
 _LOGGER = logging.getLogger(__name__)
 
 # Type definitions
-MenuItemType = Union[str, List[str]]
+StatusItemType = Union[str, List[str]]
 MenuTargetType = Literal["status_icons", "menu_items"]
 
 
@@ -41,7 +41,7 @@ class MenuItemOperation(TypedDict, total=False):
     """Type definition for menu item operations."""
     
     entity_id: str
-    menu_item: MenuItemType
+    menu_item: StatusItemType
     target: MenuTargetType
     timeout: Optional[int]
 
@@ -153,12 +153,12 @@ class MenuManager:
                 },
             )
 
-    async def add_menu_item(self, entity_id: str, menu_item: MenuItemType, to_menu_items: bool = False, timeout: Optional[int] = None) -> None:
-        """Add menu item(s) to the entity's status icons or menu items."""
+    async def add_menu_item(self, entity_id: str, status_item: StatusItemType, to_menu_items: bool = False, timeout: Optional[int] = None) -> None:
+        """Add status item(s) to the entity's status icons or menu items."""
         target = "menu_items" if to_menu_items else "status_icons"
         operation: MenuItemOperation = {
             "entity_id": entity_id,
-            "menu_item": menu_item,
+            "menu_item": status_item,
             "target": target,
         }
         
@@ -167,12 +167,12 @@ class MenuManager:
             
         await self._manipulate_menu_items(operation, "add")
 
-    async def remove_menu_item(self, entity_id: str, menu_item: MenuItemType, from_menu_items: bool = False) -> None:
-        """Remove menu item(s) from the entity's status icons or menu items."""
+    async def remove_menu_item(self, entity_id: str, status_item: StatusItemType, from_menu_items: bool = False) -> None:
+        """Remove status item(s) from the entity's status icons or menu items."""
         target = "menu_items" if from_menu_items else "status_icons"
         operation: MenuItemOperation = {
             "entity_id": entity_id,
-            "menu_item": menu_item,
+            "menu_item": status_item,
             "target": target,
         }
             
