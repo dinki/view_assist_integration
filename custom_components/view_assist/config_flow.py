@@ -553,12 +553,6 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
                     )
                 ),
                 vol.Optional(
-                    CONF_MENU_AUTO_CLOSE,
-                    default=self.config_entry.options.get(
-                        CONF_MENU_AUTO_CLOSE, DEFAULT_MENU_AUTO_CLOSE
-                    ),
-                ): bool,
-                vol.Optional(
                     CONF_ENABLE_MENU_TIMEOUT,
                     default=self.config_entry.options.get(
                         CONF_ENABLE_MENU_TIMEOUT, DEFAULT_ENABLE_MENU_TIMEOUT
