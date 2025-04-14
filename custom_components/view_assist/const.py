@@ -151,8 +151,6 @@ CONF_MENU_ITEMS = "menu_items"
 CONF_ENABLE_MENU_TIMEOUT = "enable_menu_timeout"
 CONF_MENU_TIMEOUT = "menu_timeout"
 CONF_SHOW_MENU_BUTTON = "show_menu_button"
-CONF_MENU_ICON_SIZE = "menu_icon_size"
-CONF_MENU_ICON_COLOR = "menu_icon_color"
 
 # Config default values
 DEFAULT_NAME = "View Assist"
