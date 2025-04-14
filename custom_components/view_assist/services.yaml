@@ -281,8 +281,8 @@ toggle_menu:
           min: 1
           max: 300
           step: 1
-add_menu_item:
-  name: Add menu item
+add_status_item:
+  name: Add status item
   description: Add one or more items to the menu/status bar of a View Assist entity
   fields:
     entity_id:
@@ -294,13 +294,13 @@ add_menu_item:
           integration: view_assist
           domain:
             - sensor
-    menu_item:
-      name: "Menu Item(s)"
-      description: "The menu item(s) to add. Can be a single item or a list of items. Each item can be a system item name like 'weather' or a custom action format like 'view:weather|cloud'"
+    status_item:
+      name: "Status Item(s)"
+      description: "The status item(s) to add. Can be a single item or a list of items. Each item can be a system item name like 'weather' or a custom action format like 'view:weather|cloud'"
       required: true
       selector:
         object:
-    to_menu_items:
+    menu:
       name: "Add to Menu Items"
       description: "If true, adds the item(s) to the configured menu items list that appears when the menu is toggled. If false, adds to status icons (always visible)."
       required: false
@@ -316,8 +316,8 @@ add_menu_item:
           min: 1
           max: 3600
           step: 1
-remove_menu_item:
-  name: Remove menu item
+remove_status_item:
+  name: Remove status item
   description: Remove one or more items from the menu/status bar of a View Assist entity
   fields:
     entity_id:
@@ -329,9 +329,9 @@ remove_menu_item:
           integration: view_assist
           domain:
             - sensor
-    menu_item:
-      name: "Menu Item(s)"
-      description: "The menu item(s) to remove. Can be a single item or a list of items."
+    status_item:
+      name: "Status Item(s)"
+      description: "The status item(s) to remove. Can be a single item or a list of items."
       required: true
       selector:
         object:
