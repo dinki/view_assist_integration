@@ -3,6 +3,7 @@
 from asyncio import TimerHandle
 import json
 import logging
+from typing import Any, Union, List, Optional, Callable, cast
 
 import voluptuous as vol
 
@@ -51,6 +52,9 @@ from .helpers import get_mimic_entity_id
 from .timers import TIMERS, VATimers, decode_time_sentence
 
 _LOGGER = logging.getLogger(__name__)
+
+# Type definitions
+MenuItemType = Union[str, List[str]]
 
 
 NAVIGATE_SERVICE_SCHEMA = vol.Schema(
@@ -487,19 +491,19 @@ class VAServices:
     async def async_handle_add_menu_item(self, call: ServiceCall):
         """Handle add menu item service call."""
         entity_id = call.data.get(ATTR_ENTITY_ID)
-        menu_item = call.data.get("menu_item")
-        to_menu_items = call.data.get("to_menu_items", False)  # Default to status icons for backward compatibility
+        if not entity_id:
+            _LOGGER.error("No entity_id provided in add_menu_item service call")
+            return
+        
+        raw_menu_item = call.data.get("menu_item")
+        to_menu_items = call.data.get("to_menu_items", False)
         timeout = call.data.get("timeout")
-
-        # Support both single string and list of strings
-        menu_items = menu_item
-        if isinstance(menu_item, str):
-            # Check if it's a list in string format
-            if menu_item.startswith("[") and menu_item.endswith("]"):
-                try:
-                    menu_items = json.loads(menu_item)
-                except json.JSONDecodeError:
-                    menu_items = menu_item
+        
+        # Process and validate menu item input
+        menu_items = self._process_menu_item_input(raw_menu_item)
+        if not menu_items:
+            _LOGGER.error("Invalid or empty menu_item provided")
+            return
 
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
         await menu_manager.add_menu_item(entity_id, menu_items, to_menu_items, timeout)
@@ -507,18 +511,71 @@ class VAServices:
     async def async_handle_remove_menu_item(self, call: ServiceCall):
         """Handle remove menu item service call."""
         entity_id = call.data.get(ATTR_ENTITY_ID)
-        menu_item = call.data.get("menu_item")
-        from_menu_items = call.data.get("from_menu_items", False)  # Default to status icons for backward compatibility
-
-        # Support both single string and list of strings
-        menu_items = menu_item
-        if isinstance(menu_item, str):
-            # Check if it's a list in string format
-            if menu_item.startswith("[") and menu_item.endswith("]"):
-                try:
-                    menu_items = json.loads(menu_item)
-                except json.JSONDecodeError:
-                    menu_items = menu_item
+        if not entity_id:
+            _LOGGER.error("No entity_id provided in remove_menu_item service call")
+            return
+        
+        raw_menu_item = call.data.get("menu_item")
+        from_menu_items = call.data.get("from_menu_items", False)
+        
+        # Process and validate menu item input
+        menu_items = self._process_menu_item_input(raw_menu_item)
+        if not menu_items:
+            _LOGGER.error("Invalid or empty menu_item provided")
+            return
 
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
         await menu_manager.remove_menu_item(entity_id, menu_items, from_menu_items)
+
+    def _process_menu_item_input(self, raw_input: Any) -> Optional[MenuItemType]:
+        """Process and validate menu item input.
+        
+        Handles various input formats:
+        - Single string
+        - List of strings
+        - JSON string representing a list
+        - Dictionary with attributes
+        
+        Returns:
+        - Single string
+        - List of strings
+        - None if invalid input
+        """
+        # Handle None case
+        if raw_input is None:
+            return None
+            
+        # If already a string or list, validate and return
+        if isinstance(raw_input, str):
+            # Check if it's a list in string format
+            if raw_input.startswith("[") and raw_input.endswith("]"):
+                try:
+                    parsed = json.loads(raw_input)
+                    if isinstance(parsed, list):
+                        # Ensure all items are strings
+                        string_items = [str(item) for item in parsed if item]
+                        return string_items if string_items else None
+                    return None
+                except json.JSONDecodeError:
+                    # Not valid JSON, treat as a single string
+                    return raw_input if raw_input else None
+            return raw_input if raw_input else None
+            
+        # Handle list case
+        if isinstance(raw_input, list):
+            # Ensure all items are strings
+            string_items = [str(item) for item in raw_input if item]
+            return string_items if string_items else None
+        
+        # Handle dict case
+        if isinstance(raw_input, dict):
+            # Extract appropriate fields if they exist
+            if "id" in raw_input:
+                return str(raw_input["id"])
+            if "name" in raw_input:
+                return str(raw_input["name"])
+            if "value" in raw_input:
+                return str(raw_input["value"])
+                
+        # Input is not valid
+        return None
