@@ -1,9 +1,11 @@
 """Helper functions."""
 
 from functools import reduce
+import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Optional, Union
+import json
 
 import requests
 
@@ -68,6 +70,52 @@ def ensure_menu_button_at_end(status_icons: list[str]) -> None:
     if "menu" in status_icons:
         status_icons.remove("menu")
         status_icons.append("menu")
+
+def normalize_status_items(raw_input: Any) -> Optional[Union[str, List[str]]]:
+    """Normalize and validate status item input.
+    
+    Handles various input formats:
+    - Single string
+    - List of strings
+    - JSON string representing a list
+    - Dictionary with attributes
+
+    Returns:
+    - Single string
+    - List of strings
+    - None if invalid input
+    """
+    import json
+    
+    if raw_input is None:
+        return None
+
+    if isinstance(raw_input, str):
+        if raw_input.startswith("[") and raw_input.endswith("]"):
+            try:
+                parsed = json.loads(raw_input)
+                if isinstance(parsed, list):
+                    string_items = [str(item) for item in parsed if item]
+                    return string_items if string_items else None
+                return None
+            except json.JSONDecodeError:
+                return raw_input if raw_input else None
+        return raw_input if raw_input else None
+
+    if isinstance(raw_input, list):
+        string_items = [str(item) for item in raw_input if item]
+        return string_items if string_items else None
+
+    if isinstance(raw_input, dict):
+        if "id" in raw_input:
+            return str(raw_input["id"])
+        if "name" in raw_input:
+            return str(raw_input["name"])
+        if "value" in raw_input:
+            return str(raw_input["value"])
+
+    return None
+
 
 def get_entity_attribute(hass: HomeAssistant, entity_id: str, attribute: str) -> Any:
     """Get attribute from entity by entity_id."""
