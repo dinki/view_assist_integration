@@ -39,7 +39,7 @@ MenuTargetType = Literal["status_icons", "menu_items"]
 
 class MenuItemOperation(TypedDict, total=False):
     """Type definition for menu item operations."""
-    
+
     entity_id: str
     menu_item: StatusItemType
     target: MenuTargetType
@@ -56,7 +56,7 @@ class MenuManager:
         self._active_menus: dict[str, bool] = {}  # Track open menus by entity_id
         self._timeouts: dict[str, asyncio.Task] = {}  # Track menu timeout timers
         self._item_timeouts: dict[str, asyncio.Task] = {}  # Track individual item timeout timers
-        
+
         # Register for state changes to handle initialization
         self.hass.bus.async_listen_once("homeassistant_started", self._on_ha_started)
 
@@ -80,43 +80,43 @@ class MenuManager:
         if not current_state:
             _LOGGER.warning("Entity %s not found", entity_id)
             return
-                
+
         # Toggle if not specified
         current_active = current_state.attributes.get("menu_active", False)
         if show is None:
             show = not current_active
-        
+
         # Cancel any existing timeout
         self._cancel_timeout(entity_id)
         self._active_menus[entity_id] = show
-        
+
         # Get icons and config values
         current_icons = current_state.attributes.get("status_icons", []) or []
-        
+
         # Get configured menu items from entity attributes or config options
         configured_menu_items = current_state.attributes.get("menu_items", []) or config_entry.options.get(CONF_MENU_ITEMS, DEFAULT_MENU_ITEMS)
         show_menu_button = config_entry.options.get(CONF_SHOW_MENU_BUTTON, DEFAULT_SHOW_MENU_BUTTON)
-        
+
         # Get system-only icons - these icons are not part of the menu system
         # and should always be visible regardless of menu state
         all_menu_items = set(configured_menu_items)
         system_only_icons = [icon for icon in current_icons 
                     if icon not in all_menu_items and icon != "menu"]
-        
+
         if show:
             # Get current view for filtering
             current_view = self._get_current_view(current_state)
-            
+
             # Filter out current view from menu items
             menu_icons = [item for item in configured_menu_items if item != current_view]
-            
+
             # Combine lists: system icons + menu icons
             updated_icons = system_only_icons + menu_icons
-            
+
             # Handle menu button
             if show_menu_button:
                 ensure_menu_button_at_end(updated_icons)
-            
+
             # Update entity
             await self.hass.services.async_call(
                 DOMAIN,
@@ -127,7 +127,7 @@ class MenuManager:
                     "menu_active": True,
                 },
             )
-            
+
             # Set up timeout if needed
             if timeout is not None:
                 self._setup_timeout(entity_id, timeout)
@@ -137,11 +137,11 @@ class MenuManager:
         else:
             # When hiding, we only keep system icons (not menu icons)
             updated_icons = system_only_icons
-            
+
             # Add menu button if configured
             if show_menu_button:
                 updated_icons.append("menu")
-            
+
             # Update entity
             await self.hass.services.async_call(
                 DOMAIN,
@@ -153,29 +153,29 @@ class MenuManager:
                 },
             )
 
-    async def add_menu_item(self, entity_id: str, status_item: StatusItemType, to_menu_items: bool = False, timeout: Optional[int] = None) -> None:
+    async def add_menu_item(self, entity_id: str, status_item: StatusItemType, menu: bool = False, timeout: Optional[int] = None) -> None:
         """Add status item(s) to the entity's status icons or menu items."""
-        target = "menu_items" if to_menu_items else "status_icons"
+        target = "menu_items" if menu else "status_icons"
         operation: MenuItemOperation = {
             "entity_id": entity_id,
             "menu_item": status_item,
             "target": target,
         }
-        
+
         if timeout is not None:
             operation["timeout"] = timeout
-            
+
         await self._manipulate_menu_items(operation, "add")
 
-    async def remove_menu_item(self, entity_id: str, status_item: StatusItemType, from_menu_items: bool = False) -> None:
+    async def remove_menu_item(self, entity_id: str, status_item: StatusItemType, menu: bool = False) -> None:
         """Remove status item(s) from the entity's status icons or menu items."""
-        target = "menu_items" if from_menu_items else "status_icons"
+        target = "menu_items" if menu else "status_icons"
         operation: MenuItemOperation = {
             "entity_id": entity_id,
             "menu_item": status_item,
             "target": target,
         }
-            
+
         await self._manipulate_menu_items(operation, "remove")
 
     async def _manipulate_menu_items(self, operation: MenuItemOperation, action: Literal["add", "remove"]) -> None:
@@ -184,7 +184,7 @@ class MenuManager:
         menu_item = operation["menu_item"]
         target = operation["target"]
         timeout = operation.get("timeout")
-        
+
         config_entry = get_config_entry_by_entity_id(self.hass, entity_id)
         if not config_entry and action == "add":
             _LOGGER.warning("No config entry found for entity %s", entity_id)
@@ -195,14 +195,14 @@ class MenuManager:
         if not current_state:
             _LOGGER.warning("Entity %s not found", entity_id)
             return
-        
+
         # Convert single item to list for unified processing
         items_to_process = [menu_item] if isinstance(menu_item, str) else menu_item
         
         # Handle empty list
         if not items_to_process:
             return
-            
+
         if target == "menu_items":
             # Working with the configured menu_items list
             existing_menu_items = current_state.attributes.get("menu_items", []) or []
@@ -210,7 +210,7 @@ class MenuManager:
             if action == "add":
                 # Create updated menu items list
                 updated_menu_items = list(existing_menu_items)
-                
+
                 # Add new items if not already present
                 for item in items_to_process:
                     if item not in updated_menu_items:
@@ -218,7 +218,7 @@ class MenuManager:
             else:  # remove
                 # Filter out items that should be removed
                 updated_menu_items = [item for item in existing_menu_items if item not in items_to_process]
-            
+
             # Update entity with new menu items
             await self.hass.services.async_call(
                 DOMAIN,
@@ -251,10 +251,10 @@ class MenuManager:
             current_icons = current_state.attributes.get("status_icons", [])
             show_menu_button = config_entry and config_entry.options.get(CONF_SHOW_MENU_BUTTON, DEFAULT_SHOW_MENU_BUTTON)
             has_menu = "menu" in current_icons
-            
+
             # Remove menu button if present (we'll add it back at the end if needed)
             updated_icons = [icon for icon in current_icons if icon != "menu"]
-            
+
             if action == "add":
                 # Add new items if not already present
                 for item in items_to_process:
@@ -269,14 +269,14 @@ class MenuManager:
                         _LOGGER.debug("Skipping removal of permanent menu button")
                         continue
                     filtered_items.append(item)
-                
+
                 # Remove the items
                 updated_icons = [icon for icon in updated_icons if icon not in filtered_items]
-            
+
             # Add menu button at the end if it was present or is required
             if has_menu or (show_menu_button and "menu" not in updated_icons):
                 updated_icons.append("menu")
-            
+
             # Update entity with new status icons
             await self.hass.services.async_call(
                 DOMAIN,
@@ -286,7 +286,7 @@ class MenuManager:
                     "status_icons": updated_icons,
                 },
             )
-        
+
         # Handle timeouts
         if action == "add" and timeout is not None:
             for item in items_to_process:
@@ -301,15 +301,15 @@ class MenuManager:
         current_state = self.hass.states.get(entity_id)
         if not current_state:
             return
-            
+
         # Only refresh if menu is active
         if not current_state.attributes.get("menu_active", False):
             return
-            
+
         config_entry = get_config_entry_by_entity_id(self.hass, entity_id)
         if not config_entry:
             return
-            
+
         # Re-apply menu toggle with current items
         await self.toggle_menu(entity_id, True)
 
@@ -320,12 +320,12 @@ class MenuManager:
             match = re.search(r"/view-assist/([^/]+)", current_path)
             if match:
                 return match.group(1)
-        
+
         # Try to get from display device
         display_device = state.attributes.get("display_device")
         if not display_device:
             return None
-            
+
         # Find browser or path entities for this device
         for entity in self.hass.states.async_all():
             if entity.attributes.get("device_id") == display_device and (
@@ -333,7 +333,7 @@ class MenuManager:
                 path = entity.state or entity.attributes.get("path")
                 if path and (match := re.search(r"/view-assist/([^/]+)", path)):
                     return match.group(1)
-        
+
         return None
 
     def _setup_timeout(self, entity_id: str, timeout: int) -> None:
@@ -341,14 +341,14 @@ class MenuManager:
         self._timeouts[entity_id] = self.hass.async_create_task(
             self._timeout_task(entity_id, timeout)
         )
-    
+
     async def _timeout_task(self, entity_id: str, timeout: int) -> None:
         """Task to handle menu timeout."""
         await self._handle_timeout(
             lambda: self.toggle_menu(entity_id, False), 
             timeout
         )
-        
+
     def _cancel_timeout(self, entity_id: str) -> None:
         """Cancel any existing timeout for an entity."""
         if task := self._timeouts.pop(entity_id, None):
@@ -360,15 +360,15 @@ class MenuManager:
         # Create a key for this item - include a prefix to differentiate between menu_items and status_icons
         prefix = "menu_" if is_menu_item else "status_"
         item_key = f"{prefix}{entity_id}_{menu_item}"
-        
+
         # Cancel existing timeout if any
         self._cancel_item_timeout(entity_id, menu_item, is_menu_item)
-        
+
         # Create new timeout task
         self._item_timeouts[item_key] = self.hass.async_create_task(
             self._item_timeout_task(entity_id, menu_item, timeout, is_menu_item)
         )
-    
+
     async def _item_timeout_task(self, entity_id: str, menu_item: str, timeout: int, is_menu_item: bool = False) -> None:
         """Task to handle individual menu item timeout."""
         await self._handle_timeout(
