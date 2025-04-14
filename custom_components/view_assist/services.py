@@ -162,7 +162,7 @@ REMOVE_STATUS_ITEM_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required("status_item"): vol.Any(str, [str]),
-        vol.Optional("from_menu_items", default=False): cv.boolean,
+        vol.Optional("menu", default=False): cv.boolean,
     }
 )
 
@@ -494,9 +494,9 @@ class VAServices:
         if not entity_id:
             _LOGGER.error("No entity_id provided in add_status_item service call")
             return
-        
+
         raw_status_item = call.data.get("status_item")
-        to_menu_items = call.data.get("menu", False)
+        menu = call.data.get("menu", False)
         timeout = call.data.get("timeout")
         
         # Process and validate status item input
@@ -506,7 +506,7 @@ class VAServices:
             return
 
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
-        await menu_manager.add_menu_item(entity_id, status_items, to_menu_items, timeout)
+        await menu_manager.add_menu_item(entity_id, status_items, menu, timeout)
 
     async def async_handle_remove_status_item(self, call: ServiceCall):
         """Handle remove status item service call."""
@@ -514,10 +514,10 @@ class VAServices:
         if not entity_id:
             _LOGGER.error("No entity_id provided in remove_status_item service call")
             return
-        
+
         raw_status_item = call.data.get("status_item")
-        from_menu_items = call.data.get("from_menu_items", False)
-        
+        menu = call.data.get("menu", False)
+
         # Process and validate status item input
         status_items = self._process_status_item_input(raw_status_item)
         if not status_items:
@@ -525,7 +525,7 @@ class VAServices:
             return
 
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
-        await menu_manager.remove_menu_item(entity_id, status_items, from_menu_items)
+        await menu_manager.remove_menu_item(entity_id, status_items, menu)
 
     def _process_status_item_input(self, raw_input: Any) -> Optional[StatusItemType]:
         """Process and validate status item input.
@@ -535,7 +535,7 @@ class VAServices:
         - List of strings
         - JSON string representing a list
         - Dictionary with attributes
-        
+
         Returns:
         - Single string
         - List of strings
@@ -544,7 +544,7 @@ class VAServices:
         # Handle None case
         if raw_input is None:
             return None
-            
+
         # If already a string or list, validate and return
         if isinstance(raw_input, str):
             # Check if it's a list in string format
@@ -560,13 +560,13 @@ class VAServices:
                     # Not valid JSON, treat as a single string
                     return raw_input if raw_input else None
             return raw_input if raw_input else None
-            
+
         # Handle list case
         if isinstance(raw_input, list):
             # Ensure all items are strings
             string_items = [str(item) for item in raw_input if item]
             return string_items if string_items else None
-        
+
         # Handle dict case
         if isinstance(raw_input, dict):
             # Extract appropriate fields if they exist
@@ -576,6 +576,6 @@ class VAServices:
                 return str(raw_input["name"])
             if "value" in raw_input:
                 return str(raw_input["value"])
-                
+
         # Input is not valid
         return None
