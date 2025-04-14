@@ -40,9 +40,6 @@ from .const import (
     CONF_INTENT,
     CONF_INTENT_DEVICE,
     CONF_MEDIAPLAYER_DEVICE,
-    CONF_MENU_AUTO_CLOSE,
-    CONF_MENU_ICON_COLOR,
-    CONF_MENU_ICON_SIZE,
     CONF_MENU_ITEMS,
     CONF_MENU_TIMEOUT,
     CONF_MIC_DEVICE,
@@ -69,7 +66,6 @@ from .const import (
     DEFAULT_FONT_STYLE,
     DEFAULT_HIDE_HEADER,
     DEFAULT_HIDE_SIDEBAR,
-    DEFAULT_MENU_AUTO_CLOSE,
     DEFAULT_MENU_ICON_COLOR,
     DEFAULT_MENU_ICON_SIZE,
     DEFAULT_MENU_ITEMS,
@@ -570,18 +566,6 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
                         CONF_SHOW_MENU_BUTTON, DEFAULT_SHOW_MENU_BUTTON
                     ),
                 ): bool,
-                vol.Optional(
-                    CONF_MENU_ICON_SIZE,
-                    default=self.config_entry.options.get(
-                        CONF_MENU_ICON_SIZE, DEFAULT_MENU_ICON_SIZE
-                    ),
-                ): str,
-                vol.Optional(
-                    CONF_MENU_ICON_COLOR,
-                    default=self.config_entry.options.get(
-                        CONF_MENU_ICON_COLOR, DEFAULT_MENU_ICON_COLOR
-                    ),
-                ): str,
             }
         )
 
