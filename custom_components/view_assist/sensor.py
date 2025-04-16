@@ -101,16 +101,11 @@ class ViewAssistSensor(SensorEntity):
         """Return entity attributes."""
         r = self.config.runtime_data
 
-        # TODO: To be readded when entity selection logic fixed
-        # mic_device = self.config.runtime_data.mic_device
-        # mic_type = self.config.runtime_data.mic_type
-        # mute_switch = get_mute_switch_entity_id(mic_device, mic_type)
-
         attrs = {
             "type": r.type,
             "mic_device": r.mic_device,
             "mic_device_id": get_device_id_from_entity_id(self.hass, r.mic_device),
-            # "mute_switch": mute_switch, - to be added when entity selection logic fixed
+            "mute_switch": get_mute_switch_entity_id(self.hass, r.mic_device),
             "mediaplayer_device": r.mediaplayer_device,
             "musicplayer_device": r.musicplayer_device,
             "mode": r.mode,
@@ -124,7 +119,6 @@ class ViewAssistSensor(SensorEntity):
             "use_announce": r.use_announce,
             "background": r.background,
             "weather_entity": r.weather_entity,
-            "mic_type": self.get_option_key_migration_value(r.mic_type),
             "voice_device_id": self._voice_device_id,
             "enable_menu": self.config.options.get(CONF_ENABLE_MENU, DEFAULT_ENABLE_MENU),
             "menu_items": self.config.options.get(CONF_MENU_ITEMS, DEFAULT_MENU_ITEMS),

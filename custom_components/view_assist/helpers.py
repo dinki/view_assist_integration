@@ -25,12 +25,25 @@ from .const import (
     VAMODE_REVERTS,
     VAConfigEntry,
     VADisplayType,
-    VAMicType,
     VAMode,
     VAType,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def get_integration_entries(
+    hass: HomeAssistant,
+    accepted_types: list[VAType] | None = None,
+) -> list[VAConfigEntry]:
+    """Get list of config entries for the integration."""
+    if accepted_types is None:
+        accepted_types = [VAType.VIEW_AUDIO, VAType.AUDIO_ONLY]
+    return [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if entry.data[CONF_TYPE] in accepted_types and not entry.disabled_by
+    ]
 
 
 def is_first_instance(
@@ -44,11 +57,7 @@ def is_first_instance(
     if not display_instance_only:
         accepted_types.append(VAType.AUDIO_ONLY)
 
-    entries = [
-        entry
-        for entry in hass.config_entries.async_entries(DOMAIN)
-        if entry.data["type"] in accepted_types and not entry.disabled_by
-    ]
+    entries = get_integration_entries(hass, accepted_types)
 
     # If first instance matches this entry id, return True
     if entries and entries[0].entry_id == config.entry_id:
@@ -129,7 +138,7 @@ def get_config_entry_by_config_data_value(
 ) -> VAConfigEntry:
     """Get config entry from a config data param value."""
     # Loop config entries
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    for entry in get_integration_entries(hass):
         for param_value in entry.data.values():
             if (
                 param_value == value
@@ -149,12 +158,7 @@ def get_config_entry_by_entity_id(hass: HomeAssistant, entity_id: str) -> VAConf
 
 def get_master_config_entry(hass: HomeAssistant) -> VAConfigEntry:
     """Get master config entry."""
-    entries = [
-        entry
-        for entry in hass.config_entries.async_entries(DOMAIN)
-        if entry.data.get(CONF_TYPE) == VAType.MASTER_CONFIG
-    ]
-    if entries:
+    if entries := get_integration_entries(hass, VAType.MASTER_CONFIG):
         return entries[0]
     return None
 
@@ -245,13 +249,7 @@ def get_entity_id_from_conversation_device_id(
     hass: HomeAssistant, device_id: str
 ) -> str | None:
     """Get the view assist entity id for a device id relating to the mic entity."""
-    entries = list(
-        hass.config_entries.async_entries(
-            DOMAIN, include_ignore=False, include_disabled=False
-        )
-    )
-    entry: VAConfigEntry
-    for entry in entries:
+    for entry in get_integration_entries(hass):
         mic_entity_id = entry.runtime_data.mic_device
         entity_registry = er.async_get(hass)
         mic_entity = entity_registry.async_get(mic_entity_id)
@@ -265,7 +263,7 @@ def get_mimic_entity_id(hass: HomeAssistant) -> str:
     # If we reach here, no match for browser_id was found
     if mimic_entry_ids := [
         entry.entry_id
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in get_integration_entries(hass)
         if entry.data.get(CONF_DEV_MIMIC)
     ]:
         return get_sensor_entity_from_instance(hass, mimic_entry_ids[0])
@@ -288,7 +286,7 @@ def get_entity_id_by_browser_id(hass: HomeAssistant, browser_id: str) -> str:
     if device_id:
         entry_ids = [
             entry.entry_id
-            for entry in hass.config_entries.async_entries(DOMAIN)
+            for entry in get_integration_entries(hass)
             if entry.data.get(CONF_DISPLAY_DEVICE) == device_id
         ]
 
@@ -298,17 +296,17 @@ def get_entity_id_by_browser_id(hass: HomeAssistant, browser_id: str) -> str:
     return None
 
 
-def get_mute_switch_entity_id(target_device: str, mic_type: str):
-    """Get mute switch."""
-    if mic_type == VAMicType.STREAM_ASSIST:
-        return target_device.replace("sensor", "switch").replace("_stt", "_mic")
-    if mic_type == VAMicType.HASS_MIC:
-        return target_device.replace("sensor", "switch").replace(
-            "simple_state", "microphone"
-        )
-    if mic_type == VAMicType.HA_VOICE_SATELLITE:
-        return target_device.replace("assist_satellite", "switch") + "_mute"
-
+def get_mute_switch_entity_id(hass: HomeAssistant, mic_entity_id: str) -> str | None:
+    """Get the mute switch entity id for a device id relating to the mic entity."""
+    entity_registry = er.async_get(hass)
+    if mic_entity := entity_registry.async_get(mic_entity_id):
+        device_id = mic_entity.device_id
+        device_entities = er.async_entries_for_device(entity_registry, device_id)
+        for entity in device_entities:
+            if entity.domain == "switch" and entity.entity_id.endswith(
+                ("_mute", "_mic", "_microphone")
+            ):
+                return entity.entity_id
     return None
 
 
@@ -355,7 +353,7 @@ def get_entities_by_attr_filter(
 ) -> list[str]:
     """Get the entity ids of devices not in dnd mode."""
     matched_entities = []
-    entry_ids = [entry.entry_id for entry in hass.config_entries.async_entries(DOMAIN)]
+    entry_ids = [entry.entry_id for entry in get_integration_entries(hass)]
     for entry_id in entry_ids:
         entity_registry = er.async_get(hass)
         entities = er.async_entries_for_config_entry(entity_registry, entry_id)

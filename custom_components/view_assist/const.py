@@ -99,14 +99,6 @@ class VAIconSizes(StrEnum):
     LARGE = "8vw"
 
 
-class VAMicType(StrEnum):
-    """Mic types."""
-
-    HA_VOICE_SATELLITE = "home_assistant_voice_satellite"
-    HASS_MIC = "hassmic"
-    STREAM_ASSIST = "stream_assist"
-
-
 class VADisplayType(StrEnum):
     """Display types."""
 
@@ -131,7 +123,6 @@ CONF_FONT_STYLE = "font_style"
 CONF_STATUS_ICONS = "status_icons"
 CONF_USE_24H_TIME = "use_24_hour_time"
 CONF_WEATHER_ENTITY = "weather_entity"
-CONF_MIC_TYPE = "mic_type"
 CONF_VIEW_TIMEOUT = "view_timeout"
 CONF_DO_NOT_DISTURB = "do_not_disturb"
 CONF_USE_ANNOUNCE = "use_announce"
@@ -144,6 +135,7 @@ CONF_ROTATE_BACKGROUND_SOURCE = "rotate_background_source"
 CONF_ROTATE_BACKGROUND_PATH = "rotate_background_path"
 CONF_ROTATE_BACKGROUND_LINKED_ENTITY = "rotate_background_linked_entity"
 CONF_ROTATE_BACKGROUND_INTERVAL = "rotate_background_interval"
+CONF_MIC_TYPE = "mic_type"
 
 # Menu configuration
 CONF_ENABLE_MENU = "enable_menu"
@@ -167,7 +159,6 @@ DEFAULT_FONT_STYLE = "Roboto"
 DEFAULT_STATUS_ICONS = []
 DEFAULT_USE_24H_TIME = False
 DEFAULT_WEATHER_ENITITY = "weather.home"
-DEFAULT_MIC_TYPE = VAMicType.HA_VOICE_SATELLITE
 DEFAULT_MODE = "normal"
 DEFAULT_VIEW_TIMEOUT = 20
 DEFAULT_DND = False
@@ -246,7 +237,6 @@ class RuntimeData:
 
         # Default options
         self.weather_entity: str = DEFAULT_WEATHER_ENITITY
-        self.mic_type: VAMicType = DEFAULT_MIC_TYPE
         self.mode: str = DEFAULT_MODE
         self.view_timeout: int = DEFAULT_VIEW_TIMEOUT
         self.hide_sidebar: bool = DEFAULT_HIDE_SIDEBAR

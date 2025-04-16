@@ -11,6 +11,7 @@ from homeassistant.helpers.start import async_at_started
 
 from .alarm_repeater import ALARMS, VAAlarmRepeater
 from .const import (
+    CONF_MIC_TYPE,
     DOMAIN,
     OPTION_KEY_MIGRATIONS,
     RuntimeData,
@@ -51,6 +52,7 @@ async def async_migrate_entry(
         entry.minor_version,
         entry.options,
     )
+    new_options = {}
     if entry.minor_version == 1 and entry.options:
         new_options = {**entry.options}
         # Migrate options keys
@@ -58,8 +60,15 @@ async def async_migrate_entry(
             if isinstance(value, str) and value in OPTION_KEY_MIGRATIONS:
                 new_options[key] = OPTION_KEY_MIGRATIONS.get(value)
 
+    if entry.minor_version < 3 and entry.options:
+        # Remove mic_type key
+        if "mic_type" in entry.options:
+            new_options = {**entry.options}
+            new_options.pop(CONF_MIC_TYPE)
+
+    if new_options != entry.options:
         hass.config_entries.async_update_entry(
-            entry, options=new_options, minor_version=2, version=1
+            entry, options=new_options, minor_version=3, version=1
         )
 
         _LOGGER.debug(
