@@ -82,7 +82,7 @@ def ensure_menu_button_at_end(status_icons: list[str]) -> None:
 
 def normalize_status_items(raw_input: Any) -> Optional[Union[str, List[str]]]:
     """Normalize and validate status item input.
-    
+
     Handles various input formats:
     - Single string
     - List of strings
@@ -95,7 +95,7 @@ def normalize_status_items(raw_input: Any) -> Optional[Union[str, List[str]]]:
     - None if invalid input
     """
     import json
-    
+
     if raw_input is None:
         return None
 
@@ -124,6 +124,54 @@ def normalize_status_items(raw_input: Any) -> Optional[Union[str, List[str]]]:
             return str(raw_input["value"])
 
     return None
+
+
+def arrange_status_icons(menu_items: list[str], system_icons: list[str],
+                         show_menu_button: bool = False) -> list[str]:
+    """Arrange status icons in the correct order."""
+    result = [item for item in menu_items if item != "menu"]
+
+    for icon in system_icons:
+        if icon != "menu" and icon not in result:
+            result.append(icon)
+
+    if show_menu_button:
+        ensure_menu_button_at_end(result)
+
+    return result
+
+
+def update_status_icons(current_icons: list[str],
+                        add_icons: list[str] = None,
+                        remove_icons: list[str] = None,
+                        menu_items: list[str] = None,
+                        show_menu_button: bool = False) -> list[str]:
+    """Update a status icons list by adding and/or removing icons."""
+    result = current_icons.copy()
+
+    if remove_icons:
+        for icon in remove_icons:
+            if icon == "menu" and show_menu_button:
+                continue
+            if icon in result:
+                result.remove(icon)
+
+    if add_icons:
+        for icon in add_icons:
+            if icon not in result:
+                if icon != "menu":
+                    result.append(icon)
+
+    if menu_items is not None:
+        system_icons = [
+            icon for icon in result if icon not in menu_items and icon != "menu"]
+        menu_icon_list = [icon for icon in result if icon in menu_items]
+        result = arrange_status_icons(
+            menu_icon_list, system_icons, show_menu_button)
+    elif show_menu_button:
+        ensure_menu_button_at_end(result)
+
+    return result
 
 
 def get_entity_attribute(hass: HomeAssistant, entity_id: str, attribute: str) -> Any:
