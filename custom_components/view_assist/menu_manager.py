@@ -26,10 +26,12 @@ from .const import (
     VAEvent,
 )
 from .helpers import (
+    arrange_status_icons,
     ensure_menu_button_at_end,
     get_config_entry_by_entity_id,
     get_sensor_entity_from_instance,
     normalize_status_items,
+    update_status_icons,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -146,25 +148,26 @@ class MenuManager:
 
         changes = {}
 
+        # Always refresh system_icons from current status_icons in the entity state
+        current_status_icons = state.attributes.get("status_icons", [])
+
+        # Update system_icons whenever we toggle the menu
+        system_icons = [
+            icon
+            for icon in current_status_icons
+            if icon not in menu_state.configured_items and icon != "menu"
+        ]
+        # Update the stored system_icons to match current reality
+        menu_state.system_icons = system_icons
+
         if show:
-
-            system_icons = [
-                icon
-                for icon in menu_state.status_icons
-                if icon not in menu_state.configured_items and icon != "menu"
-            ]
-
-            updated_icons = system_icons.copy()
-            for item in menu_state.configured_items:
-                if item not in updated_icons:
-                    updated_icons.append(item)
-
-            if show_menu_button:
-                ensure_menu_button_at_end(updated_icons)
-
+            updated_icons = arrange_status_icons(
+                menu_state.configured_items,
+                system_icons,
+                show_menu_button
+            )
             menu_state.active = True
             menu_state.status_icons = updated_icons
-
             changes = {"status_icons": updated_icons, "menu_active": True}
 
             if timeout is not None:
@@ -177,14 +180,13 @@ class MenuManager:
                 )
                 self._setup_timeout(entity_id, timeout_value)
         else:
-            updated_icons = menu_state.system_icons.copy()
-
-            if show_menu_button and "menu" not in updated_icons:
-                updated_icons.append("menu")
+            # When hiding menu, use the system icons with menu button if needed
+            updated_icons = system_icons.copy()
+            if show_menu_button:
+                ensure_menu_button_at_end(updated_icons)
 
             menu_state.active = False
             menu_state.status_icons = updated_icons
-
             changes = {"status_icons": updated_icons, "menu_active": False}
 
         if changes:
@@ -226,6 +228,7 @@ class MenuManager:
         changes = {}
 
         if menu:
+            # Update configured menu items
             updated_items = menu_state.configured_items.copy()
             changed = False
 
@@ -238,32 +241,25 @@ class MenuManager:
                 menu_state.configured_items = updated_items
                 changes["menu_items"] = updated_items
 
+                # If menu is active, update visible status icons too
                 if menu_state.active:
-                    updated_icons = menu_state.status_icons.copy()
-
-                    for item in items:
-                        if item not in updated_icons:
-                            updated_icons.append(item)
-
-                    if show_menu_button:
-                        ensure_menu_button_at_end(updated_icons)
-
+                    updated_icons = arrange_status_icons(
+                        menu_state.configured_items,
+                        menu_state.system_icons,
+                        show_menu_button
+                    )
                     menu_state.status_icons = updated_icons
                     changes["status_icons"] = updated_icons
         else:
-            updated_icons = menu_state.status_icons.copy()
-            changed = False
+            # Update status icons directly
+            updated_icons = update_status_icons(
+                menu_state.status_icons,
+                add_icons=items,
+                menu_items=menu_state.configured_items if menu_state.active else None,
+                show_menu_button=show_menu_button
+            )
 
-            for item in items:
-                if item != "menu" and item not in updated_icons:
-                    updated_icons.append(item)
-                    changed = True
-
-            if show_menu_button:
-                ensure_menu_button_at_end(updated_icons)
-                changed = True
-
-            if changed:
+            if updated_icons != menu_state.status_icons:
                 menu_state.status_icons = updated_icons
                 changes["status_icons"] = updated_icons
 
@@ -299,6 +295,7 @@ class MenuManager:
         changes = {}
 
         if from_menu:
+            # Remove from configured menu items
             updated_items = [
                 item for item in menu_state.configured_items if item not in items
             ]
@@ -307,35 +304,25 @@ class MenuManager:
                 menu_state.configured_items = updated_items
                 changes["menu_items"] = updated_items
 
+                # If menu is active, update visible status icons too
                 if menu_state.active:
-                    updated_icons = menu_state.status_icons.copy()
-
-                    for item in items:
-                        if item in updated_icons:
-                            updated_icons.remove(item)
-
-                    if show_menu_button and "menu" not in updated_icons:
-                        updated_icons.append("menu")
-
+                    updated_icons = arrange_status_icons(
+                        menu_state.configured_items,
+                        menu_state.system_icons,
+                        show_menu_button
+                    )
                     menu_state.status_icons = updated_icons
                     changes["status_icons"] = updated_icons
         else:
-            updated_icons = menu_state.status_icons.copy()
-            changed = False
+            # Remove from status icons directly
+            updated_icons = update_status_icons(
+                menu_state.status_icons,
+                remove_icons=items,
+                menu_items=menu_state.configured_items if menu_state.active else None,
+                show_menu_button=show_menu_button
+            )
 
-            for item in items:
-                if item == "menu" and show_menu_button:
-                    continue
-
-                if item in updated_icons:
-                    updated_icons.remove(item)
-                    changed = True
-
-            if show_menu_button and "menu" not in updated_icons:
-                updated_icons.append("menu")
-                changed = True
-
-            if changed:
+            if updated_icons != menu_state.status_icons:
                 menu_state.status_icons = updated_icons
                 changes["status_icons"] = updated_icons
 
