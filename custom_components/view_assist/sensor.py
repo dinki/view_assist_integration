@@ -14,6 +14,12 @@ from homeassistant.helpers.config_validation import make_entity_service_schema
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
+    CONF_ENABLE_MENU,
+    CONF_MENU_ITEMS,
+    CONF_SHOW_MENU_BUTTON,
+    DEFAULT_ENABLE_MENU,
+    DEFAULT_MENU_ITEMS,
+    DEFAULT_SHOW_MENU_BUTTON,
     DOMAIN,
     OPTION_KEY_MIGRATIONS,
     VA_ATTRIBUTE_UPDATE_EVENT,
@@ -114,6 +120,10 @@ class ViewAssistSensor(SensorEntity):
             "background": r.background,
             "weather_entity": r.weather_entity,
             "voice_device_id": self._voice_device_id,
+            "enable_menu": self.config.options.get(CONF_ENABLE_MENU, DEFAULT_ENABLE_MENU),
+            "menu_items": self.config.options.get(CONF_MENU_ITEMS, DEFAULT_MENU_ITEMS),
+            "show_menu_button": self.config.options.get(CONF_SHOW_MENU_BUTTON, DEFAULT_SHOW_MENU_BUTTON),
+            "menu_active": self._get_menu_active_state(),
         }
 
         # Only add these attributes if they exist
@@ -164,6 +174,17 @@ class ViewAssistSensor(SensorEntity):
                 self.config.runtime_data.extra_data[k] = v
 
         self.schedule_update_ha_state(True)
+
+    def _get_menu_active_state(self) -> bool:
+        """Get the menu active state from menu manager."""
+        menu_manager = self.hass.data[DOMAIN].get("menu_manager")
+        if not menu_manager:
+            return False
+            
+        if hasattr(menu_manager, "_menu_states") and self.entity_id in menu_manager._menu_states:
+            return menu_manager._menu_states[self.entity_id].active
+            
+        return False
 
     @property
     def icon(self):

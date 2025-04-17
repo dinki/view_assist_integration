@@ -31,6 +31,8 @@ from .const import (
     CONF_DEV_MIMIC,
     CONF_DISPLAY_DEVICE,
     CONF_DO_NOT_DISTURB,
+    CONF_ENABLE_MENU,
+    CONF_ENABLE_MENU_TIMEOUT,
     CONF_FONT_STYLE,
     CONF_HIDE_HEADER,
     CONF_HIDE_SIDEBAR,
@@ -38,6 +40,8 @@ from .const import (
     CONF_INTENT,
     CONF_INTENT_DEVICE,
     CONF_MEDIAPLAYER_DEVICE,
+    CONF_MENU_ITEMS,
+    CONF_MENU_TIMEOUT,
     CONF_MIC_DEVICE,
     CONF_MIC_UNMUTE,
     CONF_MUSIC,
@@ -56,9 +60,13 @@ from .const import (
     DEFAULT_ASSIST_PROMPT,
     DEFAULT_DASHBOARD,
     DEFAULT_DND,
+    DEFAULT_ENABLE_MENU,
+    DEFAULT_ENABLE_MENU_TIMEOUT,
     DEFAULT_FONT_STYLE,
     DEFAULT_HIDE_HEADER,
     DEFAULT_HIDE_SIDEBAR,
+    DEFAULT_MENU_ITEMS,
+    DEFAULT_MENU_TIMEOUT,
     DEFAULT_MIC_UNMUTE,
     DEFAULT_MODE,
     DEFAULT_NAME,
@@ -66,6 +74,8 @@ from .const import (
     DEFAULT_ROTATE_BACKGROUND_INTERVAL,
     DEFAULT_ROTATE_BACKGROUND_PATH,
     DEFAULT_ROTATE_BACKGROUND_SOURCE,
+    DEFAULT_SHOW_MENU_BUTTON,
+    CONF_SHOW_MENU_BUTTON,
     DEFAULT_STATUS_ICON_SIZE,
     DEFAULT_STATUS_ICONS,
     DEFAULT_TYPE,
@@ -546,6 +556,44 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
                     CONF_HIDE_HEADER,
                     default=self.config_entry.options.get(
                         CONF_HIDE_HEADER, DEFAULT_HIDE_HEADER
+                    ),
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_MENU,
+                    default=self.config_entry.options.get(
+                        CONF_ENABLE_MENU, DEFAULT_ENABLE_MENU
+                    ),
+                ): bool,
+                vol.Optional(
+                    CONF_MENU_ITEMS,
+                    default=self.config_entry.options.get(
+                        CONF_MENU_ITEMS, DEFAULT_MENU_ITEMS
+                    ),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        translation_key="menu_items_selector",
+                        options=[],
+                        mode=SelectSelectorMode.LIST,
+                        multiple=True,
+                        custom_value=True,
+                    )
+                ),
+                vol.Optional(
+                    CONF_ENABLE_MENU_TIMEOUT,
+                    default=self.config_entry.options.get(
+                        CONF_ENABLE_MENU_TIMEOUT, DEFAULT_ENABLE_MENU_TIMEOUT
+                    ),
+                ): bool,
+                vol.Optional(
+                    CONF_MENU_TIMEOUT,
+                    default=self.config_entry.options.get(
+                        CONF_MENU_TIMEOUT, DEFAULT_MENU_TIMEOUT
+                    ),
+                ): int,
+                vol.Optional(
+                    CONF_SHOW_MENU_BUTTON,
+                    default=self.config_entry.options.get(
+                        CONF_SHOW_MENU_BUTTON, DEFAULT_SHOW_MENU_BUTTON
                     ),
                 ): bool,
             }

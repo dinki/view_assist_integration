@@ -1,9 +1,11 @@
 """Helper functions."""
 
 from functools import reduce
+import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Optional, Union
+import json
 
 import requests
 
@@ -71,6 +73,105 @@ def ensure_list(value: str | list[str]):
         value = (value.replace("[", "").replace("]", "").replace('"', "")).split(",")
         return value if value else []
     return []
+
+def ensure_menu_button_at_end(status_icons: list[str]) -> None:
+    """Ensure menu button is always the rightmost (last) status icon."""
+    if "menu" in status_icons:
+        status_icons.remove("menu")
+        status_icons.append("menu")
+
+def normalize_status_items(raw_input: Any) -> Optional[Union[str, List[str]]]:
+    """Normalize and validate status item input.
+
+    Handles various input formats:
+    - Single string
+    - List of strings
+    - JSON string representing a list
+    - Dictionary with attributes
+
+    Returns:
+    - Single string
+    - List of strings
+    - None if invalid input
+    """
+    import json
+
+    if raw_input is None:
+        return None
+
+    if isinstance(raw_input, str):
+        if raw_input.startswith("[") and raw_input.endswith("]"):
+            try:
+                parsed = json.loads(raw_input)
+                if isinstance(parsed, list):
+                    string_items = [str(item) for item in parsed if item]
+                    return string_items if string_items else None
+                return None
+            except json.JSONDecodeError:
+                return raw_input if raw_input else None
+        return raw_input if raw_input else None
+
+    if isinstance(raw_input, list):
+        string_items = [str(item) for item in raw_input if item]
+        return string_items if string_items else None
+
+    if isinstance(raw_input, dict):
+        if "id" in raw_input:
+            return str(raw_input["id"])
+        if "name" in raw_input:
+            return str(raw_input["name"])
+        if "value" in raw_input:
+            return str(raw_input["value"])
+
+    return None
+
+
+def arrange_status_icons(menu_items: list[str], system_icons: list[str],
+                         show_menu_button: bool = False) -> list[str]:
+    """Arrange status icons in the correct order."""
+    result = [item for item in menu_items if item != "menu"]
+
+    for icon in system_icons:
+        if icon != "menu" and icon not in result:
+            result.append(icon)
+
+    if show_menu_button:
+        ensure_menu_button_at_end(result)
+
+    return result
+
+
+def update_status_icons(current_icons: list[str],
+                        add_icons: list[str] = None,
+                        remove_icons: list[str] = None,
+                        menu_items: list[str] = None,
+                        show_menu_button: bool = False) -> list[str]:
+    """Update a status icons list by adding and/or removing icons."""
+    result = current_icons.copy()
+
+    if remove_icons:
+        for icon in remove_icons:
+            if icon == "menu" and show_menu_button:
+                continue
+            if icon in result:
+                result.remove(icon)
+
+    if add_icons:
+        for icon in add_icons:
+            if icon not in result:
+                if icon != "menu":
+                    result.append(icon)
+
+    if menu_items is not None:
+        system_icons = [
+            icon for icon in result if icon not in menu_items and icon != "menu"]
+        menu_icon_list = [icon for icon in result if icon in menu_items]
+        result = arrange_status_icons(
+            menu_icon_list, system_icons, show_menu_button)
+    elif show_menu_button:
+        ensure_menu_button_at_end(result)
+
+    return result
 
 
 def get_entity_attribute(hass: HomeAssistant, entity_id: str, attribute: str) -> Any:

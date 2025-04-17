@@ -91,12 +91,17 @@
           "rotate_background_linked_entity": "Linked entity",
           "rotate_background_interval": "Rotation interval",
           "assist_prompt": "Assist prompt",
-          "status_icons_size": "Status icon size",
+          "status_icons_size": "Icon size",
           "font_style": "Font style",
           "status_icons": "Launch icons",
           "use_24_hour_time": "Use 24h time",
           "hide_sidebar": "Hide sidemenu",
-          "hide_header": "Hide header bar"
+          "hide_header": "Hide header bar",
+          "enable_menu": "Enable menu",
+          "menu_items": "Menu items",
+          "enable_menu_timeout": "Enable menu timeout",
+          "menu_timeout": "Menu timeout (seconds)",
+          "show_menu_button": "Show menu button in status bar"
         },
         "data_description": {
           "dashboard": "The base dashboard for View Assist (do not include trailing slash)",
@@ -108,12 +113,17 @@
           "rotate_background_linked_entity": "View Assist entity to link the background to",
           "rotate_background_interval": "Interval in minutes to rotate the background",
           "assist_prompt": "The Assist notification prompt style to use for wake word detection and intent processing",
-          "status_icons_size": "Size of the icons in the status icon display",
+          "status_icons_size": "Size of the icons in status and menu displays",
           "font_style": "The default font to use for this satellite device. Font name must match perfectly and be available",
           "status_icons": "Advanced option! List of custom launch icons to set on start up. Do not change this if you do not know what you are doing",
           "use_24_hour_time": "Sets clock display to 24 hour time when enabled",
           "hide_sidebar": "Hide the sidemenu on the display via View Assist",
-          "hide_header": "Hide the header on the display via View Assist"
+          "hide_header": "Hide the header on the display via View Assist",
+          "enable_menu": "Enable the menu system for this device",
+          "menu_items": "List of menu items to display when menu is activated. Format: type:target|icon|label",
+          "enable_menu_timeout": "Enable automatic timeout for menu",
+          "menu_timeout": "Time in seconds before menu automatically closes",
+          "show_menu_button": "Show a permanent menu button in the status bar"
         }
       },
       "default_options": {
@@ -151,12 +161,12 @@
         "flashing_bar": "Flashing bar at bottom"
       }
     },
-      "status_icons_size_selector": {
-        "options": {
-          "6vw": "Small",
-          "7vw": "Medium",
-          "8vw": "Large"
-        }
+    "status_icons_size_selector": {
+      "options": {
+        "6vw": "Small",
+        "7vw": "Medium",
+        "8vw": "Large"
+      }
     },
     "mic_type_selector": {
       "options": {
@@ -179,6 +189,9 @@
         "download": "Download random image from Unsplash",
         "link_to_entity": "Linked to another View Assist device"
       }
+    },
+    "menu_items_selector": {
+      "description": "Menu items in format: type:target|icon|label - Examples: view:weather|weather-sunny|Weather, entity:light.kitchen|lightbulb|Kitchen"
     }
   }
 }
