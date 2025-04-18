@@ -137,6 +137,13 @@ CONF_ROTATE_BACKGROUND_LINKED_ENTITY = "rotate_background_linked_entity"
 CONF_ROTATE_BACKGROUND_INTERVAL = "rotate_background_interval"
 CONF_MIC_TYPE = "mic_type"
 
+# Menu configuration
+CONF_ENABLE_MENU = "enable_menu"
+CONF_MENU_ITEMS = "menu_items"
+CONF_ENABLE_MENU_TIMEOUT = "enable_menu_timeout"
+CONF_MENU_TIMEOUT = "menu_timeout"
+CONF_SHOW_MENU_BUTTON = "show_menu_button"
+
 # Config default values
 DEFAULT_NAME = "View Assist"
 DEFAULT_TYPE = VAType.VIEW_AUDIO
@@ -163,6 +170,15 @@ DEFAULT_ROTATE_BACKGROUND = False
 DEFAULT_ROTATE_BACKGROUND_SOURCE = "local_sequence"
 DEFAULT_ROTATE_BACKGROUND_PATH = f"{IMAGE_PATH}/backgrounds"
 DEFAULT_ROTATE_BACKGROUND_INTERVAL = 60
+
+# Menu defaults
+DEFAULT_ENABLE_MENU = False
+DEFAULT_MENU_ITEMS = ["home", "weather"]
+DEFAULT_ENABLE_MENU_TIMEOUT = False
+DEFAULT_MENU_TIMEOUT = 10
+DEFAULT_SHOW_MENU_BUTTON = False
+DEFAULT_MENU_ICON_SIZE = "6vw"
+DEFAULT_MENU_ICON_COLOR = "white"
 
 # Service attributes
 ATTR_EVENT_NAME = "event_name"

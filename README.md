@@ -42,16 +42,6 @@ This integration can be installed by downloading the [view_assist](https://githu
 
 Questions, problems, concerns?  Reach out to us on Discord or use the 'Issues' above
 
-# Blueprints for beta
-
-During the beta, the blueprints and other files will be held in the [View Assist Integration Prep](https://github.com/dinki/View-Assist/tree/viewassist-integrationprep) branch.  These integrations have been modified to work with the new View Assist integration and you will need to use these new versions.  These will eventually be stored in the main View Assist branch after the beta and the links in the wiki will once again work as written.  For now, though, you will want to install these using the buttons in the README.md file in each of the [blueprint directories](https://github.com/dinki/View-Assist/tree/viewassist-integrationprep/View_Assist_custom_sentences).
-
-Here's an example:
-
-
-![image](https://github.com/user-attachments/assets/5ec48a91-ec3f-49d9-8e67-eae717e49bd9)
-
-
 # Help
 
 Need help?  Hop on our Discord channel and we'll give you a boost!
