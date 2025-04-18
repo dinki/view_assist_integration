@@ -5,7 +5,6 @@ import json
 import logging
 from pathlib import Path
 from typing import Any, List, Optional, Union
-import json
 
 import requests
 
