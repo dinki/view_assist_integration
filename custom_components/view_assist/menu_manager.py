@@ -16,6 +16,7 @@ from .const import (
     CONF_MENU_ITEMS,
     CONF_MENU_TIMEOUT,
     CONF_SHOW_MENU_BUTTON,
+    CONF_STATUS_ICONS,
     DEFAULT_ENABLE_MENU,
     DEFAULT_ENABLE_MENU_TIMEOUT,
     DEFAULT_MENU_ITEMS,
@@ -65,6 +66,7 @@ class MenuManager:
         self._pending_updates: Dict[str, Dict[str, any]] = {}
         self._update_event = asyncio.Event()
         self._update_task: Optional[asyncio.Task] = None
+        self._pending_option_updates: Dict[str, List[str]] = {}
 
         config.async_on_unload(self.cleanup)
 
@@ -99,7 +101,7 @@ class MenuManager:
                     menu_items if menu_items else []
                 )
 
-                status_icons = state.attributes.get("status_icons", [])
+                status_icons = state.attributes.get(CONF_STATUS_ICONS, [])
                 self._menu_states[entity_id].status_icons = (
                     status_icons if status_icons else []
                 )
@@ -149,7 +151,7 @@ class MenuManager:
         changes = {}
 
         # Always refresh system_icons from current status_icons in the entity state
-        current_status_icons = state.attributes.get("status_icons", [])
+        current_status_icons = state.attributes.get(CONF_STATUS_ICONS, [])
 
         # Update system_icons whenever we toggle the menu
         system_icons = [
@@ -241,6 +243,8 @@ class MenuManager:
                 menu_state.configured_items = updated_items
                 changes["menu_items"] = updated_items
 
+                await self._save_to_config_entry_options(entity_id, CONF_MENU_ITEMS, updated_items)
+
                 # If menu is active, update visible status icons too
                 if menu_state.active:
                     updated_icons = arrange_status_icons(
@@ -262,6 +266,8 @@ class MenuManager:
             if updated_icons != menu_state.status_icons:
                 menu_state.status_icons = updated_icons
                 changes["status_icons"] = updated_icons
+
+                await self._save_to_config_entry_options(entity_id, CONF_STATUS_ICONS, updated_icons)
 
         if changes:
             await self._update_entity_state(entity_id, changes)
@@ -304,6 +310,8 @@ class MenuManager:
                 menu_state.configured_items = updated_items
                 changes["menu_items"] = updated_items
 
+                await self._save_to_config_entry_options(entity_id, CONF_MENU_ITEMS, updated_items)
+
                 # If menu is active, update visible status icons too
                 if menu_state.active:
                     updated_icons = arrange_status_icons(
@@ -326,11 +334,29 @@ class MenuManager:
                 menu_state.status_icons = updated_icons
                 changes["status_icons"] = updated_icons
 
+                await self._save_to_config_entry_options(entity_id, CONF_STATUS_ICONS, updated_icons)
+
         if changes:
             await self._update_entity_state(entity_id, changes)
 
         for item in items:
             self._cancel_item_timeout(entity_id, item, from_menu)
+
+    async def _save_to_config_entry_options(self, entity_id: str, option_key: str, value: list) -> None:
+        """Save menu items or status icons to config entry options for persistence."""
+        config_entry = get_config_entry_by_entity_id(self.hass, entity_id)
+        if not config_entry:
+            _LOGGER.warning(
+                "Cannot save %s for %s - config entry not found", option_key, entity_id)
+            return
+
+        new_options = dict(config_entry.options)
+        new_options[option_key] = value
+
+        self.hass.config_entries.async_update_entry(
+            config_entry,
+            options=new_options
+        )
 
     def _setup_timeout(self, entity_id: str, timeout: int) -> None:
         """Setup timeout for menu."""
