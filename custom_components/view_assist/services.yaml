@@ -76,6 +76,16 @@ set_timer:
       required: true
       selector:
         text:
+    language:
+      name: Language
+      description: The desired language to analyze the time sentence
+      default: en
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: English
+              value: en
 cancel_timer:
   name: "Cancel timer"
   description: "Cancel running timer"
