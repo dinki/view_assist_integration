@@ -1,0 +1,4 @@
+mutagen~=1.47.0
+voluptuous~=0.15.2
+homeassistant~=2025.4.4
+wordtodigits~=1.0.2

@@ -4,6 +4,7 @@ from asyncio import TimerHandle
 import logging
 
 import voluptuous as vol
+from homeassistant.components.conversation import ATTR_LANGUAGE
 
 from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, ATTR_NAME, ATTR_TIME
 from homeassistant.core import (
@@ -69,6 +70,7 @@ SET_TIMER_SERVICE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_NAME): str,
         vol.Required(ATTR_TIME): str,
         vol.Optional(ATTR_EXTRA): vol.Schema({}, extra=vol.ALLOW_EXTRA),
+        vol.Required(ATTR_LANGUAGE): str,
     }
 )
 
@@ -86,6 +88,7 @@ SNOOZE_TIMER_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_TIMER_ID): str,
         vol.Required(ATTR_TIME): str,
+        vol.Required(ATTR_LANGUAGE): str,
     }
 )
 
@@ -306,8 +309,9 @@ class VAServices:
         name = call.data.get(ATTR_NAME)
         timer_time = call.data.get(ATTR_TIME)
         extra_data = call.data.get(ATTR_EXTRA)
+        language = call.data.get(ATTR_LANGUAGE)
 
-        sentence, timer_info = decode_time_sentence(timer_time)
+        sentence, timer_info = decode_time_sentence(timer_time, language)
         _LOGGER.debug("Time decode: %s -> %s", sentence, timer_info)
         if entity_id is None and device_id is None:
             mimic_device = get_mimic_entity_id(self.hass)
@@ -332,6 +336,7 @@ class VAServices:
                 timer_info=timer_info,
                 name=name,
                 extra_info=extra_info,
+                language=language,
             )
 
             return {"timer_id": timer_id, "timer": timer, "response": response}
@@ -341,8 +346,9 @@ class VAServices:
         """Handle a set timer service call."""
         timer_id = call.data.get(ATTR_TIMER_ID)
         timer_time = call.data.get(ATTR_TIME)
+        language = call.data.get(ATTR_LANGUAGE)
 
-        _, timer_info = decode_time_sentence(timer_time)
+        _, timer_info = decode_time_sentence(timer_time, language)
 
         if timer_info:
             t: VATimers = self.hass.data[DOMAIN][TIMERS]
