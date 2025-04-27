@@ -220,7 +220,7 @@ or
 where [action] is one of started, cancelled, warning, expired, snoozed
 
 ## Translation Instructions:
-1. Copy the file [timers_english.py](../translations/timers/timers_english.py) and rename it to the language you want to translate to.
+1. Copy the file [timers_english.py](../translations/timers/timers_en.py) and rename it to the language you want to translate to.
 2. Translate the text in the file to your language. Please be careful to not change the name of the variables. There are three types of sections:
     - Needs Translation: These are word and phrases that need to be translated.
     - Might Need Translation: These are words and phrases that might need to be translated. They use words from the previous section to form sentences. If they make sense in your language, you can leave them as is.
@@ -231,7 +231,8 @@ where [action] is one of started, cancelled, warning, expired, snoozed
     - Import the translation file into [test_timers_all_languages.py](../tests/test_timers_all_languages.py) and add the language to the list of supported languages (involves updating all level top level dicts).
     - Duplicate the [test_timers_en.py](../tests/test_timers_en.py) file and rename it to the language you want to test.
     - Run tests to confirm things work as expected.
-5. Update the language field in the [services.yaml](../services.yaml) file with the language code you added.
+5. Update the language field in the [services.yaml](../services.yaml) file with the language code you added (needs to match the value defined in the `TimerLanguage` class).
+    - Needs to be done for the `set_timer` and `snooze_timer` services.
 6. Move code to your Home Assistant custom component directory and test it out.
 
 ## Outstanding TODOs

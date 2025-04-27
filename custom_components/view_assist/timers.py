@@ -40,7 +40,7 @@ from .const import (
 )
 from .helpers import get_entity_id_from_conversation_device_id, get_mimic_entity_id
 
-from .translations.timers import timers_english
+from .translations.timers import timers_en
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,43 +90,43 @@ TIMERS_STORE_NAME = f"{DOMAIN}.{TIMERS}"
 
 # Translation Imports
 WEEKDAYS= {
-    "en": timers_english.WEEKDAYS  # Add more languages here
+    "en": timers_en.WEEKDAYS  # Add more languages here
 }
 
 SPECIAL_HOURS = {
-    "en": timers_english.SPECIAL_HOURS  # Add more languages here
+    "en": timers_en.SPECIAL_HOURS  # Add more languages here
 }
 
 HOUR_FRACTIONS = {
-    "en": timers_english.HOUR_FRACTIONS  # Add more languages here
+    "en": timers_en.HOUR_FRACTIONS  # Add more languages here
 }
 
 SPECIAL_AMPM = {
-    "en": timers_english.SPECIAL_AMPM  # Add more languages here
+    "en": timers_en.SPECIAL_AMPM  # Add more languages here
 }
 
 DIRECT_REPLACE = {
-    "en": timers_english.DIRECT_REPLACE  # Add more languages here
+    "en": timers_en.DIRECT_REPLACE  # Add more languages here
 }
 
 REFERENCES = {
-    "en": timers_english.REFERENCES  # Add more languages here
+    "en": timers_en.REFERENCES  # Add more languages here
 }
 
 SINGULARS = {
-    "en": timers_english.SINGULARS  # Add more languages here
+    "en": timers_en.SINGULARS  # Add more languages here
 }
 
 REGEXES = {
-    "en": timers_english.REGEXES  # Add more languages here
+    "en": timers_en.REGEXES  # Add more languages here
 }
 
 REGEX_DAYS = {
-    "en": timers_english.REGEX_DAYS  # Add more languages here
+    "en": timers_en.REGEX_DAYS  # Add more languages here
 }
 
 INTERVAL_DETECTION_REGEX = {
-    "en": timers_english.INTERVAL_DETECTION_REGEX  # Add more languages here
+    "en": timers_en.INTERVAL_DETECTION_REGEX  # Add more languages here
 }
 
 
@@ -308,7 +308,7 @@ def decode_time_sentence(sentence: str, language: TimerLanguage):
                     meridiem=decoded[4],
                 )
     _LOGGER.warning(
-        "Time senstence decoder - Unable to decode: %s -> %s", sentence, None
+        "Time sentence decoder - Unable to decode: %s -> %s", sentence, None
     )
     return sentence, None
 
@@ -874,7 +874,7 @@ class VATimers:
 
             encoded_duration = encode_datetime_to_human("TimerInterval", expiry, timer.language)
 
-            return timer_id, timer.to_dict(), encoded_duration
+            return timer_id, self.format_timer_output(timer), encoded_duration
         return None, None, "unable to snooze"
 
     async def cancel_timer(
