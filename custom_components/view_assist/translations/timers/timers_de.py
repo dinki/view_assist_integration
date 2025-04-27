@@ -1,118 +1,119 @@
 #####################
 # NEEDS TRANSLATION #
 #####################
-DAY_SINGULAR = "day"
-DAY_PLURAL = "days"
+DAY_SINGULAR = "Tag"
+DAY_PLURAL = "Tage"
 DAY_SHORT = "d"
-HOUR_SINGULAR = "hour"
-HOUR_PLURAL = "hours"
+HOUR_SINGULAR = "Stunde"
+HOUR_PLURAL = "Stunden"
 HOUR_SHORT = "h"
-MINUTE_SINGULAR = "minute"
-MINUTE_PLURAL = "minutes"
+MINUTE_SINGULAR = "Minute"
+MINUTE_PLURAL = "Minuten"
 MINUTE_SHORT = "m"
-SECOND_SINGULAR = "second"
-SECOND_PLURAL = "seconds"
+SECOND_SINGULAR = "Sekunde"
+SECOND_PLURAL = "Sekunden"
 SECOND_SHORT = "s"
 
 WEEKDAYS = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
+    "montag",
+    "dienstag",
+    "mittwoch",
+    "donnerstag",
+    "freitag",
+    "samstag",
+    "sonntag",
 ]
 SPECIAL_DAYS = {
-    "today": 0,
-    "tomorrow": 1,
+    "heute": 0,
+    "morgen": 1,
 }
 REFERENCES = {
-    "next": "next",
-    "tomorrow": "tomorrow",
-    "this": "this",
-    "at": "at",
-    "and": "and",
-    "to": "to",
-    "past": "past",
+    "next": "nächsten",
+    "tomorrow": "morgen",
+    "this": "dieser",
+    "at": "um",
+    "and": "und",
+    "to": "vor",
+    "past": "nach",
 }
 SPECIAL_HOURS = {
-    "midnight": 0,
-    "noon": 12,
+    "mitternacht": 0,
+    "mittag": 12,
 }
 HOUR_FRACTIONS = {
     "1/4": 15,
-    "quarter": 15,
+    "viertel": 15,
     "1/2": 30,
-    "half": 30,
+    "halb": 30,
     "3/4": 45,
-    "three quarters": 45,
+    "dreiviertel": 45,
+    "drei viertel": 45,
 }
 AMPM = ["am", "pm"]
 SPECIAL_AMPM = {
-    "morning": "am",
-    "tonight": "pm",
-    "afternoon": "pm",
-    "evening": "pm",
+    "morgens": "am",
+    "heute abend": "pm",
+    "nachmittags": "pm",
+    "abends": "pm",
 }
 # Phrases that will be string replaced, irrespective of the regex
 DIRECT_REPLACE = {
-    "a day": "1 day",
-    "an hour": "1 hour",
+    "ein tag": "1 tag",
+    "eine stunde": "1 stunde",
 }
 
 # Allow natural language times
-# quarter past 11
-# 20 past five
-# half past 12
-# half past twelve
-# twenty to four
-# twenty to four AM
-# twenty to four PM
-# 20 to 4:00 PM
+# viertel nach 11
+# 20 nach fünf
+# halb 12
+# halb zwölf
+# zwanzig vor vier
+# zwanzig vor vier morgens
+# zwanzig vor vier abends
+# 20 vor 4:00 abends
+# um Mitternacht
 REGEX_SUPER_TIME = (
     rf"(?i)\b(?P<{DAY_SINGULAR}>"
     + ("|".join(WEEKDAYS + list(SPECIAL_DAYS)))
-    + r")?[ ]?(?:at)?[ ]?(\d+|"  # Wording or Word Sequence needs translating
-    + "|".join(list(HOUR_FRACTIONS))
-    + rf")\s({REFERENCES['to']}|{REFERENCES['past']})\s(\d+|"
-    + ("|".join(SPECIAL_HOURS))
-    + r")(?::\d+)?[ ]?("
+    + r")?[ ]?(?:um|am)?[ ]?("
+    + "|".join(list(HOUR_FRACTIONS) + list(SPECIAL_HOURS))
+    + r"|[01]?[0-9]|2[0-3])\s?("
+    + rf"{REFERENCES['to']}|{REFERENCES['past']})?\s?([0-5]?[0-9])?(?::[0-5][0-9])?[ ]?("
     + "|".join(AMPM + list(SPECIAL_AMPM))
     + r")?\b"
 )
 
 
 # All natural language intervals
-# 2 1/2 hours
-# 2 and a half hours
-# two and a half hours
-# one and a quarter hours
-# 1 1/2 minutes
-# three quarters of an hour
-# 3/4 of an hour
-# half an hour
-# 1/2 an hour
-# quarter of an hour
-# 1/4 of an hour
+# 2 1/2 Stunden
+# 2 und eine halbe Stunde
+# zwei und eine halbe Stunde
+# eine und eine viertel Stunde
+# 1 1/2 Minuten
+# drei Viertel einer Stunde
+# 3/4 einer Stunde
+# eine halbe Stunde
+# 1/2 einer Stunde
+# ein Viertel einer Stunde
+# 1/4 einer Stunde
 REGEX_SUPER_HOUR_INTERVAL = (
     r"()(\d+)?"  # noqa: ISC003
-    + r"[ ]?(?:and a)?[ ]?("  # Wording or Word Sequence needs translating
+    + r"[ ]?(?:und eine)?[ ]?("  # Übersetzung der Wortfolge
     + "|".join(HOUR_FRACTIONS)
-    + r")[ ](?:an|of an)?[ ]?(?:hours?)()"  # Wording or Word Sequence needs translating
+    + r")[ ](?:einer|von einer)?[ ]?(?:stunden?)()"  # Übersetzung der Wortfolge
 )
 
 REGEX_SUPER_MIN_INTERVAL = (
     r"()()(\d+)?"  # noqa: ISC003
-    + r"[ ]?(?:and a)?[ ]?("  # Wording or Word Sequence needs translating
+    + r"[ ]?(?:und eine)?[ ]?("  # Übersetzung der Wortfolge
     + "|".join(HOUR_FRACTIONS)
-    + r")[ ](?:an|of an)?[ ]?(?:minutes?)"  # Wording or Word Sequence needs translating
+    + r")[ ](?:einer|von einer)?[ ]?(?:minuten?)"  # Übersetzung der Wortfolge
 )
 
 REGEX_ALT_SUPER_INTERVAL = (
     r"()"  # noqa: ISC003
-    + r"(?:([01]?[0-9]|2[0-3]]|an) hours?)?"  # Wording or Word Sequence needs translating
-    + r"(?:[ ]?(?:and a?)?[ ]?)?"  # Wording or Word Sequence needs translating
+    + r"(?:([01]?[0-9]|2[0-3]]|eine) stunden?)?"  # Übersetzung der Wortfolge
+    + r"(?:[ ]?(?:und eine?)?[ ]?)?"  # Übersetzung der Wortfolge
     + r"("
     + "|".join(HOUR_FRACTIONS)
     + r")?()"
@@ -155,8 +156,8 @@ REGEX_ALT_TIME = (
     r"(?i)\b("
     + ("|".join(WEEKDAYS + list(SPECIAL_DAYS)))
     + "|"
-    + ("|".join([f"{REFERENCES['next']} {day}" for day in WEEKDAYS])) # Might need translating
-    + rf")?[ ]?(?:{REFERENCES['at']})?[ ]?"
+    + ("|".join([f"{REFERENCES['next']} {day}" for day in WEEKDAYS]))
+    + r")?[ ]?(?:um|am)?[ ]?"
     + r"("
     + "|".join(list(SPECIAL_HOURS))
     + r")()()()"

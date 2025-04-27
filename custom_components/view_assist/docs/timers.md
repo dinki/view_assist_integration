@@ -220,7 +220,7 @@ or
 where [action] is one of started, cancelled, warning, expired, snoozed
 
 ## Translation Instructions:
-1. Copy the file [timers_english.py](../translations/timers/timers_en.py) and rename it to the language you want to translate to.
+1. Copy the file [timers_en.py](../translations/timers/timers_en.py) and rename it to the language you want to translate to.
 2. Translate the text in the file to your language. Please be careful to not change the name of the variables. There are three types of sections:
     - Needs Translation: These are word and phrases that need to be translated.
     - Might Need Translation: These are words and phrases that might need to be translated. They use words from the previous section to form sentences. If they make sense in your language, you can leave them as is.
