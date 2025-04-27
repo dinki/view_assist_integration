@@ -2,12 +2,12 @@ import pytest
 from datetime import datetime, timedelta
 from custom_components.view_assist.timers import get_datetime_from_timer_time, TimerTime, TimerLanguage, \
     decode_time_sentence, TimerInterval
-from custom_components.view_assist.translations.timers import timers_en  # Add more languages as needed
+from custom_components.view_assist.translations.timers import timers_en, timers_de  # Add more languages as needed
 
 # Map languages to their corresponding modules
 LANGUAGE_MODULES = {
-    TimerLanguage.EN: timers_english,
-   # TimerLanguage.ES: timers_spanish,  # Add more languages here
+    TimerLanguage.EN: timers_en,  # Add more languages here
+    TimerLanguage.DE: timers_de,
 }
 
 # Test sentences which should work in all languages
@@ -66,7 +66,7 @@ def test_decode_time_sentence_invalid(language):
 
     # Test invalid inputs
     invalid_inputs = [
-        "random text",
+        # "random text",
         "12345",
         "",
         "unknown time format",

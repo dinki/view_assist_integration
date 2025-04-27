@@ -41,6 +41,7 @@ from .const import (
 from .helpers import get_entity_id_from_conversation_device_id, get_mimic_entity_id
 
 from .translations.timers import timers_en
+from .translations.timers import timers_de
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,44 +90,59 @@ TIMERS = "timers"
 TIMERS_STORE_NAME = f"{DOMAIN}.{TIMERS}"
 
 # Translation Imports
-WEEKDAYS= {
-    "en": timers_en.WEEKDAYS  # Add more languages here
+WEEKDAYS = {
+    "en": timers_en.WEEKDAYS,  # Add more languages here
+    "de": timers_de.WEEKDAYS,
 }
 
 SPECIAL_HOURS = {
-    "en": timers_en.SPECIAL_HOURS  # Add more languages here
+    "en": timers_en.SPECIAL_HOURS,  # Add more languages here
+    "de": timers_de.SPECIAL_HOURS,
 }
 
 HOUR_FRACTIONS = {
-    "en": timers_en.HOUR_FRACTIONS  # Add more languages here
+    "en": timers_en.HOUR_FRACTIONS,  # Add more languages here
+    "de": timers_de.HOUR_FRACTIONS,
 }
 
 SPECIAL_AMPM = {
-    "en": timers_en.SPECIAL_AMPM  # Add more languages here
+    "en": timers_en.SPECIAL_AMPM,  # Add more languages here
+    "de": timers_de.SPECIAL_AMPM,
 }
 
 DIRECT_REPLACE = {
-    "en": timers_en.DIRECT_REPLACE  # Add more languages here
+    "en": timers_en.DIRECT_REPLACE,  # Add more languages here
+    "de": timers_de.DIRECT_REPLACE,
 }
 
 REFERENCES = {
-    "en": timers_en.REFERENCES  # Add more languages here
+    "en": timers_en.REFERENCES,  # Add more languages here
+    "de": timers_de.REFERENCES,
 }
 
 SINGULARS = {
-    "en": timers_en.SINGULARS  # Add more languages here
+    "en": timers_en.SINGULARS,  # Add more languages here
+    "de": timers_de.SINGULARS,
+}
+
+PLURAL_MAPPING = {
+    "en": timers_en.PLURAL_MAPPING,  # Add more languages here
+    "de": timers_de.PLURAL_MAPPING,
 }
 
 REGEXES = {
-    "en": timers_en.REGEXES  # Add more languages here
+    "en": timers_en.REGEXES,  # Add more languages here
+    "de": timers_de.REGEXES,
 }
 
 REGEX_DAYS = {
-    "en": timers_en.REGEX_DAYS  # Add more languages here
+    "en": timers_en.REGEX_DAYS,  # Add more languages here
+    "de": timers_de.REGEX_DAYS,
 }
 
 INTERVAL_DETECTION_REGEX = {
-    "en": timers_en.INTERVAL_DETECTION_REGEX  # Add more languages here
+    "en": timers_en.INTERVAL_DETECTION_REGEX,  # Add more languages here
+    "de": timers_de.INTERVAL_DETECTION_REGEX,
 }
 
 
@@ -182,6 +198,7 @@ class TimerLanguage(StrEnum):
     """Language enums."""
 
     EN = "en"
+    DE = "de"
 
 
 @dataclass
@@ -251,7 +268,7 @@ def decode_time_sentence(sentence: str, language: TimerLanguage):
     _LOGGER.debug("%s is of type %s", sentence, "interval" if is_interval else "time")
 
     # Convert all word numbers to ints
-    if not sentence.startswith("three quarters"):
+    if not sentence.startswith("three quarters"): # TODO Figure out why this is needed
         sentence = wordtodigits.convert(sentence)
 
     # Direct replace parts of the string to help decoding
@@ -282,11 +299,11 @@ def decode_time_sentence(sentence: str, language: TimerLanguage):
                 for i, v in enumerate(decoded):
                     if i > 0:
                         with contextlib.suppress(KeyError):
-                            decoded[i] = SPECIAL_HOURS[language][v]
+                            decoded[i] = SPECIAL_HOURS[language][v.lower()]
                         with contextlib.suppress(KeyError):
-                            decoded[i] = HOUR_FRACTIONS[language][v]
+                            decoded[i] = HOUR_FRACTIONS[language][v.lower()]
                         with contextlib.suppress(KeyError):
-                            decoded[i] = SPECIAL_AMPM[language][v]
+                            decoded[i] = SPECIAL_AMPM[language][v.lower()]
 
                 # Make time objects
                 if is_interval:
@@ -302,8 +319,8 @@ def decode_time_sentence(sentence: str, language: TimerLanguage):
                 # Handle super time (which is in different format)
                 return sentence, TimerTime(
                     day=decoded[0],
-                    hour=decoded[3] - 1 if decoded[2] == "to" else decoded[3],
-                    minute=60 - decoded[1] if decoded[2] == "to" else decoded[1],
+                    hour=decoded[3] - 1 if decoded[2] == REFERENCES[language]["to"] else decoded[3],
+                    minute=60 - decoded[1] if decoded[2] == REFERENCES[language]["to"] else decoded[1],
                     second=0,
                     meridiem=decoded[4],
                 )
@@ -421,7 +438,10 @@ def encode_datetime_to_human(
 
     def declension(term: str, qty: int) -> str:
         if qty > 1:
-            return f"{term}s"
+            if term in PLURAL_MAPPING[language]:
+                return PLURAL_MAPPING[language][term]
+            else:
+                return f"{term}s"
         return term
 
     dt_now = dt.datetime.now()
