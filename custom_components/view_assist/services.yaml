@@ -160,12 +160,20 @@ snooze_timer:
         text:
     time:
       name: "Snooze duration"
-      description: "The snooze duration in minutes"
+      description: "The snooze duration in a sentence (e.g. 5 minutes)"
       required: true
       selector:
-        number:
-          min: 1
-          mode: box
+        text:
+    language:
+      name: Language
+      description: The desired language to analyze the snooze duration
+      default: en
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: English
+              value: en
 sound_alarm:
   name: "Sound alarm"
   description: "Sound alarm on a media device with an attempt to restore any already playing media"

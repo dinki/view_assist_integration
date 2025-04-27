@@ -88,6 +88,7 @@ SNOOZE_TIMER_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_TIMER_ID): str,
         vol.Required(ATTR_TIME): str,
+        vol.Required(ATTR_LANGUAGE): str,
     }
 )
 
@@ -310,7 +311,7 @@ class VAServices:
         extra_data = call.data.get(ATTR_EXTRA)
         language = call.data.get(ATTR_LANGUAGE)
 
-        sentence, timer_info = decode_time_sentence(timer_time)
+        sentence, timer_info = decode_time_sentence(timer_time, language)
         _LOGGER.debug("Time decode: %s -> %s", sentence, timer_info)
         if entity_id is None and device_id is None:
             mimic_device = get_mimic_entity_id(self.hass)
@@ -345,8 +346,9 @@ class VAServices:
         """Handle a set timer service call."""
         timer_id = call.data.get(ATTR_TIMER_ID)
         timer_time = call.data.get(ATTR_TIME)
+        language = call.data.get(ATTR_LANGUAGE)
 
-        _, timer_info = decode_time_sentence(timer_time)
+        _, timer_info = decode_time_sentence(timer_time, language)
 
         if timer_info:
             t: VATimers = self.hass.data[DOMAIN][TIMERS]
