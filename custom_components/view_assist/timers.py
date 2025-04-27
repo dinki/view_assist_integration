@@ -40,6 +40,8 @@ from .const import (
 )
 from .helpers import get_entity_id_from_conversation_device_id, get_mimic_entity_id
 
+from .translations.timers import timers_english
+
 _LOGGER = logging.getLogger(__name__)
 
 SET_TIMER_SERVICE_SCHEMA = vol.Schema(
@@ -86,44 +88,45 @@ VA_COMMAND_EVENT_PREFIX = "va_timer_command_{}"
 TIMERS = "timers"
 TIMERS_STORE_NAME = f"{DOMAIN}.{TIMERS}"
 
-WEEKDAYS = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-]
-SPECIAL_DAYS = {
-    "today": 0,
-    "tomorrow": 1,
+# Translation Imports
+WEEKDAYS= {
+    "en": timers_english.WEEKDAYS  # Add more languages here
 }
-
 
 SPECIAL_HOURS = {
-    "midnight": 0,
-    "noon": 12,
+    "en": timers_english.SPECIAL_HOURS  # Add more languages here
 }
+
 HOUR_FRACTIONS = {
-    "1/4": 15,
-    "quarter": 15,
-    "1/2": 30,
-    "half": 30,
-    "3/4": 45,
-    "three quarters": 45,
+    "en": timers_english.HOUR_FRACTIONS  # Add more languages here
 }
-AMPM = ["am", "pm"]
+
 SPECIAL_AMPM = {
-    "morning": "am",
-    "tonight": "pm",
-    "afternoon": "pm",
-    "evening": "pm",
+    "en": timers_english.SPECIAL_AMPM  # Add more languages here
 }
 
 DIRECT_REPLACE = {
-    "a day": "1 day",
-    "an hour": "1 hour",
+    "en": timers_english.DIRECT_REPLACE  # Add more languages here
+}
+
+REFERENCES = {
+    "en": timers_english.REFERENCES  # Add more languages here
+}
+
+SINGULARS = {
+    "en": timers_english.SINGULARS  # Add more languages here
+}
+
+REGEXES = {
+    "en": timers_english.REGEXES  # Add more languages here
+}
+
+REGEX_DAYS = {
+    "en": timers_english.REGEX_DAYS  # Add more languages here
+}
+
+INTERVAL_DETECTION_REGEX = {
+    "en": timers_english.INTERVAL_DETECTION_REGEX  # Add more languages here
 }
 
 
@@ -175,6 +178,11 @@ class TimerEvent(StrEnum):
     SNOOZED = "snoozed"
     CANCELLED = "cancelled"
 
+class TimerLanguage(StrEnum):
+    """Language enums."""
+
+    EN = "en"
+
 
 @dataclass
 class Timer:
@@ -191,149 +199,19 @@ class Timer:
     updated_at: int = 0
     status: TimerStatus = field(default_factory=TimerStatus.INACTIVE)
     extra_info: dict[str, Any] | None = None
+    language: TimerLanguage = field(default_factory=TimerLanguage.EN)
 
 
-REGEX_DAYS = (
-    r"(?i)\b("
-    + (
-        "|".join(WEEKDAYS + list(SPECIAL_DAYS))
-        + "|"
-        + "|".join(f"Next {weekday}" for weekday in WEEKDAYS)
-    )
-    + ")"
-)
-
-# Find a time in the string and split into day, hours, mins and secs
-# 10:15 AM
-# 1600
-# 15:24
-# Monday at 10:00 AM
-REGEX_TIME = (
-    r"(?i)\b("
-    + ("|".join(WEEKDAYS + list(SPECIAL_DAYS)))
-    + "|"
-    + ("|".join([f"next {day}" for day in WEEKDAYS]))
-    + r")?[ ]?(?:at)?[ ]?([01]?[0-9]|2[0-3]):?([0-5][0-9])(?::([0-9][0-9]))?[ ]?(?:this)?[ ]?("
-    + "|".join(AMPM + list(SPECIAL_AMPM))
-    + r")?\b"
-)
-REGEX_ALT_TIME = (
-    r"(?i)\b("
-    + ("|".join(WEEKDAYS + list(SPECIAL_DAYS)))
-    + "|"
-    + ("|".join([f"next {day}" for day in WEEKDAYS]))
-    + r")?[ ]?(?:at)?[ ]?"
-    + r"("
-    + "|".join(list(SPECIAL_HOURS))
-    + r")()()()"
-)
-
-# Allow natural language times
-# quarter past 11
-# 20 past five
-# half past 12
-# half past twelve
-# twenty to four
-# twenty to four AM
-# twenty to four PM
-# 20 to 4:00 PM
-REGEX_SUPER_TIME = (
-    r"(?i)\b(?P<day>"
-    + ("|".join(WEEKDAYS + list(SPECIAL_DAYS)))
-    + r")?[ ]?(?:at)?[ ]?(\d+|"
-    + "|".join(list(HOUR_FRACTIONS))
-    + r")\s(to|past)\s(\d+|"
-    + ("|".join(SPECIAL_HOURS))
-    + r")(?::\d+)?[ ]?("
-    + "|".join(AMPM + list(SPECIAL_AMPM))
-    + r")?\b"
-)
+def _is_interval(sentence, language: TimerLanguage) -> bool:
+    return re.search(INTERVAL_DETECTION_REGEX[language], sentence) is not None
 
 
-# Find an interval in human readbale form and decode into days, hours, minutes, seconds.
-# 5 minutes 30 seconds
-# 5 minutes
-# 2 hours 30 minutes
-# 30 seconds
-# 2 days 1 hour 20 minutes
-# 1 day 20 minutes
-# 5m
-# 2h
-# 1d 3h
-# 30s
-# 2d 1h 20m
-REGEX_INTERVAL = (
-    r"(?i)\b"
-    r"(?:(?P<days>\d+)\s*(?:d|days?))?\s*"
-    r"(?:(?P<hours>\d+)\s*(?:h|hours?))?\s*"
-    r"(?:(?P<minutes>\d+)\s*(?:m|minutes?))?\s*"
-    r"(?:(?P<seconds>\d+)\s*(?:s|seconds?))?"
-    r"\b"
-)
-
-INTERVAL_DETECTION_REGEX = r"(?i)\b\d+\s*(d|day|days|h|hour|hours|m|minute|minutes|s|second|seconds)\b"
-
-
-# All natural language intervals
-# 2 1/2 hours
-# 2 and a half hours
-# two and a half hours
-# one and a quarter hours
-# 1 1/2 minutes
-# three quarters of an hour
-# 3/4 of an hour
-# half an hour
-# 1/2 an hour
-# quarter of an hour
-# 1/4 of an hour
-REGEX_SUPER_HOUR_INTERVAL = (
-    r"()(\d+)?"  # noqa: ISC003
-    + r"[ ]?(?:and a)?[ ]?("
-    + "|".join(HOUR_FRACTIONS)
-    + r")[ ](?:an|of an)?[ ]?(?:hours?)()"
-)
-
-REGEX_SUPER_MIN_INTERVAL = (
-    r"()()(\d+)?"  # noqa: ISC003
-    + r"[ ]?(?:and a)?[ ]?("
-    + "|".join(HOUR_FRACTIONS)
-    + r")[ ](?:an|of an)?[ ]?(?:minutes?)"
-)
-
-REGEX_ALT_SUPER_INTERVAL = (
-    r"()"  # noqa: ISC003
-    + r"(?:([01]?[0-9]|2[0-3]]|an) hours?)?"
-    + r"(?:[ ]?(?:and a?)?[ ]?)?"
-    + r"("
-    + "|".join(HOUR_FRACTIONS)
-    + r")?()"
-)
-
-REGEXES = {
-    "interval": {
-        "base": REGEX_INTERVAL,
-        "super_hour": REGEX_SUPER_HOUR_INTERVAL,
-        "super_min": REGEX_SUPER_MIN_INTERVAL,
-        "alt_super": REGEX_ALT_SUPER_INTERVAL,
-    },
-    "time": {
-        "base": REGEX_TIME,
-        "alt_base": REGEX_ALT_TIME,
-        "super": REGEX_SUPER_TIME,
-    },
-}
-
-
-def _is_interval(sentence) -> bool:
-    return re.search(INTERVAL_DETECTION_REGEX, sentence) is not None
-
-
-def _is_super(sentence: str, is_interval: bool) -> bool:
+def _is_super(sentence: str, is_interval: bool, language: TimerLanguage) -> bool:
     if is_interval:
-        return re.search(r"\b" + "|".join(HOUR_FRACTIONS), sentence) is not None
+        return re.search(r"\b" + "|".join(HOUR_FRACTIONS[language]), sentence) is not None
     return (
         re.search(
-            r"\b(?:" + "|".join(list(HOUR_FRACTIONS) + list(SPECIAL_HOURS)) + ")",
+            r"\b(?:" + "|".join(list(HOUR_FRACTIONS[language]) + list(SPECIAL_HOURS[language])) + ")",
             sentence,
         )
         is not None
@@ -361,14 +239,14 @@ def _format_time_numbers(time_list: list[str | int]) -> list[int]:
     return time_list
 
 
-def decode_time_sentence(sentence: str):
+def decode_time_sentence(sentence: str, language: TimerLanguage):
     """Decode a time or interval sentence.
 
     Returns a TimerTime or TimerInterval object
     """
     decoded = None
-    is_interval = _is_interval(sentence)
-    is_super = _is_super(sentence, is_interval)
+    is_interval = _is_interval(sentence, language)
+    is_super = _is_super(sentence, is_interval, language)
 
     _LOGGER.debug("%s is of type %s", sentence, "interval" if is_interval else "time")
 
@@ -377,11 +255,11 @@ def decode_time_sentence(sentence: str):
         sentence = wordtodigits.convert(sentence)
 
     # Direct replace parts of the string to help decoding
-    for repl_item, repl_str in DIRECT_REPLACE.items():
+    for repl_item, repl_str in DIRECT_REPLACE[language].items():
         if repl_item in sentence:
             sentence = sentence.replace(repl_item, repl_str)
 
-    for idx, regex in REGEXES["interval" if is_interval else "time"].items():
+    for idx, regex in REGEXES[language]["interval" if is_interval else "time"].items():
         if is_super and idx == "base":
             continue
         match = re.match(regex, sentence)
@@ -393,22 +271,22 @@ def decode_time_sentence(sentence: str):
 
                 # if day is blank look if we need to populate
                 if not is_interval and not decoded[0]:
-                    if day_text := re.findall(REGEX_DAYS, sentence):
+                    if day_text := re.findall(REGEX_DAYS[language], sentence):
                         decoded[0] = day_text[0].lower()
 
                 # If has special hours, set meridiem
-                if decoded[1] in list(SPECIAL_HOURS):
-                    decoded[4] = "am" if SPECIAL_HOURS[decoded[1]] < 12 else "pm"
+                if decoded[1] in list(SPECIAL_HOURS[language]):
+                    decoded[4] = "am" if SPECIAL_HOURS[language][decoded[1]] < 12 else "pm"
 
                 # now iterate and replace text numbers with numbers
                 for i, v in enumerate(decoded):
                     if i > 0:
                         with contextlib.suppress(KeyError):
-                            decoded[i] = SPECIAL_HOURS[v]
+                            decoded[i] = SPECIAL_HOURS[language][v]
                         with contextlib.suppress(KeyError):
-                            decoded[i] = HOUR_FRACTIONS[v]
+                            decoded[i] = HOUR_FRACTIONS[language][v]
                         with contextlib.suppress(KeyError):
-                            decoded[i] = SPECIAL_AMPM[v]
+                            decoded[i] = SPECIAL_AMPM[language][v]
 
                 # Make time objects
                 if is_interval:
@@ -447,30 +325,30 @@ def get_datetime_from_timer_interval(interval: TimerInterval) -> dt.datetime:
 
 
 def get_datetime_from_timer_time(
-    set_time: TimerTime, context_time: bool = True
+    set_time: TimerTime, language: TimerLanguage, context_time: bool = True
 ) -> dt.datetime:
     """Return datetime from TimerTime object."""
 
-    def _calc_days_add(day: str, dt_now: dt.datetime) -> int:
+    def _calc_days_add(day: str, dt_now: dt.datetime, language: TimerLanguage) -> int:
         """Get number of days to add for required weekday from now."""
         has_next = False
 
         # Deal with the likes of next wednesday
-        if "next" in day:
+        if REFERENCES[language]["next"] in day:
             has_next = True
-            day = day.replace("next", "").strip()
+            day = day.replace(REFERENCES[language]["next"], "").strip()
 
-        if day in WEEKDAYS:
+        if day in WEEKDAYS[language]:
             # monday is weekday 0
             current_weekday = dt_now.weekday()
-            set_weekday = WEEKDAYS.index(day)
+            set_weekday = WEEKDAYS[language].index(day)
 
             # Check for 'next' prefix to day or if day less than today (assume next week)
             if set_weekday < current_weekday or has_next:
                 return (7 - current_weekday) + set_weekday
 
             return set_weekday - current_weekday
-        if day == "tomorrow":  # or "tomorrow" in sentence:
+        if day == REFERENCES[language]["tomorrow"]:  # or "tomorrow" in sentence:
             return 1
         return 0
 
@@ -489,7 +367,7 @@ def get_datetime_from_timer_time(
     )
 
     # Set the timer_dt day
-    if add_days := _calc_days_add(set_time.day, timer_dt):
+    if add_days := _calc_days_add(set_time.day, timer_dt, language):
         timer_dt = timer_dt + dt.timedelta(days=add_days)
 
     # Apply fixed context
@@ -508,7 +386,7 @@ def get_datetime_from_timer_time(
     return timer_dt
 
 
-def get_named_day(timer_dt: dt.datetime, dt_now: dt.datetime) -> str:
+def get_named_day(timer_dt: dt.datetime, dt_now: dt.datetime, language: TimerLanguage) -> str:
     """Return a named day or date."""
     days_diff = timer_dt.day - dt_now.day
     if days_diff == 0:
@@ -516,7 +394,7 @@ def get_named_day(timer_dt: dt.datetime, dt_now: dt.datetime) -> str:
     if days_diff == 1:
         return "Tomorrow"
     if days_diff < 7:
-        return f"{WEEKDAYS[timer_dt.weekday()]}".title()
+        return f"{WEEKDAYS[language][timer_dt.weekday()]}".title()
     return timer_dt.strftime("%-d %B")
 
 
@@ -536,6 +414,7 @@ def get_formatted_time(timer_dt: dt.datetime, h24format: bool = False) -> str:
 def encode_datetime_to_human(
     timer_type: str,
     timer_dt: dt.datetime,
+    language: TimerLanguage,
     h24format: bool = False,
 ) -> str:
     """Encode datetime into human speech sentence."""
@@ -556,19 +435,19 @@ def encode_datetime_to_human(
 
         response = []
         if days:
-            response.append(f"{days} {declension('day', days)}")
+            response.append(f"{days} {declension(SINGULARS[language]['day'], days)}")
         if hours:
-            response.append(f"{hours} {declension('hour', hours)}")
+            response.append(f"{hours} {declension(SINGULARS[language]['hour'], hours)}")
         if minutes:
-            response.append(f"{minutes} {declension('minute', minutes)}")
+            response.append(f"{minutes} {declension(SINGULARS[language]['minute'], minutes)}")
         if seconds:
-            response.append(f"{seconds} {declension('second', seconds)}")
+            response.append(f"{seconds} {declension(SINGULARS[language]['second'], seconds)}")
 
         # Now create sentence
         duration: str = ""
         for i, entry in enumerate(response):
             if i == len(response) - 1 and duration:
-                duration += " and " + entry
+                duration += f" {REFERENCES[language]['and']} " + entry
             else:
                 duration += " " + entry
 
@@ -576,9 +455,9 @@ def encode_datetime_to_human(
 
     if timer_type == "TimerTime":
         # do date bit - today, tomorrow, day of week if in next 7 days, date
-        output_date = get_named_day(timer_dt, dt_now)
+        output_date = get_named_day(timer_dt, dt_now, language)
         output_time = get_formatted_time(timer_dt, h24format)
-        return f"{output_date} at {output_time}"
+        return f"{output_date} {REFERENCES[language]['at']} {output_time}"
 
     return timer_dt
 
@@ -871,6 +750,7 @@ class VATimers:
         pre_expire_warning: int = 10,
         start: bool = True,
         extra_info: dict[str, Any] | None = None,
+        language: TimerLanguage = TimerLanguage.EN,
     ) -> tuple:
         """Add timer to store."""
 
@@ -884,7 +764,7 @@ class VATimers:
         # calculate expiry time from TimerTime or TimerInterval
         timer_info_class = timer_info.__class__.__name__
         if timer_info_class == "TimerTime":
-            expiry = get_datetime_from_timer_time(timer_info)
+            expiry = get_datetime_from_timer_time(timer_info, language)
         elif timer_info_class == "TimerInterval":
             expiry = get_datetime_from_timer_interval(timer_info)
         else:
@@ -909,6 +789,7 @@ class VATimers:
                 updated_at=time_now_unix,
                 status=TimerStatus.INACTIVE,
                 extra_info=extra_info,
+                language=language,
             )
 
             self.store.timers[timer_id] = timer
@@ -917,7 +798,7 @@ class VATimers:
             if start:
                 await self.start_timer(timer_id, timer)
 
-            encoded_time = encode_datetime_to_human(timer_info_class, expiry)
+            encoded_time = encode_datetime_to_human(timer_info_class, expiry, language)
             return timer_id, self.format_timer_output(timer), encoded_time
 
         return None, None, "already exists"
@@ -991,7 +872,7 @@ class VATimers:
             await self.start_timer(timer_id, timer)
             await self._fire_event(timer_id, TimerEvent.SNOOZED)
 
-            encoded_duration = encode_datetime_to_human("TimerInterval", expiry)
+            encoded_duration = encode_datetime_to_human("TimerInterval", expiry, timer.language)
 
             return timer_id, timer.to_dict(), encoded_duration
         return None, None, "unable to snooze"
@@ -1102,11 +983,12 @@ class VATimers:
                 "seconds": int(seconds),
             }
 
-        def dynamic_remaining(timer_type: TimerClass, expires_at: int) -> str:
+        def dynamic_remaining(timer_type: TimerClass, expires_at: int, language: TimerLanguage) -> str:
             """Generate dynamic name."""
             return encode_datetime_to_human(
                 timer_type,
                 dt.datetime.fromtimestamp(expires_at),
+                language
             )
 
         dt_now = dt.datetime.now(self.tz)
@@ -1125,14 +1007,15 @@ class VATimers:
             "expiry": {
                 "seconds": math.ceil(expires_in_seconds(timer.expires_at)),
                 "interval": expires_in_interval(timer.expires_at),
-                "day": get_named_day(dt_expiry, dt_now),
+                "day": get_named_day(dt_expiry, dt_now, timer.language),
                 "time": get_formatted_time(dt_expiry),
-                "text": dynamic_remaining(timer.timer_type, timer.expires_at),
+                "text": dynamic_remaining(timer.timer_type, timer.expires_at, timer.language),
             },
             "created_at": dt.datetime.fromtimestamp(timer.created_at, self.tz),
             "updated_at": dt.datetime.fromtimestamp(timer.updated_at, self.tz),
             "status": timer.status,
             "extra_info": timer.extra_info,
+            "language": timer.language,
         }
 
     async def _wait_for_timer(
