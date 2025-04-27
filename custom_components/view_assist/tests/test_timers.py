@@ -11,6 +11,13 @@ from custom_components.view_assist.timers import decode_time_sentence, TimerTime
         ("30 seconds", TimerInterval(seconds=30)),
         ("2 days 1 hour 20 minutes", TimerInterval(days=2, hours=1, minutes=20)),
 
+        # Test shorthand intervals
+        ("5m", TimerInterval(minutes=5)),
+        ("2h", TimerInterval(hours=2)),
+        ("1d 3h", TimerInterval(days=1, hours=3)),
+        ("30s", TimerInterval(seconds=30)),
+        ("2d 1h 20m", TimerInterval(days=2, hours=1, minutes=20)),
+
         # Test specific times
         ("10:30 AM", TimerTime(hour=10, minute=30, meridiem="am")),
         ("quarter past 3", TimerTime(hour=3, minute=15)),
@@ -21,6 +28,14 @@ from custom_components.view_assist.timers import decode_time_sentence, TimerTime
         # Test special cases
         ("midnight", TimerTime(hour=0, minute=0, meridiem="am")),
         ("noon", TimerTime(hour=12, minute=0, meridiem="pm")),
+
+        # Additional examples from regex comments
+        ("at 10:30 AM", TimerTime(hour=10, minute=30, meridiem="am")),
+        ("at quarter past 3", TimerTime(hour=3, minute=15)),
+        ("at half past 12", TimerTime(hour=12, minute=30)),
+        ("at 20 to 4 PM", TimerTime(hour=3, minute=40, meridiem="pm")),
+        ("at midnight", TimerTime(hour=0, minute=0, meridiem="am")),
+        ("at noon", TimerTime(hour=12, minute=0, meridiem="pm")),
     ],
 )
 def test_decode_time_sentence(input_sentence, expected_output):

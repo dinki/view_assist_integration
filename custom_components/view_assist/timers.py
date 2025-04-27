@@ -204,13 +204,21 @@ REGEX_SUPER_TIME = (
 # 30 seconds
 # 2 days 1 hour 20 minutes
 # 1 day 20 minutes
+# 5m
+# 2h
+# 1d 3h
+# 30s
+# 2d 1h 20m
 REGEX_INTERVAL = (
-    r"(?i)\b"  # noqa: ISC003
-    + r"(?:(\d+) days?)?"
-    + r"[ ]?(?:and)?[ ]?(?:([01]?[0-9]|2[0-3]]) hours?)?"
-    + r"[ ]?(?:and)?[ ]?(?:([0-9]?[0-9]?[0-9]) minutes?)?"
-    + r"[ ]?(?:and)?[ ]?(?:(\d+) seconds?)?\b"
+    r"(?i)\b"
+    r"(?:(?P<days>\d+)\s*(?:d|days?))?\s*"
+    r"(?:(?P<hours>\d+)\s*(?:h|hours?))?\s*"
+    r"(?:(?P<minutes>\d+)\s*(?:m|minutes?))?\s*"
+    r"(?:(?P<seconds>\d+)\s*(?:s|seconds?))?"
+    r"\b"
 )
+
+INTERVAL_DETECTION_REGEX = r"(?i)\b\d+\s*(d|day|days|h|hour|hours|m|minute|minutes|s|second|seconds)\b"
 
 
 # All natural language intervals
@@ -264,7 +272,7 @@ REGEXES = {
 
 
 def _is_interval(sentence) -> bool:
-    return re.search(r"\bdays?|hours?|minutes?|seconds?", sentence) is not None
+    return re.search(INTERVAL_DETECTION_REGEX, sentence) is not None
 
 
 def _is_super(sentence: str, is_interval: bool) -> bool:
