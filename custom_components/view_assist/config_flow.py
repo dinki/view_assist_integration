@@ -37,6 +37,7 @@ from .const import (
     CONF_HOME,
     CONF_INTENT,
     CONF_INTENT_DEVICE,
+    CONF_LIST,
     CONF_MEDIAPLAYER_DEVICE,
     CONF_MIC_DEVICE,
     CONF_MIC_UNMUTE,
@@ -74,6 +75,7 @@ from .const import (
     DEFAULT_VIEW_BACKGROUND,
     DEFAULT_VIEW_HOME,
     DEFAULT_VIEW_INTENT,
+    DEFAULT_VIEW_LIST,
     DEFAULT_VIEW_MUSIC,
     DEFAULT_VIEW_TIMEOUT,
     DEFAULT_WEATHER_ENITITY,
@@ -425,6 +427,10 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
                     default=self.config_entry.options.get(
                         CONF_INTENT, DEFAULT_VIEW_INTENT
                     ),
+                ): str,
+                vol.Optional(
+                    CONF_LIST,
+                    default=self.config_entry.options.get(CONF_LIST, DEFAULT_VIEW_LIST),
                 ): str,
                 vol.Optional(
                     CONF_BACKGROUND,

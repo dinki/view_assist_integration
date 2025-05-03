@@ -524,6 +524,16 @@ class EntityListeners:
                 for entity in filtered_list
             ]
 
+            todo_entities = (
+                [
+                    item["id"]
+                    for item in changed_entities
+                    if item.get("id", "").startswith("todo")
+                ]
+                if changed_entities
+                else []
+            )
+
             # Check to make sure filtered_entities is not empty before proceeding
             if filtered_entities:
                 await self.hass.services.async_call(
@@ -535,6 +545,21 @@ class EntityListeners:
                     },
                 )
                 await self.async_browser_navigate(self.config_entry.runtime_data.intent)
+            # If there are no filtered entities but there is a todo entity, show the list view
+            elif todo_entities:
+                await self.hass.services.async_call(
+                    DOMAIN,
+                    "set_state",
+                    service_data={
+                        "entity_id": entity_id,
+                        # If there are somehow multiple affected lists, just use the first one
+                        "list": todo_entities[0],
+                    },
+                )
+                await self.async_browser_navigate(
+                    self.config_entry.runtime_data.list_view
+                )
+
             else:
                 word_count = len(speech_text.split())
                 message_font_size = ["10vw", "8vw", "6vw", "4vw"][
