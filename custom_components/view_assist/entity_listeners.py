@@ -492,28 +492,43 @@ class EntityListeners:
 
         old_state = event.data["old_state"].state
         new_state = event.data["new_state"].state
-        ducking_volume = self.config_entry.runtime_data.default.ducking_volume / 100
 
         if (mic_integration == HASSMIC_DOMAIN and old_state == "wake_word-start") or (
             mic_integration != HASSMIC_DOMAIN
             and new_state == AssistSatelliteState.LISTENING
         ):
+            _LOGGER.debug("Mic is listening, ducking music player volume")
+
+            # Ducking volume is a % of current volume of mediaplayer
+            ducking_percent = self.config_entry.runtime_data.default.ducking_volume
+
             if music_player_volume := self.hass.states.get(
                 music_player_entity_id
             ).attributes.get("volume_level"):
+                _LOGGER.debug("Current music player volume: %s", music_player_volume)
+                # Set current volume for restoring later
                 self.music_player_volume = music_player_volume
 
-                if self.hass.states.get(music_player_entity_id):
-                    if music_player_volume > ducking_volume:
-                        _LOGGER.debug("Ducking music player volume: %s", ducking_volume)
-                        await self.hass.services.async_call(
-                            "media_player",
-                            "volume_set",
-                            {
-                                "entity_id": music_player_entity_id,
-                                "volume_level": ducking_volume,
-                            },
-                        )
+                # Calculate media player volume for ducking
+                ducking_volume = music_player_volume * ((100 - ducking_percent) / 100)
+
+                if self.music_player_volume > ducking_volume:
+                    _LOGGER.debug("Ducking music player volume to: %s", ducking_volume)
+                    await self.hass.services.async_call(
+                        "media_player",
+                        "volume_set",
+                        {
+                            "entity_id": music_player_entity_id,
+                            "volume_level": ducking_volume,
+                        },
+                    )
+
+            else:
+                _LOGGER.debug(
+                    "Music player volume not found, volume ducking not supported"
+                )
+                return
+
         elif (
             (mic_integration == HASSMIC_DOMAIN and new_state == "wake_word-start")
             or (
@@ -522,13 +537,19 @@ class EntityListeners:
             )
         ) and self.music_player_volume is not None:
             if self.hass.states.get(music_player_entity_id):
-                await asyncio.sleep(2)
+                await asyncio.sleep(1)
                 _LOGGER.debug(
                     "Restoring music player volume: %s", self.music_player_volume
                 )
                 # Restore gradually to avoid sudden volume change
+                current_music_player_volume = self.hass.states.get(
+                    music_player_entity_id
+                ).attributes.get("volume_level")
                 for i in range(1, 11):
-                    volume = min(self.music_player_volume, ducking_volume + (i * 0.1))
+                    volume = min(
+                        self.music_player_volume,
+                        current_music_player_volume + (i * 0.1),
+                    )
                     await self.hass.services.async_call(
                         "media_player",
                         "volume_set",

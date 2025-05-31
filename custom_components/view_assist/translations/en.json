@@ -148,7 +148,7 @@
           "do_not_disturb": "Enable do not disturb at startup",
           "use_announce": "Disable announce on this device",
           "micunmute": "Unmute microphone on HA start/restart",
-          "ducking_volume": "Volume Ducking"
+          "ducking_volume": "Volume ducking percentage"
         },
         "data_description": {
           "mode": "The default mode for this satellite device",
@@ -156,7 +156,7 @@
           "do_not_disturb": "Default state for do not disturb mode on HA restart",
           "use_announce": "Some media player devices, like BrowserMod, cannot use the Home Assistant announce feature while media is playing. This option allows for turning off announce messages if problems arise. Default is on.",
           "micunmute": "Helpful for Stream Assist devices",
-          "ducking_volume": "Lower media playback volume to this level when Assist is active"
+          "ducking_volume": "Lower media playback volume by this percentage when Assist is active"
         }
       },
       "integration_options": {

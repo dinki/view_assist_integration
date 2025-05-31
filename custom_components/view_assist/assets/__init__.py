@@ -248,11 +248,6 @@ class AssetsManager:
             ) < timedelta(minutes=VERSION_CHECK_INTERVAL):
                 return
 
-        _LOGGER.debug(
-            "Updating latest versions for %s",
-            f"{asset_class} asset class" if asset_class else "all asset classes",
-        )
-
         managers = self.managers
         if asset_class and asset_class in self.managers:
             managers = {k: v for k, v in self.managers.items() if k == asset_class}

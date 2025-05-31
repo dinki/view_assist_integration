@@ -18,10 +18,12 @@ from .const import (
     CONF_BACKGROUND_SETTINGS,
     CONF_DEV_MIMIC,
     CONF_DISPLAY_SETTINGS,
+    CONF_DO_NOT_DISTURB,
     CONF_FONT_STYLE,
     CONF_HIDE_HEADER,
     CONF_HIDE_SIDEBAR,
     CONF_MIC_TYPE,
+    CONF_MIC_UNMUTE,
     CONF_ROTATE_BACKGROUND,
     CONF_ROTATE_BACKGROUND_INTERVAL,
     CONF_ROTATE_BACKGROUND_LINKED_ENTITY,
@@ -32,6 +34,7 @@ from .const import (
     CONF_STATUS_ICONS,
     CONF_TIME_FORMAT,
     CONF_USE_24H_TIME,
+    CONF_USE_ANNOUNCE,
     DEFAULT_VALUES,
     DOMAIN,
     OPTION_KEY_MIGRATIONS,
@@ -169,9 +172,17 @@ async def async_migrate_entry(
                 else:
                     new_options[CONF_DISPLAY_SETTINGS][param] = new_options.pop(param)
 
+    if entry.minor_version < 5:
+        # Fix for none migration of default options for dnd, announce and unmute mic
+        for key in [CONF_DO_NOT_DISTURB, CONF_USE_ANNOUNCE, CONF_MIC_UNMUTE]:
+            if new_options.get(key) is not None:
+                new_options[CONF_DO_NOT_DISTURB] = (
+                    "on" if new_options.get(key) else "off"
+                )
+
     if new_options != entry.options:
         hass.config_entries.async_update_entry(
-            entry, options=new_options, minor_version=4, version=1
+            entry, options=new_options, minor_version=5, version=1
         )
 
         _LOGGER.debug(
