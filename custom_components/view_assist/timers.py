@@ -44,6 +44,9 @@ from .helpers import get_entity_id_from_conversation_device_id, get_mimic_entity
 from .translations.timers import timers_en
 from .translations.timers import timers_de
 
+from .translations.timers import timers_en
+from .translations.timers import timers_de
+
 _LOGGER = logging.getLogger(__name__)
 
 SET_TIMER_SERVICE_SCHEMA = vol.Schema(
