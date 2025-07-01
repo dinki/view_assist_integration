@@ -42,7 +42,6 @@ from .const import (
 from .helpers import (
     async_get_download_image,
     async_get_filesystem_images,
-    ensure_menu_button_at_end,
     get_config_entry_by_entity_id,
     get_device_name_from_id,
     get_display_type_from_browser_id,
@@ -566,6 +565,7 @@ class EntityListeners:
 
     @callback
     def _async_on_mic_change(self, event: Event[EventStateChangedData]) -> None:
+        """Handle microphone mute state changes via menu manager."""
         mic_mute_new_state = event.data["new_state"].state
 
         # If not change to mic mute state, exit function
@@ -576,23 +576,30 @@ class EntityListeners:
             return
 
         _LOGGER.debug("MIC MUTE: %s", mic_mute_new_state)
-        d = self.config_entry.runtime_data.dashboard.display_settings
-        status_icons = d.status_icons.copy()
 
-        if mic_mute_new_state == "on" and "mic" not in status_icons:
-            status_icons.append("mic")
-        elif mic_mute_new_state == "off" and "mic" in status_icons:
-            status_icons.remove("mic")
+        # Get entity ID for this config entry
+        entity_id = get_sensor_entity_from_instance(
+            self.hass, self.config_entry.entry_id
+        )
 
-        ensure_menu_button_at_end(status_icons)
+        # Get menu manager to update system icons
+        menu_manager = self.hass.data[DOMAIN]["menu_manager"]
 
-        d.status_icons = status_icons
-        self.update_entity()
+        # Use menu manager to update system icons
+        if mic_mute_new_state == "on":
+            self.hass.async_create_task(
+                menu_manager.update_system_icons(entity_id, add_icons=["mic"])
+            )
+        else:
+            self.hass.async_create_task(
+                menu_manager.update_system_icons(entity_id, remove_icons=["mic"])
+            )
 
     @callback
     def _async_on_mediaplayer_device_mute_change(
         self, event: Event[EventStateChangedData]
     ) -> None:
+        """Handle media player mute state changes via menu manager."""
         mp_mute_new_state = event.data["new_state"].attributes.get(
             "is_volume_muted", False
         )
@@ -606,18 +613,24 @@ class EntityListeners:
             return
 
         _LOGGER.debug("MP MUTE: %s", mp_mute_new_state)
-        d = self.config_entry.runtime_data.dashboard.display_settings
-        status_icons = d.status_icons.copy() if d.status_icons else []
+        
+        # Get entity ID for this config entry
+        entity_id = get_sensor_entity_from_instance(
+            self.hass, self.config_entry.entry_id
+        )
 
-        if mp_mute_new_state and "mediaplayer" not in status_icons:
-            status_icons.append("mediaplayer")
-        elif not mp_mute_new_state and "mediaplayer" in status_icons:
-            status_icons.remove("mediaplayer")
-
-        ensure_menu_button_at_end(status_icons)
-
-        d.status_icons = status_icons
-        self.update_entity()
+        # Get menu manager to update system icons
+        menu_manager = self.hass.data[DOMAIN]["menu_manager"]
+        
+        # Use menu manager to update system icons
+        if mp_mute_new_state:
+            self.hass.async_create_task(
+                menu_manager.update_system_icons(entity_id, add_icons=["mediaplayer"])
+            )
+        else:
+            self.hass.async_create_task(
+                menu_manager.update_system_icons(entity_id, remove_icons=["mediaplayer"])
+            )
 
     async def _async_cc_on_conversation_ended_handler(self, event: Event):
         """Handle custom conversation integration conversation ended event."""
@@ -779,65 +792,51 @@ class EntityListeners:
             await self._async_on_mode_state_change(event)
 
     async def _async_on_dnd_device_state_change(self, event: Event) -> None:
-        """Set dnd status icon."""
-
+        """Handle DND state changes via menu manager."""
         # This is called from our set_service event listener and therefore event data is
         # slightly different.  See set_state_changed_attribute above
         dnd_new_state = event.data["new_value"]
-        d = self.config_entry.runtime_data.dashboard.display_settings
 
         _LOGGER.debug("DND STATE: %s", dnd_new_state)
-        status_icons = d.status_icons.copy()
-        if dnd_new_state and "dnd" not in status_icons:
-            status_icons.append("dnd")
-        elif not dnd_new_state and "dnd" in status_icons:
-            status_icons.remove("dnd")
 
-        ensure_menu_button_at_end(status_icons)
-
-        d.status_icons = status_icons
-        self.update_entity()
-
-    async def _async_on_mode_state_change(self, event: Event) -> None:
-        """Set mode status icon."""
-
-        new_mode = event.data["new_value"]
-        r = self.config_entry.runtime_data
-        d = r.dashboard.display_settings
-
-        _LOGGER.debug("MODE STATE: %s", new_mode)
-
-        # Get current status icons directly from entity state
+        # Get entity ID for this config entry
         entity_id = get_sensor_entity_from_instance(
             self.hass, self.config_entry.entry_id
         )
-        if entity := self.hass.states.get(entity_id):
-            status_icons = list(entity.attributes.get("status_icons", []))
+
+        # Get menu manager to update system icons
+        menu_manager = self.hass.data[DOMAIN]["menu_manager"]
+
+        # Use menu manager to update system icons
+        if dnd_new_state:
+            await menu_manager.update_system_icons(entity_id, add_icons=["dnd"])
         else:
-            status_icons = d.status_icons.copy()
+            await menu_manager.update_system_icons(entity_id, remove_icons=["dnd"])
 
-        modes = [VAMode.HOLD, VAMode.CYCLE]
+    async def _async_on_mode_state_change(self, event: Event) -> None:
+        """Handle mode state changes via menu manager."""
+        new_mode = event.data["new_value"]
+        r = self.config_entry.runtime_data
 
-        # Remove all mode icons
-        for mode in modes:
-            if mode in status_icons:
-                status_icons.remove(mode)
+        _LOGGER.debug("MODE STATE: %s", new_mode)
 
-        # Now add back any you want
-        if new_mode in modes and new_mode not in status_icons:
-            status_icons.append(new_mode)
-
-        ensure_menu_button_at_end(status_icons)
-
-        # Store the updated status icons in the display settings
-        d.status_icons = status_icons
-
-        # Update entity state
-        await self.hass.services.async_call(
-            DOMAIN,
-            "set_state",
-            service_data={"entity_id": entity_id, "status_icons": status_icons},
+        # Get entity ID for this config entry
+        entity_id = get_sensor_entity_from_instance(
+            self.hass, self.config_entry.entry_id
         )
+
+        # Get menu manager to update system icons
+        menu_manager = self.hass.data[DOMAIN]["menu_manager"]
+
+        # Define mode icons that should be shown
+        mode_icons = [VAMode.HOLD, VAMode.CYCLE]
+
+        # Remove all mode icons first
+        await menu_manager.update_system_icons(entity_id, remove_icons=mode_icons)
+
+        # Add current mode icon if it should be shown
+        if new_mode in mode_icons:
+            await menu_manager.update_system_icons(entity_id, add_icons=[new_mode])
 
         self.update_entity()
 

@@ -26,6 +26,7 @@ from .const import (
     ATTR_RESUME_MEDIA,
     DOMAIN,
 )
+from .helpers import normalize_status_items
 from .typed import VAConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -197,7 +198,7 @@ class VAServices:
         menu = call.data.get("menu", False)
         timeout = call.data.get("timeout")
 
-        status_items = self._process_status_item_input(raw_status_item)
+        status_items = normalize_status_items(raw_status_item)
         if not status_items:
             _LOGGER.error("Invalid or empty status_item provided")
             return
@@ -215,16 +216,10 @@ class VAServices:
         raw_status_item = call.data.get("status_item")
         menu = call.data.get("menu", False)
 
-        status_items = self._process_status_item_input(raw_status_item)
+        status_items = normalize_status_items(raw_status_item)
         if not status_items:
             _LOGGER.error("Invalid or empty status_item provided")
             return
 
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
         await menu_manager.remove_status_item(entity_id, status_items, menu)
-
-    def _process_status_item_input(self, raw_input: Any) -> str | list[str] | None:
-        """Process and validate status item input."""
-        from .helpers import normalize_status_items
-
-        return normalize_status_items(raw_input)
