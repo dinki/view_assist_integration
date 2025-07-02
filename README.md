@@ -29,6 +29,10 @@ This integration can be installed by downloading the [view_assist](https://githu
 
 Questions, problems, concerns?  Reach out to us on Discord or use the 'Issues' above
 
+## Development
+To develop this integration, you will need Python 3.13.0 or higher, as homeassistant 2024.2.0+ requires it.  You will also need to install the dependencies referenced in the [requirements.txt](custom_components/requirements.txt) file.
+In addition, if you want to run the tests, you will need to install the dependencies referenced in the [test_requirements.txt](custom_components/test_requirements.txt) file.
+
 # Help
 
 Need help?  Check our [View Assist Wiki](https://dinki.github.io/View-Assist/) for the most up-to-date documentation.  You can also hop on our [View Assist Discord Server](https://discord.gg/3WXXfGAf8T) and we'll give you a boost!
