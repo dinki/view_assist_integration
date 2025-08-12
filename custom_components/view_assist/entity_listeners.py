@@ -269,13 +269,20 @@ class EntityListeners:
         )
 
         # Update current path attribute
+        service_data = {
+            "entity_id": entity_id,
+            "current_path": path,
+        }
+
+        # Clear stale title to prevent context bleeding between views
+        service_data.update({
+            "title": "",
+        })
+
         await self.hass.services.async_call(
             DOMAIN,
             "set_state",
-            {
-                "entity_id": entity_id,
-                "current_path": path,
-            },
+            service_data,
         )
 
         # Do navigation and set revert if needed
@@ -811,6 +818,9 @@ class EntityListeners:
                 message_font_size = ["10vw", "8vw", "6vw", "4vw"][
                     min(word_count // 6, 3)
                 ]
+                await self.async_browser_navigate(
+                    f"{self.config_entry.runtime_data.dashboard.dashboard}/{DEFAULT_VIEW_INFO}"
+                )
                 await self.hass.services.async_call(
                     DOMAIN,
                     "set_state",
@@ -820,9 +830,6 @@ class EntityListeners:
                         "message_font_size": message_font_size,
                         "message": speech_text,
                     },
-                )
-                await self.async_browser_navigate(
-                    f"{self.config_entry.runtime_data.dashboard.dashboard}/{DEFAULT_VIEW_INFO}"
                 )
 
     # ---------------------------------------------------------------------------------------
