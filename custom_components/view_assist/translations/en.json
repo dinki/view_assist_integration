@@ -114,8 +114,8 @@
             "description": "Options for the display device",
             "data": {
               "assist_prompt": "Assist prompt",
-              "status_icons_size": "Status icon size",
               "font_style": "Font style",
+              "status_icons_size": "Status icon size",
               "status_icons": "Launch icons",
               "menu_config": "Menu configuration",
               "menu_items": "Menu items",
@@ -125,8 +125,8 @@
             },
             "data_description": {
               "assist_prompt": "The Assist notification prompt style to use for wake word detection and intent processing",
-              "status_icons_size": "Size of the icons in the status icon display",
               "font_style": "The default font to use for this satellite device. Font name must match perfectly and be available",
+              "status_icons_size": "Size of the icons in the status icon display",
               "status_icons": "Advanced option! List of custom launch icons to set on start up. Do not change this if you do not know what you are doing",
               "menu_config": "Configure the menu behavior",
               "menu_items": "List of items to show in the menu when activated",

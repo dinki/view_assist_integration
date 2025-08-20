@@ -25,6 +25,8 @@ from ..const import (  # noqa: TID252
     DASHBOARD_NAME,
     DASHBOARD_VIEWS_GITHUB_PATH,
     DOMAIN,
+    GITHUB_BRANCH,
+    GITHUB_DEV_BRANCH,
 )
 from ..helpers import differ_to_json, get_key, json_to_dictdiffer  # noqa: TID252
 from ..typed import VAConfigEntry  # noqa: TID252
@@ -145,7 +147,12 @@ class DashboardManager(BaseAssetManager):
         return self._dashboard_key in lovelace.dashboards
 
     async def async_install_or_update(
-        self, name: str, download: bool = False, backup_existing: bool = False
+        self,
+        name: str,
+        download: bool = False,
+        dev_branch: bool = False,
+        discard_user_dashboard_changes: bool = False,
+        backup_existing: bool = False,
     ) -> InstallStatus:
         """Install or update dashboard."""
         success = False
@@ -160,6 +167,12 @@ class DashboardManager(BaseAssetManager):
         if download:
             # Download dashboard
             _LOGGER.debug("Downloading dashboard")
+            # Set branch to download from
+            if dev_branch:
+                self.download_manager.set_branch(GITHUB_DEV_BRANCH)
+            else:
+                self.download_manager.set_branch(GITHUB_BRANCH)
+
             downloaded = await self._download_dashboard()
             if not downloaded:
                 raise AssetManagerException("Unable to download dashboard")
@@ -244,7 +257,10 @@ class DashboardManager(BaseAssetManager):
                     # Apply
                     await dashboard_store.async_save(new_dashboard_config)
                     self._update_install_progress("dashboard", 80)
-                    await self._apply_user_dashboard_changes()
+
+                    if not discard_user_dashboard_changes:
+                        await self._apply_user_dashboard_changes()
+
                     self._update_install_progress("dashboard", 90)
 
                     installed_version = self._read_dashboard_version(

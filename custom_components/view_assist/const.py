@@ -15,6 +15,7 @@ from .typed import (
 DOMAIN = "view_assist"
 GITHUB_REPO = "dinki/View-Assist"
 GITHUB_BRANCH = "main"
+GITHUB_DEV_BRANCH = "dev"
 GITHUB_TOKEN_FILE = "github.token"
 DASHBOARD_VIEWS_GITHUB_PATH = "View Assist dashboard and views"
 BLUEPRINT_GITHUB_PATH = "View_Assist_custom_sentences"
@@ -22,6 +23,7 @@ VIEWS_DIR = "views"
 COMMUNITY_VIEWS_DIR = "community_contributions"
 DASHBOARD_DIR = "dashboard"
 DASHBOARD_NAME = "View Assist"
+WIKI_URL = "https://dinki.github.io/View-Assist"
 
 DEFAULT_VIEW = "clock"
 CYCLE_VIEWS = ["music", "info", "weather", "clock"]
@@ -42,7 +44,7 @@ JSMODULES = [
     {
         "name": "View Assist Helper",
         "filename": "view_assist.js",
-        "version": "1.0.16",
+        "version": "1.0.17",
     },
 ]
 VERSION_CHECK_INTERVAL = (
@@ -184,6 +186,8 @@ ATTR_MAX_REPEATS = "max_repeats"
 ATTR_ASSET_CLASS = "asset_class"
 ATTR_BACKUP_CURRENT_ASSET = "backup_current_asset"
 ATTR_DOWNLOAD_FROM_REPO = "download_from_repo"
+ATTR_DOWNLOAD_FROM_DEV_BRANCH = "download_from_dev_branch"
+ATTR_DISCARD_DASHBOARD_USER_CHANGES = "discard_dashboard_user_changes"
 
 VA_ATTRIBUTE_UPDATE_EVENT = "va_attr_update_event_{}"
 VA_BACKGROUND_UPDATE_EVENT = "va_background_update_{}"

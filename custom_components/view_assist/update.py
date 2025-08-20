@@ -29,6 +29,7 @@ from .const import (
     GITHUB_REPO,
     VA_ASSET_UPDATE_PROGRESS,
     VIEWS_DIR,
+    WIKI_URL,
 )
 from .typed import VAConfigEntry
 
@@ -140,9 +141,11 @@ class VAUpdateEntity(UpdateEntity):
         if self._asset_class == AssetClass.DASHBOARD:
             return f"{base}/{DASHBOARD_VIEWS_GITHUB_PATH}/{DASHBOARD_DIR}/dashboard"
         if self._asset_class == AssetClass.VIEW:
-            return f"{base}/{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{self._name}"
+            return f"{WIKI_URL}/docs/extend-functionality/{VIEWS_DIR}/{self._name}#changelog"
         if self._asset_class == AssetClass.BLUEPRINT:
-            return f"{base}/{BLUEPRINT_GITHUB_PATH}/{self._name}"
+            return (
+                f"{WIKI_URL}/docs/extend-functionality/sentences/{self._name}#changelog"
+            )
         return base
 
     @property

@@ -241,6 +241,7 @@ async def get_dashboard_options_schema(
                 mode=SelectSelectorMode.DROPDOWN,
             )
         ),
+        vol.Optional(CONF_FONT_STYLE): str,
         vol.Optional(CONF_STATUS_ICON_SIZE): SelectSelector(
             SelectSelectorConfig(
                 translation_key="status_icons_size_selector",
@@ -248,7 +249,6 @@ async def get_dashboard_options_schema(
                 mode=SelectSelectorMode.DROPDOWN,
             )
         ),
-        vol.Optional(CONF_FONT_STYLE): str,
         vol.Optional(CONF_STATUS_ICONS): SelectSelector(
             SelectSelectorConfig(
                 translation_key="status_icons_selector",

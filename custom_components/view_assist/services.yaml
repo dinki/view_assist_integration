@@ -231,14 +231,28 @@ load_asset:
     download_from_repo:
       name: "Download from respository"
       description: "Download from the github repository, overwriting any existing copy"
-      required: true
+      required: false
+      default: false
+      selector:
+        boolean:
+    download_from_dev_branch:
+      name: "From development branch"
+      description: "Download from the development branch for the very latest version.  Be warned, there maybe issues with this version"
+      required: false
+      default: false
+      selector:
+        boolean:
+    discard_dashboard_user_changes:
+      name: "Discard dashboard user changes"
+      description: "Discard any user changes to the dashboard when loading a new dashboard asset"
+      required: false
       default: false
       selector:
         boolean:
     backup_current_asset:
       name: "Backup existing"
       description: "Backup existing before updating"
-      required: true
+      required: false
       default: false
       selector:
         boolean:

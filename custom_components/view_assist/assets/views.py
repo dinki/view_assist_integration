@@ -15,6 +15,8 @@ from ..const import (  # noqa: TID252
     DASHBOARD_VIEWS_GITHUB_PATH,
     DEFAULT_VIEW,
     DOMAIN,
+    GITHUB_BRANCH,
+    GITHUB_DEV_BRANCH,
     VIEWS_DIR,
 )
 from .base import AssetManagerException, BaseAssetManager, InstallStatus
@@ -119,6 +121,8 @@ class ViewManager(BaseAssetManager):
         self,
         name: str,
         download: bool = False,
+        dev_branch: bool = False,
+        discard_user_dashboard_changes: bool = False,
         backup_existing: bool = False,
     ) -> InstallStatus:
         """Install or update asset."""
@@ -150,6 +154,12 @@ class ViewManager(BaseAssetManager):
         elif download:
             # Download view files from github repo
             _LOGGER.debug("Downloading view %s", name)
+            # Set branch to download from
+            if dev_branch:
+                self.download_manager.set_branch(GITHUB_DEV_BRANCH)
+            else:
+                self.download_manager.set_branch(GITHUB_BRANCH)
+
             downloaded = await self._download_view(name)
             if not downloaded:
                 raise AssetManagerException(

@@ -48,11 +48,13 @@ class GithubNotFoundException(GithubAPIException):
 class GitHubAPI:
     """Class to handle basic Github repo rest commands."""
 
-    def __init__(self, hass: HomeAssistant, repo: str) -> None:
+    def __init__(
+        self, hass: HomeAssistant, repo: str, branch: str = GITHUB_BRANCH
+    ) -> None:
         """Initialise."""
         self.hass = hass
         self.repo = repo
-        self.branch: str = GITHUB_BRANCH
+        self.branch = branch
         self.api_base = f"https://api.github.com/repos/{self.repo}"
         self.path_base = f"https://github.com/{self.repo}/tree/{self.branch}"
         self.raw_base = f"https://raw.githubusercontent.com/{self.repo}/{self.branch}"
@@ -171,7 +173,11 @@ class DownloadManager:
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialise."""
         self.hass = hass
-        self.github = GitHubAPI(hass, GITHUB_REPO)
+        self.github = GitHubAPI(hass, GITHUB_REPO, GITHUB_BRANCH)
+
+    def set_branch(self, branch: str) -> None:
+        """Set the branch to use for downloads."""
+        self.github = GitHubAPI(self.hass, GITHUB_REPO, branch)
 
     def _save_binary_to_file(self, data: bytes, file_path: str, file_name: str):
         """Save binary data to file."""

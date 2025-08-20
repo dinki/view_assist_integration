@@ -18,6 +18,7 @@ from ..const import (  # noqa: TID252
     COMMUNITY_VIEWS_DIR,
     DOMAIN,
     GITHUB_BRANCH,
+    GITHUB_DEV_BRANCH,
     GITHUB_REPO,
 )
 from .base import AssetManagerException, BaseAssetManager, InstallStatus
@@ -160,6 +161,8 @@ class BlueprintManager(BaseAssetManager):
         self,
         name,
         download: bool = False,
+        dev_branch: bool = False,
+        discard_user_dashboard_changes: bool = False,
         backup_existing: bool = False,
     ) -> InstallStatus:
         """Install or update blueprint."""
@@ -183,7 +186,9 @@ class BlueprintManager(BaseAssetManager):
 
         # Install blueprint
         _LOGGER.debug("Downloading blueprint %s", name)
-        bp = await self._get_blueprint_from_repo(name)
+        bp = await self._get_blueprint_from_repo(
+            name, branch=GITHUB_DEV_BRANCH if dev_branch else GITHUB_BRANCH
+        )
 
         self._update_install_progress(name, 60)
 
@@ -292,11 +297,13 @@ class BlueprintManager(BaseAssetManager):
         """Get the URL for a blueprint."""
         return f"{BLUEPRINT_GITHUB_PATH}/{bp_name}/blueprint-{bp_name.replace('_', '').lower()}.yaml"
 
-    async def _get_blueprint_from_repo(self, name: str) -> importer.ImportedBlueprint:
+    async def _get_blueprint_from_repo(
+        self, name: str, branch: str = GITHUB_BRANCH
+    ) -> importer.ImportedBlueprint:
         """Get the blueprint from the repo."""
         try:
             path = self._get_blueprint_path(name)
-            url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{path}"
+            url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{branch}/{path}"
             return await importer.fetch_blueprint_from_github_url(self.hass, url)
         except Exception as ex:
             raise AssetManagerException(
