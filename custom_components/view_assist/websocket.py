@@ -22,7 +22,6 @@ from .helpers import (
     get_config_entry_by_entity_id,
     get_device_id_from_entity_id,
     get_entity_id_by_browser_id,
-    get_master_config_entry,
     get_mimic_entity_id,
 )
 from .timers import TIMERS, VATimers
@@ -79,6 +78,16 @@ class MockWSConnection:
 async def async_register_websockets(hass: HomeAssistant):  # noqa: C901
     """Register websocket functions."""
 
+    def get_entity_id(hass: HomeAssistant, browser_id: str) -> tuple[str | None, bool]:
+        """Get entity id by browser id."""
+        mimic = False
+        entity = get_entity_id_by_browser_id(hass, browser_id)
+
+        if not entity:
+            if entity := get_mimic_entity_id(hass, browser_id):
+                mimic = True
+        return entity, mimic
+
     @websocket_command(
         {
             vol.Required("type"): f"{DOMAIN}/connect",
@@ -87,42 +96,20 @@ async def async_register_websockets(hass: HomeAssistant):  # noqa: C901
     )
     @async_response
     async def handle_connect(hass: HomeAssistant, connection: ActiveConnection, msg):
-        """Connect to Browser Mod and subscribe to settings updates."""
+        """Connect to device browser and subscribe to settings updates."""
         unsubscribe = {}
-
-        browser_id = msg["browser_id"]
         timers: VATimers = hass.data[DOMAIN]["timers"]
 
-        def close_connection():
-            _LOGGER.debug("Browser with id %s disconnected", browser_id)
-            for unsub_listener in unsubscribe.values():
-                unsub_listener()
-
-        def get_entity_id(browser_id):
-            mimic = False
-            entity = get_entity_id_by_browser_id(hass, browser_id)
-
-            if not entity:
-                if entity := get_mimic_entity_id(hass, browser_id):
-                    mimic = True
-            return entity, mimic
-
         async def send_event(event: VAEvent):
-            va_entity, mimic = get_entity_id(browser_id)
+            va_entity, mimic = get_entity_id(hass, browser_id)
+
             _LOGGER.debug(
                 "Sending event: %s to %s - %s", event.event_name, browser_id, va_entity
             )
 
-            if event.event_name == "config_update" and not va_entity:
-                # Browser id has been deregistered
-                connection.send_message(
-                    event_message(msg["id"], {"event": "unregistered", "payload": {}})
-                )
-                return
             if event.event_name in (
                 "connection",
                 "config_update",
-                "registered",
                 "master_config_update",
             ):
                 payload = await get_data(hass, browser_id, va_entity, mimic)
@@ -145,38 +132,65 @@ async def async_register_websockets(hass: HomeAssistant):  # noqa: C901
                 )
             )
 
-        async def send_register_event():
-            await subscribe_listeners(is_registered=True)
-            await send_event(VAEvent("registered"))
-
-        async def subscribe_listeners(is_registered: bool = False):
-            if is_registered:
-                va_entity, _ = get_entity_id(browser_id)
-                if va_entity is None:
-                    return
-
+        async def subscribe_dispatcher_events(is_registered: bool = False):
+            va_entity, _ = get_entity_id(hass, browser_id)
+            if is_registered and va_entity:
                 config = get_config_entry_by_entity_id(hass, va_entity)
-                unsubscribe["all_devices"] = async_dispatcher_connect(
-                    hass, f"{DOMAIN}_event", send_event
-                )
-                unsubscribe["this_device"] = async_dispatcher_connect(
-                    hass, f"{DOMAIN}_{config.entry_id}_event", send_event
-                )
-                unsubscribe["timers"] = timers.store.add_listener(
-                    va_entity, send_timer_update
-                )
-                if "register" in unsubscribe:
-                    unsubscribe["register"]()
-            else:
+                if "all_devices" not in unsubscribe:
+                    unsubscribe["all_devices"] = async_dispatcher_connect(
+                        hass, f"{DOMAIN}_event", send_event
+                    )
+                if "this_device" not in unsubscribe:
+                    unsubscribe["this_device"] = async_dispatcher_connect(
+                        hass, f"{DOMAIN}_{config.entry_id}_event", send_event
+                    )
+                if "master_device" not in unsubscribe:
+                    unsubscribe["master_device"] = async_dispatcher_connect(
+                        hass, f"{DOMAIN}_{config.entry_id}_master_event", send_event
+                    )
+                if "timers" not in unsubscribe:
+                    unsubscribe["timers"] = timers.store.add_listener(
+                        va_entity, send_timer_update
+                    )
+
+            if "register" not in unsubscribe:
                 unsubscribe["register"] = async_dispatcher_connect(
                     hass, f"{DOMAIN}_{browser_id}_registered", send_register_event
                 )
+
+        async def send_register_event():
+            await subscribe_dispatcher_events(is_registered=True)
+            await initialise_device(browser_id, True)
+
+        async def initialise_device(browser_id: str, is_registered: bool):
+            payload = {}
+            if is_registered:
+                va_entity, mimic = get_entity_id(hass, browser_id)
+                if va_entity:
+                    payload = await get_data(hass, browser_id, va_entity, mimic)
+                    await send_event(VAEvent("registered", payload=payload))
+            else:
+                await send_event(VAEvent("unregistered"))
+
+        def close_connection():
+            _LOGGER.debug("Browser with id %s disconnected", browser_id)
+            for unsub_listener in unsubscribe.values():
+                unsub_listener()
+
+        # -------------------------------------------------------------------
+        # Device browser has connected
+        browser_id = msg["browser_id"]
 
         # Register close connection
         connection.subscriptions[browser_id] = close_connection
         connection.send_result(msg["id"])
 
-        # Add (if va browser id) to list of known connected browsers
+        # Init core variables
+        va_entity, mimic = get_entity_id(hass, browser_id)
+        _LOGGER.debug("Browser with id %s connected - %s", browser_id, va_entity)
+        is_registered = va_entity is not None
+
+        # Add VA browser id to list of known connected browsers
         if (
             str(browser_id).startswith("va-")
             and browser_id not in hass.data[DOMAIN]["va_browser_ids"]
@@ -184,30 +198,11 @@ async def async_register_websockets(hass: HomeAssistant):  # noqa: C901
             # Store browser id in hass.data
             hass.data[DOMAIN]["va_browser_ids"][browser_id] = browser_id
 
-        va_entity, mimic = get_entity_id(browser_id)
-        if va_entity and not mimic:
-            # If registered browser id
-            _LOGGER.debug(
-                "Browser with id %s connected with mimic as %s. VA Entity is %s",
-                browser_id,
-                mimic,
-                va_entity,
-            )
-            await send_event(VAEvent("connection"))
+        # Subscribe to dispatcher events
+        await subscribe_dispatcher_events(is_registered=is_registered)
 
-        elif va_entity and mimic:
-            await send_event(VAEvent("connection"))
-
-        elif not va_entity and not mimic:
-            # If not registered browser id
-            await subscribe_listeners(is_registered=False)
-            config = get_master_config_entry(hass)
-            await send_event(
-                VAEvent(
-                    "unregistered",
-                    {"dashboard": config.runtime_data.dashboard.dashboard},
-                )
-            )
+        # Initialise device
+        await initialise_device(browser_id, is_registered)
 
     # Get sensor entity by browser id
     @websocket_command(
@@ -273,7 +268,7 @@ async def async_register_websockets(hass: HomeAssistant):  # noqa: C901
         connection.send_result(msg["id"], output)
 
     async_register_command(hass, handle_connect)
-    async_register_command(hass, websocket_get_entity_by_browser_id)
+    # async_register_command(hass, websocket_get_entity_by_browser_id)
     async_register_command(hass, websocket_get_server_time)
     async_register_command(hass, websocket_get_timer_by_name)
 

@@ -1,11 +1,12 @@
 """Helper functions."""
 
-from bs4 import BeautifulSoup
 from functools import reduce
+import json
 import logging
 from pathlib import Path
 from typing import Any
 
+from bs4 import BeautifulSoup
 import requests
 
 from homeassistant.const import CONF_TYPE, Platform
@@ -119,8 +120,6 @@ def normalize_status_items(raw_input: Any) -> str | list[str] | None:
     - List of strings
     - None if invalid input
     """
-    import json
-
     if raw_input is None:
         return None
 
@@ -131,9 +130,10 @@ def normalize_status_items(raw_input: Any) -> str | list[str] | None:
                 if isinstance(parsed, list):
                     string_items = [str(item) for item in parsed if item]
                     return string_items if string_items else None
-                return None
             except json.JSONDecodeError:
                 return raw_input if raw_input else None
+            else:
+                return None
         return raw_input if raw_input else None
 
     if isinstance(raw_input, list):
@@ -323,6 +323,7 @@ def get_entity_id_by_browser_id(hass: HomeAssistant, browser_id: str) -> str:
             entry.entry_id
             for entry in get_integration_entries(hass)
             if entry.data.get(CONF_DISPLAY_DEVICE) == device_id
+            and entry.disabled_by is None
         ]
 
         if entry_ids:

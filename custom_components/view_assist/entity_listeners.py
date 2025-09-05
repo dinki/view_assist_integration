@@ -8,6 +8,7 @@ import random
 
 from awesomeversion import AwesomeVersion
 
+# pylint: disable-next=hass-component-root-import
 from homeassistant.components.assist_satellite.entity import AssistSatelliteState
 from homeassistant.components.media_player import MediaPlayerState
 from homeassistant.config_entries import ConfigEntryState

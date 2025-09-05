@@ -263,6 +263,7 @@ class VAData {
     this.wakeDevice;
     this.server_time_delta = 0;
     this.browser_id = '';
+    this.registered = false;
   }
 }
 
@@ -275,6 +276,14 @@ class ViewAssist {
     this.variables = new VAData();
     this.connected = false;
     setTimeout(() => this.initialize(), 100);
+  }
+
+  async hide_sections() {
+    // Hide header and sidebar
+    if (!this.variables.config?.mimic_device) {
+      await this.hide_header(this.variables.config?.hide_header);
+      await this.hide_sidebar(this.variables.config?.hide_sidebar);
+    }
   }
 
   async hide_header(enabled) {
@@ -345,56 +354,68 @@ class ViewAssist {
 
   }
 
-  display_browser_id() {
-    const display = localStorage.getItem("view_assist_status") == "unregistered";
+  async display_browser_id() {
+    const elRoot = await selectTree(
+      document.body,
+      "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root"
+    );
 
-    if (display && location.pathname.includes("view-assist")) {
-      var browserId = document.getElementById("view_assist_browser_id");
-      if (!browserId) {
-        browserId = document.createElement("div");
-        document.body.append(browserId);
-        browserId.id = "view_assist_browser_id";
-        browserId.attachShadow({ mode: "open" });
-        const vadiv = document.createElement("p");
-        vadiv.innerHTML = "Register this display in View Assist with below display ID</br></br>" + this.get_browser_id();
-        browserId.shadowRoot.appendChild(vadiv);
-        const styleEl = document.createElement("style");
-        browserId.shadowRoot.append(styleEl);
-        styleEl.innerHTML = (
-          `:host {
-            position: absolute;
-            left: 10vw;
-            top: 30vh;
-            font-size: 6vh;
-            color: white;
-            background-color: rgba(0,0,0,0.9);
-            z-index: 100;
-            padding: 0 5vw;
-            border: 4px solid #5C82A7; */
-            margin: auto;
-            justify-content: center;
-            width: 70vw;
-            text-align: center;
-          }`
-        );
+    try {
+      if (!this.variables.registered && location.pathname.includes("view-assist")) {
+        let elMain = await selectTree(
+          elRoot,
+          "$ div hui-view-container hui-view"
+        )
+        var browserId = elRoot.shadowRoot.getElementById("view_assist_browser_id");
+        if (!browserId) {
+          browserId = document.createElement("div");
+          browserId.id = "view_assist_browser_id";
+          browserId.attachShadow({ mode: "open" });
+          elMain.append(browserId);
+
+          const vadiv = document.createElement("p");
+          vadiv.innerHTML = "Register this display in View Assist with the below display ID to start using it</br></br>" + this.get_browser_id();
+          browserId.shadowRoot.appendChild(vadiv);
+
+          const styleEl = document.createElement("style");
+          styleEl.innerHTML = (
+            `:host {
+              position: absolute;
+              left: 10%;
+              top: 30%;
+              font-size: 6vh;
+              color: white;
+              background-color: rgba(0,0,0,0.9);
+              z-index: 100;
+              padding: 0 5%;
+              border: 4px solid #5C82A7; */
+              margin: auto;
+              justify-content: center;
+              width: 70%;
+              text-align: center;
+            }`
+          );
+          browserId.shadowRoot.append(styleEl);
+        }
+      } else {
+        var browserId = elRoot.shadowRoot.getElementById("view_assist_browser_id");
+        if (browserId) {
+          browserId.remove();
+        }
       }
-    } else {
-      const browserId = document.getElementById("view_assist_browser_id");
-      if (browserId) {
-        browserId.remove();
-      }
+    } catch (e) {
+      setTimeout(() => this.display_browser_id(), 1000);
     }
   }
 
   async initialize() {
     try {
 
-      // Add custom elements and overlay html
+      // Add custom elements
       customElements.define("viewassist-countdown", CountdownTimer)
       customElements.define("viewassist-clock", Clock)
 
-      await this.add_custom_html();
-      await this.add_custom_css();
+
 
       // Connect to server websocket
       this._hass = await hass();
@@ -411,11 +432,11 @@ class ViewAssist {
         });
 
         window.addEventListener("location-changed", () => {
-          this.hide_sections();
-          this.display_browser_id();
+          setTimeout(() => {
+            this.hide_sections(false);
+            this.display_browser_id();
+          }, 100);
         });
-
-        this.variables.wakeWordDetection = this.sendWakeWordDetected.bind(this);
       }
 
     } catch (e) {
@@ -423,67 +444,37 @@ class ViewAssist {
     }
   }
 
-  hide_sections() {
-    // Hide header and sidebar
-    if (!this.variables.config?.mimic_device) {
-      setTimeout(() => {
-        this.hide_header(this.variables.config?.hide_header);
-        this.hide_sidebar(this.variables.config?.hide_sidebar);
-      }, 100);
-    }
-  }
-
-  set_va_browser_id() {
+  get_browser_id() {
     // Create a browser id if not already set
     if (!localStorage.getItem("view_assist_browser_id")) {
-      // Test if VA Companiion App is installed and get uuid form that
+      // Test if VA Companion App is installed and get uuid from that
       let browser_id = '';
-      //if (typeof ViewAssistApp.getViewAssistCAUUID != "undefined") {
-      // safe to use the function
       try {
         browser_id = `va-${ViewAssistApp.getViewAssistCAUUID()}`;
       } catch (e) {
-        console.log("View Assist Companion App not installed, generating browser id");
         const s4 = () => { return Math.floor((1 + Math.random()) * 100000).toString(16).substring(1); };
         browser_id = `va-${s4()}${s4()}-${s4()}${s4()}`
       }
-
-      console.log("BrowserID - " + browser_id);
       localStorage.setItem("view_assist_browser_id", browser_id);
+      return browser_id
     }
     return localStorage.getItem("view_assist_browser_id");
-  }
-
-  sendWakeWordDetected() {
-    // Send wake word detection to device
-    try {
-      ViewAssistApp.wakeWordDetection()
-    } catch (e) {}
-  }
-
-  get_browser_id() {
-    // Get the browser id
-    if ((window.browser_mod || localStorage.getItem("remote_assist_display_settings")) && localStorage.getItem("browser_mod-browser-id")) {
-      return localStorage.getItem("browser_mod-browser-id");
-    }
-    if (localStorage.getItem("view_assist_browser_id")) {
-      return localStorage.getItem("view_assist_browser_id");
-    }
-    return this.set_va_browser_id();
   }
 
   async connect(attempts = 1) {
     // Subscribe to server updates
     try {
       this.variables.browser_id = this.get_browser_id();
+      this.variables.registered = localStorage.getItem("view_assist_status") == "registered";
+
+      // Subscribe to server messages
       const conn = this._hass.connection;
       conn.subscribeMessage((msg) => this.incoming_message(msg), {
         type: "view_assist/connect",
         browser_id: this.variables.browser_id,
       })
 
-      // Test connection - this will fail if integration not yet loaded
-      // and cause a retry
+      // Test connection - this will fail if integration not yet loaded and cause a retry
       const delta = await this._hass.callWS({
         type: 'view_assist/get_server_time_delta',
         epoch: new Date().getTime()
@@ -499,7 +490,7 @@ class ViewAssist {
     }
 
     if (this.connected) {
-      // Update time delta and set 5 min refresh interval
+      // Create time sync job with server - updates every 5 minutes
       await this.set_time_delta();
       var t = this;
       this.serverTimeHandler = setInterval(function () {
@@ -512,38 +503,44 @@ class ViewAssist {
     // Handle incomming messages from the server
     let event = msg["event"];
     let payload = msg["payload"];
-    console.log("Event: " + event + ", Payload: " + JSON.stringify(payload))
-    if (event == "connection" || event == "config_update") {
-      this.process_config(event, payload);
-    }
-    else if (event == "registered") {
-      localStorage.setItem("view_assist_status", "registered");
-      this.process_config(event, payload);
-    }
-    else if (event == "timer_update") {
-      this.variables.config.timers = payload
-    }
-    else if (event == "navigate") {
-      if (payload["variables"]) this.variables.navigation = payload["variables"];
-      this.browser_navigate(payload["path"]);
-    }
-    else if (event == "unregistered") {
-      if (localStorage.getItem("view_assist_sensor") || localStorage.getItem("view_assist_mimic_device")) {
+    //console.log("Event: " + event + ", Payload: " + JSON.stringify(payload))
+
+    switch (event) {
+      case "config_update":
+        this.process_config(event, payload);
+        break;
+      case "timer_update":
+        this.variables.config.timers = payload
+        break;
+      case "navigate":
+        if (payload["variables"]) this.variables.navigation = payload["variables"];
+        this.browser_navigate(payload["path"]);
+        break;
+      case "registered":
+        localStorage.setItem("view_assist_status", "registered");
+        this.variables.registered = true
+        // Add listening overlay html from overlay.html and overlay.css files
+        await this.inject_assist_listening_overlay();
+        // Setup device config
+        this.process_config(event, payload);
+        break;
+      case "unregistered":
         localStorage.removeItem("view_assist_sensor");
         localStorage.removeItem("view_assist_mimic_device");
-      }
-      this.variables.config = {}
-      this.hide_sections(false);
-      if (localStorage.getItem("view_assist_status") == "registered") {
         localStorage.setItem("view_assist_status", "unregistered");
-      }
-      this.display_browser_id();
-    }
-    else if (event == "listening") {
-      this.show_listening_overlay(payload["state"], payload["style"])
-    }
-    else if (event == "reload") {
-      location.reload()
+        this.variables.config = {};
+        this.variables.registered = false;
+        await this.hide_sections(this.variables.registered);
+        setTimeout(() => this. display_browser_id(), 2000);
+        break;
+      case "listening":
+        this.show_assist_listening_overlay(payload["state"], payload["style"])
+        break;
+      case "reload":
+        location.reload()
+        break;
+      default:
+        console.log("ViewAssist - unknown event: " + event);
     }
   }
 
@@ -551,7 +548,7 @@ class ViewAssist {
     let reload = false;
     const old_config = this.variables?.config
 
-    if (event == "connection" || event == "config_update") {
+    if (event == "registered" || event == "config_update") {
       reload = true;
     }
 
@@ -594,47 +591,44 @@ class ViewAssist {
     }
   }
 
-  async add_custom_css() {
-    // Add custom css to the shadow root
-    var e = await selectTree(
-        document.body,
-        "view-assist-overlays $"
-      );
-    //var e = document.getElementById("view-assist-overlays").shadowRoot;
-    var st = document.createElement("style");
-    const response = await fetch("/view_assist/dashboard/overlay.css");
-    if (!response.ok) {
-      console.error("Overlay HTML not found - no overlays will be displayed");
-      return;
-    }
-    st.innerHTML = await response.text();
-    e.appendChild(st);
-  }
+  async inject_assist_listening_overlay() {
+    // If already exists, return
+    if (document.querySelector("view-assist-overlays")) return;
 
-  async add_custom_html() {
+    // Create overlay html element and add to body
     var htmlElement = document.createElement('view-assist-overlays');
     htmlElement.style.display = "block";
     htmlElement.attachShadow({ mode: "open" });
     document.body.appendChild(htmlElement);
 
-    const response = await fetch("/view_assist/dashboard/overlay.html");
-    if (!response.ok) {
+    // Load html from url
+    const html_response = await fetch("/view_assist/dashboard/overlay.html");
+    if (!html_response.ok) {
       console.error("Overlay HTML not found - no overlays will be displayed");
       return;
     }
-    htmlElement.shadowRoot.innerHTML = await response.text();
+
+    // Add html to shadow root
+    htmlElement.shadowRoot.innerHTML = await html_response.text();
+
+    var st = document.createElement("style");
+    const css_response = await fetch("/view_assist/dashboard/overlay.css");
+    if (!css_response.ok) {
+      console.error("Overlay CSS not found - no overlays will be displayed");
+      return;
+    }
+    st.innerHTML = await css_response.text();
+    htmlElement.shadowRoot.appendChild(st);
   }
 
-  async show_listening_overlay(state, style) {
+  async show_assist_listening_overlay(state, style) {
     // Display listening message
     try {
       let overlays = await selectTree(
         document.body,
         "view-assist-overlays $"
       );
-      //const overlays = document.getElementsByTagName("view-assist-overlays").shadowRoot;
       const styleDiv = overlays.querySelector(`[id=${style}]`);
-
       const listeningDiv = styleDiv.querySelector(`[id="listening"]`);
       const processingDiv = styleDiv.querySelector(`[id="processing"]`);
 
@@ -653,7 +647,6 @@ class ViewAssist {
           styleDiv.style.display = "none";
           break;
       }
-
     } catch (e) {
       console.log("Error showing overlay for style: ", style, "with action: ", state, "\n", e);
       return;
@@ -662,7 +655,6 @@ class ViewAssist {
 }
 
 // Initialize when core web components are ready
-
 Promise.all([
   customElements.whenDefined("home-assistant"),
   customElements.whenDefined("hui-view"),

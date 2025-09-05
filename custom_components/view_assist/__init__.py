@@ -61,7 +61,6 @@ from .typed import (
     VABackgroundMode,
     VAConfigEntry,
     VAEvent,
-    VAMenuConfig,
     VAScreenMode,
     VATimeFormat,
     VAType,
@@ -231,22 +230,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: VAConfigEntry):
         await load_common_display_functions(hass, entry)
 
     else:
-        # Add config change listener
-        entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-
         # Set entity listeners
         EntityListeners(hass, entry)
 
         # Request platform setup
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-        # Fire config update event
-        # Does nothing on HA reload but sends update to device if config reloaded from config update
-        async_dispatcher_send(
-            hass, f"{DOMAIN}_{entry.entry_id}_event", VAEvent("config_update")
-        )
-
-        # Fire display device registration to setup display if first time config
+        # Fire display device registration to setup display when added or re-enabled
         if entry.data[CONF_TYPE] == VAType.VIEW_AUDIO:
             async_dispatcher_send(
                 hass,
@@ -309,7 +299,7 @@ async def load_common_display_functions(hass: HomeAssistant, entry: VAConfigEntr
     async_at_started(hass, setup_frontend)
 
 
-def set_runtime_data_for_config(
+def set_runtime_data_for_config(  # noqa: C901
     hass: HomeAssistant, config_entry: VAConfigEntry, is_master: bool = False
 ):
     """Set config.runtime_data attributes from matching config values."""
@@ -447,6 +437,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: VAConfigEntry):
         return True
 
     # Tell device to unregister
+    _LOGGER.debug("Unregistering device: %s", entry.entry_id)
     async_dispatcher_send(
         hass,
         f"{DOMAIN}_{entry.entry_id}_event",
