@@ -112,6 +112,7 @@ class DisplayConfig:
     """Display settings class."""
 
     assist_prompt: str | None = None
+    avatar_choice: str = "jarvis"
     status_icons_size: VAIconSizes | None = None
     font_style: str | None = None
     status_icons: list[str] = field(default_factory=list)

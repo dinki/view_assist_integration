@@ -520,7 +520,7 @@ class ViewAssist {
       this.display_browser_id();
     }
     else if (event == "listening") {
-      this.show_listening_overlay(payload["state"], payload["style"])
+      this.show_listening_overlay(payload["state"], payload["style"], payload["avatar"])
     }
     else if (event == "reload") {
       location.reload()
@@ -605,7 +605,7 @@ class ViewAssist {
     htmlElement.shadowRoot.innerHTML = await response.text();
   }
 
-  async show_listening_overlay(state, style) {
+  async show_listening_overlay(state, style, avatar) {
     // Display listening message
     try {
       let overlays = await selectTree(
@@ -617,7 +617,25 @@ class ViewAssist {
 
       const listeningDiv = styleDiv.querySelector(`[id="listening"]`);
       const processingDiv = styleDiv.querySelector(`[id="processing"]`);
-
+        // ======== AVATAR =========
+      if (style === "avatar") {
+        const avatarGif = styleDiv.querySelector("#avatar-gif");
+        const avatarName = avatar || "jarvis"; 
+    
+        if (state === "listening") {
+            styleDiv.style.display = "block";
+            avatarGif.src = `/view_assist/gifs/${avatarName}_speech.gif`; // initial gif 
+    
+            setTimeout(() => {
+                avatarGif.src = `/view_assist/gifs/${avatarName}_listen.gif`; // switch gif after 1 - 2sec
+            }, 1500);
+    
+        } else if (state === "processing" || state === "idle") {
+            styleDiv.style.display = "none"; // gif off
+        }
+    
+        return; 
+    }
       switch (state) {
         case "listening":
           listeningDiv.style.display = "block";

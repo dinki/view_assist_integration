@@ -114,6 +114,7 @@
             "description": "Options for the display device",
             "data": {
               "assist_prompt": "Assist prompt",
+              "avatar_choice": "Avatar choice",
               "font_style": "Font style",
               "status_icons_size": "Status icon size",
               "status_icons": "Launch icons",
@@ -125,6 +126,7 @@
             },
             "data_description": {
               "assist_prompt": "The Assist notification prompt style to use for wake word detection and intent processing",
+              "avatar_choice": "Avatar GIFs for Assist prompt – auto-detects _speech.gif and _listen.gif from /config/view_assist/gifs/",
               "font_style": "The default font to use for this satellite device. Font name must match perfectly and be available",
               "status_icons_size": "Size of the icons in the status icon display",
               "status_icons": "Advanced option! List of custom launch icons to set on start up. Do not change this if you do not know what you are doing",
@@ -192,7 +194,15 @@
       "options": {
         "blur_pop_up": "Blurs the screen and shows pop up",
         "flashing_bar": "Flashing bar at bottom",
-        "kitt_bar": "KITT style bar at bottom"
+        "kitt_bar": "KITT style bar at bottom",
+        "avatar": "Avatar overlay with GIF animation"
+      }
+    },
+    "avatar_selector": {
+      "options": {
+        "jarvis": "Jarvis",
+        "sheila": "Sheila",
+        "roomie": "Roomie"
       }
     },
     "status_icons_size_selector": {
