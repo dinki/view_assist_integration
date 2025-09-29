@@ -73,7 +73,12 @@ REMOVE_STATUS_ITEM_SERVICE_SCHEMA = vol.Schema(
     }
 )
 
-
+SET_AVATAR_SERVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required("avatar"): str,
+    }
+)
 class VAServices:
     """Class to manage services."""
 
@@ -121,7 +126,13 @@ class VAServices:
             self.async_handle_remove_status_item,
             schema=REMOVE_STATUS_ITEM_SERVICE_SCHEMA,
         )
-
+        )
+        self.hass.services.async_register(
+            DOMAIN,
+            "set_avatar",
+            self.async_handle_set_avatar,
+            schema=SET_AVATAR_SERVICE_SCHEMA,
+        )
     # -----------------------------------------------------------------------
     # Get Target Satellite
     # Used to determine which VA satellite is being used based on its microphone device
@@ -223,3 +234,28 @@ class VAServices:
 
         menu_manager = self.hass.data[DOMAIN]["menu_manager"]
         await menu_manager.remove_status_item(entity_id, status_items, menu)
+
+    async def async_handle_set_avatar(self, call: ServiceCall):
+        """Handle changing the avatar for a device."""
+        entity_ids = call.data.get(ATTR_ENTITY_ID)
+        avatar = call.data.get("avatar")
+
+        for entity_id in entity_ids:
+            entity_registry = er.async_get(self.hass)
+            if va_entity := entity_registry.async_get(entity_id):
+                config_entry: VAConfigEntry = (
+                    self.hass.config_entries.async_get_entry(va_entity.config_entry_id)
+                )
+                # update runtime_data
+                config_entry.runtime_data.dashboard.display_settings.avatar_choice = avatar
+
+                # notify frontend overlay to update
+                async_dispatcher_send(
+                    self.hass,
+                    f"{DOMAIN}_{config_entry.entry_id}_event",
+                    {
+                        "state": "idle",
+                        "style": config_entry.runtime_data.dashboard.display_settings.assist_prompt,
+                        "avatar": avatar,
+                    },
+                )
