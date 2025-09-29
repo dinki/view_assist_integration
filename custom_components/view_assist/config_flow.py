@@ -39,6 +39,7 @@ from .const import (
     CONF_DEVELOPER_MIMIC_DEVICE,
     CONF_DISPLAY_DEVICE,
     CONF_DISPLAY_SETTINGS,
+    CONF_AVATAR_CHOICE,
     CONF_DO_NOT_DISTURB,
     CONF_DUCKING_VOLUME,
     CONF_ENABLE_UPDATES,
@@ -166,7 +167,24 @@ def get_display_devices(
         }
         for key, value in display_devices.items()
     ]
+async def get_available_avatars(hass) -> list[str]:
+    """Return a list of available avatar names (without _speech/_listen suffix and .gif)"""
+    import os
+    import re
 
+    avatars_dir = "/config/view_assist/gifs/"
+
+    def _list_files():
+        if not os.path.isdir(avatars_dir):
+            return []
+        files = [f for f in os.listdir(avatars_dir) if f.endswith(".gif")]
+        names = set()
+        for f in files:           
+            name = re.sub(r"(_speech|_listen)?\.gif$", "", f)
+            names.add(name)
+        return sorted(names) 
+
+    return await hass.async_add_executor_job(_list_files)
 
 async def get_dashboard_options_schema(
     hass: HomeAssistant, config_entry: VAConfigEntry | None
@@ -232,12 +250,20 @@ async def get_dashboard_options_schema(
         vol.Optional(CONF_ROTATE_BACKGROUND_PATH): str,
         vol.Optional(CONF_ROTATE_BACKGROUND_INTERVAL): int,
     }
-
+    avatar_files = await get_available_avatars(hass)
+    avatar_options = [{"value": f, "label": f} for f in avatar_files]
     DISPLAY_SETTINGS = {
         vol.Optional(CONF_ASSIST_PROMPT): SelectSelector(
             SelectSelectorConfig(
                 translation_key="assist_prompt_selector",
                 options=overlay_options,
+                mode=SelectSelectorMode.DROPDOWN,
+            )
+        ),
+        vol.Optional(CONF_AVATAR_CHOICE): SelectSelector(
+            SelectSelectorConfig(
+                translation_key="avatar_selector",
+                options=avatar_options,   # <-- acum folosim lista generată async
                 mode=SelectSelectorMode.DROPDOWN,
             )
         ),
