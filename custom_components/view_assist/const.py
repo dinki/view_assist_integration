@@ -93,6 +93,7 @@ CONF_ROTATE_BACKGROUND_INTERVAL = "rotate_background_interval"
 
 CONF_DISPLAY_SETTINGS = "display_settings"
 CONF_ASSIST_PROMPT = "assist_prompt"
+CONF_AVATAR_CHOICE = "avatar_choice"
 CONF_STATUS_ICON_SIZE = "status_icons_size"
 CONF_FONT_STYLE = "font_style"
 CONF_STATUS_ICONS = "status_icons"
@@ -140,6 +141,7 @@ DEFAULT_VALUES = {
     },
     CONF_DISPLAY_SETTINGS: {
         CONF_ASSIST_PROMPT: "blur_pop_up",
+        CONF_AVATAR_CHOICE: "jarvis",
         CONF_STATUS_ICON_SIZE: VAIconSizes.LARGE,
         CONF_FONT_STYLE: "Roboto",
         CONF_STATUS_ICONS: [],
