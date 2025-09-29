@@ -514,6 +514,7 @@ class EntityListeners:
                     {
                         "state": state,
                         "style": self.config_entry.runtime_data.dashboard.display_settings.assist_prompt,
+                        "avatar": self.config_entry.runtime_data.dashboard.display_settings.avatar_choice,
                     },
                 ),
             )
