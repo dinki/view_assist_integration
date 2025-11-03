@@ -19,6 +19,7 @@ from ..helpers import get_integration_entries  # noqa: TID252
 from ..typed import VAConfigEntry  # noqa: TID252
 from .alarm_repeater import AlarmRepeater
 from .http import HTTPManager
+from .intents import IntentsManager
 from .javascript import JSModuleRegistration
 from .services import Services
 from .templates import TemplatesManager
@@ -38,6 +39,7 @@ LOAD_MODULES = [
     TimerManager,
     AlarmRepeater,
     WebsocketManager,
+    IntentsManager,
 ]
 
 
