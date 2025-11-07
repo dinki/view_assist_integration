@@ -22,10 +22,25 @@ _LOGGER = logging.getLogger(__name__)
 
 CONF_INTENT = "intent"
 
+
+def has_one_non_empty_item(value: list[str]) -> list[str]:
+    """Validate result has at least one item."""
+    if len(value) < 1:
+        raise vol.Invalid("at least one intent is required")
+
+    for intent in value:
+        if not intent:
+            raise vol.Invalid("empty intent found in list")
+
+    return value
+
+
 _OPTIONS_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_INTENT): cv.string,
-        vol.Optional(CONF_COMMAND): cv.string,
+        vol.Required(CONF_INTENT): vol.All(
+            cv.ensure_list, [cv.string], has_one_non_empty_item
+        ),
+        vol.Optional(CONF_COMMAND): vol.All(cv.ensure_list, [cv.string]),
     }
 )
 
@@ -63,7 +78,7 @@ class VAIntentTrigger(Trigger):
         @callback
         def async_remove() -> None:
             """Remove trigger."""
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Unregistering intent trigger -> %s - %s",
                 self._options[CONF_INTENT],
                 self._options.get(CONF_COMMAND),
@@ -126,18 +141,16 @@ class VAIntentTrigger(Trigger):
             return None
 
         # Register event listener
-        _LOGGER.warning("Registering intent trigger")
         if im := IntentsManager.get(self._hass):
-            command = self._options.get(CONF_COMMAND, "")
-            _LOGGER.warning(
-                "Registering intent trigger for intent %s with command: %s",
+            _LOGGER.debug(
+                "Registering intent trigger for intent %s with commands: %s",
                 self._options[CONF_INTENT],
-                command,
+                self._options.get(CONF_COMMAND),
             )
             self._unregister = im.register_trigger(
                 IntentTriggerDetails(
-                    intent=self._options[CONF_INTENT],
-                    command=command,
+                    intents=self._options[CONF_INTENT],
+                    commands=self._options.get(CONF_COMMAND),
                     callback=async_on_event,
                 )
             )
