@@ -25,6 +25,7 @@
           "musicplayer_device": "Music player device",
           "display_device": "Display Device",
           "intent_device": "Intent Device (optional)",
+          "orientation_sensor": "Orientation Sensor (optional)",
           "dev_mimic": "Mimic for view development"
         },
         "data_description": {
@@ -34,6 +35,7 @@
           "musicplayer_device": "The music player device for this satellite",
           "display_device": "The display device for this satellite",
           "intent_device": "The device to provide intent data for this satellite",
+          "orientation_sensor": "Sensor that reports device orientation (portrait/landscape)",
           "dev_mimic": "Use this device for view development on another machine"
         }
       }
@@ -62,6 +64,7 @@
           "musicplayer_device": "Music player device",
           "display_device": "Display Device",
           "intent_device": "Intent Device (optional)",
+          "orientation_sensor": "Orientation Sensor (optional)",
           "dev_mimic": "Mimic for view development"
         },
         "data_description": {
@@ -70,6 +73,7 @@
           "mediaplayer_device": "The media player device for this satellite",
           "musicplayer_device": "The music player device for this satellite",
           "intent_device": "The device to provide intent data for this satellite",
+          "orientation_sensor": "Sensor that reports device orientation (portrait/landscape)",
           "display_device": "The display device for this satellite",
           "dev_mimic": "Use this device for view development on another machine"
         }
