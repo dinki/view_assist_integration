@@ -117,6 +117,16 @@ class NavigationManager:
             self.config.runtime_data.default.mode,
         )
 
+        # Update current_path attribute
+        self.config.runtime_data.extra_data["current_path"] = path
+        
+        # Notify sensor entity to update (triggers schedule_update_ha_state)
+        async_dispatcher_send(
+            self.hass,
+            f"{DOMAIN}_{self.config.entry_id}_event",
+            VAEvent(VAEventType.CONFIG_UPDATE),
+        )
+
         # Send navigation event to VA JS Helper
         async_dispatcher_send(
             self.hass,
