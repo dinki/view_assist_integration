@@ -107,6 +107,7 @@ class DeviceCoreConfig:
     musicplayer_device: str | None = None
     intent_device: str | None = None
     display_device: str | None = None
+    orientation_sensor: str | None = None
     dev_mimic: bool | None = None
 
 

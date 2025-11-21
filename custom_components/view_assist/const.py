@@ -85,6 +85,7 @@ CONF_MEDIAPLAYER_DEVICE = "mediaplayer_device"
 CONF_MUSICPLAYER_DEVICE = "musicplayer_device"
 CONF_DISPLAY_DEVICE = "display_device"
 CONF_INTENT_DEVICE = "intent_device"
+CONF_ORIENTATION_SENSOR = "orientation_sensor"
 
 CONF_DASHBOARD = "dashboard"
 CONF_HOME = "home"
