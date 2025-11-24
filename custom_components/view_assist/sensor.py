@@ -129,10 +129,17 @@ class ViewAssistSensor(SensorEntity):
             # TODO: Update runtime config data types as needed
 
             # Set the value of named vartiables or add/update to extra_data dict
+            # Check runtime_data.default first (mode, view_timeout, etc.)
             if hasattr(self.config.runtime_data.default, k):
                 if getattr(self.config.runtime_data.default, k) != v:
                     setattr(self.config.runtime_data.default, k, v)
                     update_ha = True
+            # Check runtime_data.dashboard next (home, music, etc.)
+            elif hasattr(self.config.runtime_data.dashboard, k):
+                if getattr(self.config.runtime_data.dashboard, k) != v:
+                    setattr(self.config.runtime_data.dashboard, k, v)
+                    update_ha = True
+            # Otherwise store in extra_data
             elif self.config.runtime_data.extra_data.get(k) != v:
                 self.config.runtime_data.extra_data[k] = v
                 update_ha = True
