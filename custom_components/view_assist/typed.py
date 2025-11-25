@@ -161,6 +161,8 @@ class DefaultConfig:
     use_announce: bool | None = None
     mic_unmute: bool | None = None
     ducking_volume: int | None = None
+    music_mode_auto: bool | None = None
+    music_mode_timeout: int | None = None
 
 
 @dataclass

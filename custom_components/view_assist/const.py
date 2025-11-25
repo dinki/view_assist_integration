@@ -116,6 +116,8 @@ CONF_DO_NOT_DISTURB = "do_not_disturb"
 CONF_USE_ANNOUNCE = "use_announce"
 CONF_MIC_UNMUTE = "micunmute"
 CONF_DUCKING_VOLUME = "ducking_volume"
+CONF_MUSIC_MODE_AUTO = "music_mode_auto"
+CONF_MUSIC_MODE_TIMEOUT = "music_mode_timeout"
 
 CONF_ENABLE_UPDATES = "enable_updates"
 CONF_TRANSLATION_ENGINE = "translation_engine"
@@ -166,6 +168,8 @@ DEFAULT_VALUES = {
     CONF_USE_ANNOUNCE: "off",
     CONF_MIC_UNMUTE: "off",
     CONF_DUCKING_VOLUME: 70,
+    CONF_MUSIC_MODE_AUTO: False,
+    CONF_MUSIC_MODE_TIMEOUT: 300,
     # Default integration options
     CONF_ENABLE_UPDATES: True,
     # Default developer otions
