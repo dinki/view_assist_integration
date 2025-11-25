@@ -220,4 +220,5 @@ class ViewAssistSensor(SensorEntity):
             "mode": d.default.mode,
             "view_timeout": d.default.view_timeout,
             "weather_entity": d.default.weather_entity,
+            "home": d.dashboard.home,
         }
