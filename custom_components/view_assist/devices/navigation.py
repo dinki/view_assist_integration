@@ -77,19 +77,6 @@ class NavigationManager:
         NavigationManagerServices(self.hass).unregister()
         return True
 
-    @callback
-    def _handle_browser_navigate_service_call(self, args):
-        """Navigate browser to defined view.
-
-        Optionally revert to another view after timeout.
-        """
-        try:
-            assert "path" in args
-            self.browser_navigate(path=args["path"], timeout=args.get("timeout"))
-        except AssertionError:
-            _LOGGER.error("No path provided for browser_navigate")
-            return
-
     def browser_navigate(
         self,
         path: str,
@@ -146,11 +133,17 @@ class NavigationManager:
         revert, revert_view = get_revert_settings_for_mode(
             self.config.runtime_data.default.mode
         )
-        revert_path = (
-            getattr(self.config.runtime_data.dashboard, revert_view)
-            if revert_view
-            else None
-        )
+        if (
+            revert_view == "home"
+            and self.config.runtime_data.runtime_config_overrides.home
+        ):
+            revert_path = self.config.runtime_data.runtime_config_overrides.home
+        else:
+            revert_path = (
+                getattr(self.config.runtime_data.dashboard, revert_view)
+                if revert_view
+                else None
+            )
 
         # Set revert action if required
         if revert and path != revert_path:
@@ -163,6 +156,19 @@ class NavigationManager:
             self.revert_view_task = self.hass.async_create_task(
                 self._display_revert_delay_task(path=revert_path, timeout=timeout)
             )
+
+    def navigate_home(self):
+        """Navigate browser to home view."""
+        path = (
+            self.config.runtime_data.runtime_config_overrides.home
+            if self.config.runtime_data.runtime_config_overrides.home
+            else self.config.runtime_data.dashboard.dashboard
+        )
+        self.browser_navigate(
+            path=path,
+            timeout=0,
+            is_revert_action=False,
+        )
 
     async def _display_revert_delay_task(self, path: str, timeout: int = 0):
         """Display revert function.  To be called from task."""
@@ -236,7 +242,10 @@ class NavigationManagerServices:
 
         # get config entry from entity id to allow access to browser_id parameter
         if navigation_manager := self._get_navigation_manager(entity_id):
-            navigation_manager.browser_navigate(path=path, timeout=timeout)
+            if path == "home":
+                navigation_manager.navigate_home()
+            else:
+                navigation_manager.browser_navigate(path=path, timeout=timeout)
         else:
             _LOGGER.error("No navigation manager found for entity_id: %s", entity_id)
 

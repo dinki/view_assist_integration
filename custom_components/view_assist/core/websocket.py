@@ -298,7 +298,9 @@ class WebsocketListenerHandler:
                     "timers": timer_info,
                     "background": data.dashboard.background_settings.background,
                     "dashboard": data.dashboard.dashboard,
-                    "home": data.dashboard.home,
+                    "home": data.dashboard.home
+                    if not data.runtime_config_overrides.home
+                    else data.runtime_config_overrides.home,
                     "music": data.dashboard.music,
                     "intent": data.dashboard.intent,
                     "hide_sidebar": data.dashboard.display_settings.screen_mode

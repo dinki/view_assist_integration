@@ -94,16 +94,21 @@ class AssistEntityListenerHandler:
         """Initialise."""
         self.hass = hass
         self.config = config
-        self.mic_integration = get_config_entry_by_entity_id(
-            hass, config.runtime_data.core.mic_device or ""
-        ).domain
+        self.mic_integration = None
         self.music_player_entity = config.runtime_data.core.musicplayer_device
         self.music_player_volume: float = 0.0
         self.is_ducked: bool = False
         self.ducking_task: asyncio.Task | None = None
 
+        if mic_device := get_config_entry_by_entity_id(
+            hass, config.runtime_data.core.mic_device
+        ):
+            self.mic_integration = mic_device.domain
+
     def register_listeners(self) -> None:
         """Register the state change listener for assist/mic status entities."""
+        if not self.mic_integration:
+            return
 
         if self.mic_integration == HASSMIC_DOMAIN:
             assist_entity_id = get_hassmic_pipeline_status_entity_id(
@@ -306,6 +311,12 @@ class AssistEntityListenerHandler:
             elif state in ["start", "intent-processing"]:
                 state = AssistSatelliteState.PROCESSING
 
+            assist_prompt = (
+                self.config.runtime_data.dashboard.display_settings.assist_prompt
+                if not self.config.runtime_data.runtime_config_overrides.assist_prompt
+                else self.config.runtime_data.runtime_config_overrides.assist_prompt
+            )
+
             async_dispatcher_send(
                 self.hass,
                 f"{DOMAIN}_{self.config.entry_id}_event",
@@ -313,7 +324,7 @@ class AssistEntityListenerHandler:
                     VAEventType.ASSIST_LISTENING,
                     {
                         "state": state,
-                        "style": self.config.runtime_data.dashboard.display_settings.assist_prompt,
+                        "style": assist_prompt,
                     },
                 ),
             )
@@ -412,9 +423,7 @@ class SensorAttributeChangedHandler:
         if new_mode == VAMode.NORMAL:
             # Add navigate to default view
             if self.navigation_manager:
-                self.navigation_manager.browser_navigate(
-                    self.config.runtime_data.dashboard.home
-                )
+                self.navigation_manager.navigate_home()
         elif new_mode == VAMode.MUSIC:
             # Add navigate to music view
             if self.navigation_manager:

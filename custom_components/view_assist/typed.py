@@ -171,6 +171,14 @@ class DeveloperConfig:
     developer_mimic_device: str | None = None
 
 
+@dataclass
+class RuntimeConfigOverrides:
+    """Class to hold runtime override data."""
+
+    home: str | None = None
+    assist_prompt: str | None = None
+
+
 class MasterConfigRuntimeData:
     """Class to hold master config data."""
 
@@ -192,6 +200,7 @@ class DeviceRuntimeData:
         self.core: DeviceCoreConfig = DeviceCoreConfig()
         self.dashboard: DashboardConfig = DashboardConfig()
         self.default: DefaultConfig = DefaultConfig()
+        self.runtime_config_overrides: RuntimeConfigOverrides = RuntimeConfigOverrides()
 
         # Extra data for holding key/value pairs passed in by set_state service call
         self.extra_data: dict[str, Any] = {}
