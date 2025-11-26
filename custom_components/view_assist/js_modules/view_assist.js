@@ -1,6 +1,6 @@
-import { timerCards } from "./timers.js?v=1.0.24";
+import { timerCards } from "./timers.js?v=1.0.25";
 
-const version = "1.0.24"
+const version = "1.0.25"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 export async function await_element(el, hard = false) {
@@ -447,7 +447,7 @@ class ViewAssist {
           vadiv.innerHTML += '<p class="message" style="font-size: 4vh">Register this device in View Assist to start using it. You may see a template error until you do</p>';
           const missingModules = this.missingModules();
           if (missingModules.length > 0) {
-            vadiv.innerHTML += '<p class="missingResources" style="background-color: rgba(126, 3, 3, 0.8);">You have missing resources!</br>' + missingModules.join(", ") + '</p>';
+            vadiv.innerHTML += '<p class="missingResources" style="background-color: rgba(126, 3, 3, 0.8);">Missing resources! You must install these before continuing or View Assist will not work.</br>' + missingModules.join(", ") + '</p>';
           } else {
             vadiv.innerHTML += '<p class="noMissingResources" style="background-color: rgba(3, 126, 3, 0.8);">Base required resources are detected!</p>';
           }
@@ -734,6 +734,15 @@ class ViewAssist {
         document.body,
         "view-assist-overlays $"
       );
+
+      // Reset all overlays to ensure no stuck ones if style changes
+      overlays.querySelectorAll("*").forEach((div) => {
+        if (div.getAttribute("data-name") != null) {
+          div.style.display = "none";
+        }
+      });
+
+
       const styleDiv = overlays.querySelector(`[id=${style}]`);
       const listeningDiv = styleDiv.querySelector(`[id="listening"]`);
       const processingDiv = styleDiv.querySelector(`[id="processing"]`);
