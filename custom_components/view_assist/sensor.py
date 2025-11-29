@@ -185,7 +185,7 @@ class ViewAssistSensor(SensorEntity):
             "mute_switch": get_mute_switch_entity_id(self.hass, d.mic_device),
             "display_device": d.display_device,
             "intent_device": d.intent_device,
-            "orientation_sensor": self.config.runtime_data.core.orientation_sensor,
+            "orientation_sensor": d.orientation_sensor,
             "mediaplayer_device": d.mediaplayer_device,
             "musicplayer_device": d.musicplayer_device,
             "voice_device_id": get_device_id_from_entity_id(self.hass, d.mic_device),
