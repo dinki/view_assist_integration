@@ -64,6 +64,7 @@ class VAMode(StrEnum):
     HOLD = "hold"
     NIGHT = "night"
     ROTATE = "rotate"
+    GAME = "game"
 
 
 VAMODE_REVERTS = {

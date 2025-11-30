@@ -773,8 +773,8 @@ class EntityStateChangedHandler:
 
         current_mode = self._get_current_mode()
 
-        # Don't override hold mode
-        if current_mode == VAMode.HOLD:
+        # Don't override these modes
+        if current_mode in (VAMode.HOLD, VAMode.GAME):
             return
 
         _LOGGER.info(
