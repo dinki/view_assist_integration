@@ -58,6 +58,8 @@ from .const import (
     CONF_MIC_DEVICE,
     CONF_MIC_UNMUTE,
     CONF_MUSIC,
+    CONF_MUSIC_MODE_AUTO,
+    CONF_MUSIC_MODE_TIMEOUT,
     CONF_MUSICPLAYER_DEVICE,
     CONF_ORIENTATION_SENSOR,
     CONF_ROTATE_BACKGROUND_INTERVAL,
@@ -355,6 +357,16 @@ DEFAULT_OPTIONS_SCHEMA = vol.Schema(
                 max=100,
                 step=1.0,
                 mode=NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(CONF_MUSIC_MODE_AUTO): BooleanSelector(),
+        vol.Optional(CONF_MUSIC_MODE_TIMEOUT): NumberSelector(
+            NumberSelectorConfig(
+                min=0,
+                max=3600,
+                step=1,
+                mode=NumberSelectorMode.BOX,
+                unit_of_measurement="seconds",
             )
         ),
     }
