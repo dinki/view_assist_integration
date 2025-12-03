@@ -58,7 +58,10 @@ from .const import (
     CONF_MIC_DEVICE,
     CONF_MIC_UNMUTE,
     CONF_MUSIC,
+    CONF_MUSIC_MODE_AUTO,
+    CONF_MUSIC_MODE_TIMEOUT,
     CONF_MUSICPLAYER_DEVICE,
+    CONF_ORIENTATION_SENSOR,
     CONF_ROTATE_BACKGROUND_INTERVAL,
     CONF_ROTATE_BACKGROUND_LINKED_ENTITY,
     CONF_ROTATE_BACKGROUND_PATH,
@@ -131,6 +134,9 @@ BASE_DEVICE_SCHEMA = vol.Schema(
         vol.Optional(CONF_INTENT_DEVICE, default=vol.UNDEFINED): EntitySelector(
             EntitySelectorConfig(domain=SENSOR_DOMAIN)
         ),
+        vol.Optional(CONF_ORIENTATION_SENSOR, default=vol.UNDEFINED): EntitySelector(
+            EntitySelectorConfig(domain=SENSOR_DOMAIN)
+        ),
     }
 )
 
@@ -155,12 +161,14 @@ def get_vaca_config(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
 
     entity_registry = er.async_get(hass)
     entities = er.async_entries_for_device(entity_registry, device_id)
+
     return {
         CONF_MIC_DEVICE: get_entity("assist_satellite", "", entities) or "",
         CONF_MEDIAPLAYER_DEVICE: get_entity("media_player", "", entities) or "",
         CONF_MUSICPLAYER_DEVICE: get_entity("media_player", "", entities) or "",
         CONF_INTENT_DEVICE: get_entity("sensor", "intent", entities) or "",
         CONF_DISPLAY_DEVICE: get_display_id(device_id) or "",
+        CONF_ORIENTATION_SENSOR: get_entity("sensor", "orientation", entities) or "",
     }
 
 
@@ -349,6 +357,16 @@ DEFAULT_OPTIONS_SCHEMA = vol.Schema(
                 max=100,
                 step=1.0,
                 mode=NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(CONF_MUSIC_MODE_AUTO): BooleanSelector(),
+        vol.Optional(CONF_MUSIC_MODE_TIMEOUT): NumberSelector(
+            NumberSelectorConfig(
+                min=0,
+                max=3600,
+                step=1,
+                mode=NumberSelectorMode.BOX,
+                unit_of_measurement="seconds",
             )
         ),
     }

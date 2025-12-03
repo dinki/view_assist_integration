@@ -107,6 +107,7 @@ class DeviceCoreConfig:
     musicplayer_device: str | None = None
     intent_device: str | None = None
     display_device: str | None = None
+    orientation_sensor: str | None = None
     dev_mimic: bool | None = None
 
 
@@ -160,6 +161,8 @@ class DefaultConfig:
     use_announce: bool | None = None
     mic_unmute: bool | None = None
     ducking_volume: int | None = None
+    music_mode_auto: bool | None = None
+    music_mode_timeout: int | None = None
 
 
 @dataclass
@@ -168,6 +171,14 @@ class DeveloperConfig:
 
     developer_device: str | None = None
     developer_mimic_device: str | None = None
+
+
+@dataclass
+class RuntimeConfigOverrides:
+    """Class to hold runtime override data."""
+
+    home: str | None = None
+    assist_prompt: str | None = None
 
 
 class MasterConfigRuntimeData:
@@ -191,6 +202,7 @@ class DeviceRuntimeData:
         self.core: DeviceCoreConfig = DeviceCoreConfig()
         self.dashboard: DashboardConfig = DashboardConfig()
         self.default: DefaultConfig = DefaultConfig()
+        self.runtime_config_overrides: RuntimeConfigOverrides = RuntimeConfigOverrides()
 
         # Extra data for holding key/value pairs passed in by set_state service call
         self.extra_data: dict[str, Any] = {}

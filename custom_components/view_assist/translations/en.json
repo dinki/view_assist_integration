@@ -25,6 +25,7 @@
           "musicplayer_device": "Music player device",
           "display_device": "Display Device",
           "intent_device": "Intent Device (optional)",
+          "orientation_sensor": "Orientation Sensor (optional)",
           "dev_mimic": "Mimic for view development"
         },
         "data_description": {
@@ -34,6 +35,7 @@
           "musicplayer_device": "The music player device for this satellite",
           "display_device": "The display device for this satellite",
           "intent_device": "The device to provide intent data for this satellite",
+          "orientation_sensor": "Sensor that reports device orientation (portrait/landscape)",
           "dev_mimic": "Use this device for view development on another machine"
         }
       }
@@ -62,6 +64,7 @@
           "musicplayer_device": "Music player device",
           "display_device": "Display Device",
           "intent_device": "Intent Device (optional)",
+          "orientation_sensor": "Orientation Sensor (optional)",
           "dev_mimic": "Mimic for view development"
         },
         "data_description": {
@@ -70,6 +73,7 @@
           "mediaplayer_device": "The media player device for this satellite",
           "musicplayer_device": "The music player device for this satellite",
           "intent_device": "The device to provide intent data for this satellite",
+          "orientation_sensor": "Sensor that reports device orientation (portrait/landscape)",
           "display_device": "The display device for this satellite",
           "dev_mimic": "Use this device for view development on another machine"
         }
@@ -148,7 +152,9 @@
           "do_not_disturb": "Enable do not disturb at startup",
           "use_announce": "Disable announce on this device",
           "micunmute": "Unmute microphone on HA start/restart",
-          "ducking_volume": "Volume ducking percentage"
+          "ducking_volume": "Volume ducking percentage",
+          "music_mode_auto": "Auto music mode",
+          "music_mode_timeout": "Music mode timeout"
         },
         "data_description": {
           "mode": "The default mode for this satellite device",
@@ -156,7 +162,9 @@
           "do_not_disturb": "Default state for do not disturb mode on HA restart",
           "use_announce": "Some media player devices, like BrowserMod, cannot use the Home Assistant announce feature while media is playing. This option allows for turning off announce messages if problems arise. Default is on.",
           "micunmute": "Helpful for Stream Assist devices",
-          "ducking_volume": "Lower media playback volume by this percentage when Assist is active"
+          "ducking_volume": "Lower media playback volume by this percentage when Assist is active",
+          "music_mode_auto": "Automatically enter music mode when music player starts playing",
+          "music_mode_timeout": "Time in seconds before automatically exiting music mode after music stops (0 = disabled)"
         }
       },
       "integration_options": {

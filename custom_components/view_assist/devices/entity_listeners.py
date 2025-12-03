@@ -27,6 +27,8 @@ from ..assets import AssetClass, AssetsManager  # noqa: TID252
 from ..const import (  # noqa: TID252
     CC_CONVERSATION_ENDED_EVENT,
     CYCLE_VIEWS,
+    CONF_MUSIC_MODE_AUTO,
+    CONF_MUSIC_MODE_TIMEOUT,
     DEVICES,
     DOMAIN,
     ESPHOME_DOMAIN,
@@ -94,16 +96,21 @@ class AssistEntityListenerHandler:
         """Initialise."""
         self.hass = hass
         self.config = config
-        self.mic_integration = get_config_entry_by_entity_id(
-            hass, config.runtime_data.core.mic_device or ""
-        ).domain
+        self.mic_integration = None
         self.music_player_entity = config.runtime_data.core.musicplayer_device
         self.music_player_volume: float = 0.0
         self.is_ducked: bool = False
         self.ducking_task: asyncio.Task | None = None
 
+        if mic_device := get_config_entry_by_entity_id(
+            hass, config.runtime_data.core.mic_device
+        ):
+            self.mic_integration = mic_device.domain
+
     def register_listeners(self) -> None:
         """Register the state change listener for assist/mic status entities."""
+        if not self.mic_integration:
+            return
 
         if self.mic_integration == HASSMIC_DOMAIN:
             assist_entity_id = get_hassmic_pipeline_status_entity_id(
@@ -306,6 +313,12 @@ class AssistEntityListenerHandler:
             elif state in ["start", "intent-processing"]:
                 state = AssistSatelliteState.PROCESSING
 
+            assist_prompt = (
+                self.config.runtime_data.dashboard.display_settings.assist_prompt
+                if not self.config.runtime_data.runtime_config_overrides.assist_prompt
+                else self.config.runtime_data.runtime_config_overrides.assist_prompt
+            )
+
             async_dispatcher_send(
                 self.hass,
                 f"{DOMAIN}_{self.config.entry_id}_event",
@@ -313,7 +326,7 @@ class AssistEntityListenerHandler:
                     VAEventType.ASSIST_LISTENING,
                     {
                         "state": state,
-                        "style": self.config.runtime_data.dashboard.display_settings.assist_prompt,
+                        "style": assist_prompt,
                     },
                 ),
             )
@@ -412,9 +425,7 @@ class SensorAttributeChangedHandler:
         if new_mode == VAMode.NORMAL:
             # Add navigate to default view
             if self.navigation_manager:
-                self.navigation_manager.browser_navigate(
-                    self.config.runtime_data.dashboard.home
-                )
+                self.navigation_manager.navigate_home()
         elif new_mode == VAMode.MUSIC:
             # Add navigate to music view
             if self.navigation_manager:
@@ -440,6 +451,11 @@ class EntityStateChangedHandler:
         self.hass = hass
         self.config = config
         self.entity_id: str | None = None
+
+        # Music mode auto-switching configuration
+        self.music_mode_auto = config.options.get(CONF_MUSIC_MODE_AUTO, False)
+        self.music_mode_timeout = config.options.get(CONF_MUSIC_MODE_TIMEOUT, 300)
+        self.music_timeout_task: asyncio.Task | None = None
 
     def register_listeners(self) -> None:
         """Register the state change listener for entities."""
@@ -468,6 +484,25 @@ class EntityStateChangedHandler:
                 self._async_cc_on_conversation_ended_handler,
             )
         )
+
+        # Add music player state listener for auto mode switching
+        if self._should_monitor_music_player():
+            musicplayer_device = self.config.runtime_data.core.musicplayer_device
+
+            # Check initial state, enter music mode if already playing
+            if musicplayer_state := self.hass.states.get(musicplayer_device):
+                if musicplayer_state.state == MediaPlayerState.PLAYING:
+                    if self._is_music_content(musicplayer_state):
+                        self._handle_music_started()
+
+            # Add listener for future state changes
+            self.config.async_on_unload(
+                async_track_state_change_event(
+                    self.hass,
+                    musicplayer_device,
+                    self._async_on_musicplayer_device_state_change,
+                )
+            )
 
     def _add_entity_state_listener(
         self, entity_id: str, listener: Callable[[Event[EventStateChangedData]], None]
@@ -673,6 +708,181 @@ class EntityStateChangedHandler:
                 "Received CC event for %s but device id does not match: %s",
                 entity_id,
                 event.data["device_id"],
+            )
+
+    def _should_monitor_music_player(self) -> bool:
+        """Check if music player monitoring should be enabled."""
+        musicplayer = self.config.runtime_data.core.musicplayer_device
+
+        if not musicplayer:
+            return False
+
+        # Only monitor if at least one feature is enabled
+        if not self.music_mode_auto and self.music_mode_timeout <= 0:
+            return False
+
+        return True
+
+    def _is_music_content(self, state_obj: State) -> bool:
+        """Check if the media content type is an audio entertainment type."""
+        media_content_type = state_obj.attributes.get("media_content_type")
+
+        allowed_types = (
+            "music",
+            "podcast",
+            "episode",
+            "track",
+            "album",
+            "playlist",
+            "artist",
+            "composer",
+            "contributing_artist",
+            "channel",
+            "channels",
+        )
+
+        return media_content_type in allowed_types
+
+    @callback
+    def _async_on_musicplayer_device_state_change(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        """Handle music player state changes for auto mode switching."""
+        if not self._validate_event(event):
+            return
+
+        new_state_obj = event.data.get("new_state")
+        old_state_obj = event.data.get("old_state")
+
+        new_state = new_state_obj.state
+        old_state = old_state_obj.state if old_state_obj else None
+
+        if old_state == new_state:
+            return
+
+        # Music started playing
+        if new_state == MediaPlayerState.PLAYING:
+            if not self._is_music_content(new_state_obj):
+                return
+
+            self._handle_music_started()
+        # Music stopped/paused
+        elif new_state in (
+            MediaPlayerState.IDLE,
+            MediaPlayerState.PAUSED,
+            MediaPlayerState.OFF,
+        ):
+            self._handle_music_stopped()
+
+    def _handle_music_started(self) -> None:
+        """Handle music playback started - transition to music mode."""
+        # Only auto-enter if feature is enabled
+        if not self.music_mode_auto:
+            return
+
+        current_mode = self._get_current_mode()
+
+        # Don't override these modes
+        if current_mode in (VAMode.HOLD, VAMode.GAME):
+            return
+
+        _LOGGER.info(
+            "Music playback started on %s, switching to music mode",
+            self.config.runtime_data.core.name,
+        )
+
+        # Cancel any pending timeout task
+        self._cancel_music_timeout_task()
+
+        # Update mode to music
+        self._set_mode(VAMode.MUSIC)
+
+    def _handle_music_stopped(self) -> None:
+        """Handle music playback stopped - schedule transition to default mode."""
+        current_mode = self._get_current_mode()
+
+        if current_mode != VAMode.MUSIC:
+            return
+
+        if self.music_mode_timeout <= 0:
+            return
+
+        default_mode = self._get_default_mode()
+        _LOGGER.info(
+            "Music playback stopped on %s, scheduling return to default mode '%s' in %d seconds",
+            self.config.runtime_data.core.name,
+            default_mode,
+            self.music_mode_timeout,
+        )
+
+        # Cancel any existing timeout task
+        self._cancel_music_timeout_task()
+
+        # Schedule new timeout task
+        self.music_timeout_task = self.config.async_create_background_task(
+            self.hass,
+            self._music_mode_timeout_handler(),
+            name=f"Music Mode Timeout - {self.config.runtime_data.core.name}",
+        )
+
+    async def _music_mode_timeout_handler(self) -> None:
+        """Handle music mode timeout - transition back to default mode."""
+        try:
+            # Wait for timeout duration
+            await asyncio.sleep(min(self.music_mode_timeout, 3600))
+
+            # Verify mode is still music before transitioning
+            current_mode = self._get_current_mode()
+            if current_mode != VAMode.MUSIC:
+                return
+
+            default_mode = self._get_default_mode()
+            _LOGGER.info(
+                "Music mode timeout expired for %s, returning to default mode '%s'",
+                self.config.runtime_data.core.name,
+                default_mode,
+            )
+
+            # Update mode to default
+            self._set_mode(default_mode)
+
+        except asyncio.CancelledError:
+            raise
+
+    def _cancel_music_timeout_task(self) -> None:
+        """Cancel any existing music mode timeout task."""
+        if self.music_timeout_task and not self.music_timeout_task.done():
+            self.music_timeout_task.cancel()
+            self.music_timeout_task = None
+
+    def _get_current_mode(self) -> str:
+        """Get the current mode from the sensor entity."""
+        sensor_entity = get_sensor_entity_from_instance(
+            self.hass, self.config.entry_id
+        )
+        if sensor_entity and (state := self.hass.states.get(sensor_entity)):
+            return state.attributes.get("mode", VAMode.NORMAL)
+        return VAMode.NORMAL
+
+    def _get_default_mode(self) -> str:
+        """Get the configured default mode from config options."""
+        return self.config.options.get("mode", VAMode.NORMAL)
+
+    def _set_mode(self, mode: str) -> None:
+        """Set the mode using the view_assist.set_state service."""
+        sensor_entity = get_sensor_entity_from_instance(
+            self.hass, self.config.entry_id
+        )
+        if sensor_entity:
+            self.hass.async_create_task(
+                self.hass.services.async_call(
+                    DOMAIN,
+                    "set_state",
+                    {
+                        "entity_id": sensor_entity,
+                        "mode": mode,
+                    },
+                )
             )
 
     def _update_sensor_entity(self, updates: dict) -> None:

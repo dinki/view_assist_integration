@@ -17,7 +17,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DOMAIN, OPTION_KEY_MIGRATIONS
 from .core import TimerManager
-from .devices import MenuManager
+from .devices import MenuManager, NavigationManager
 from .helpers import get_device_id_from_entity_id, get_mute_switch_entity_id
 from .typed import (
     DISPLAY_DEVICE_TYPES,
@@ -126,7 +126,12 @@ class ViewAssistSensor(SensorEntity):
                 self._attr_native_value = v
                 continue
 
-            # TODO: Update runtime config data types as needed
+            # Specific overrides
+            if hasattr(self.config.runtime_data.runtime_config_overrides, k):
+                if getattr(self.config.runtime_data.runtime_config_overrides, k) != v:
+                    setattr(self.config.runtime_data.runtime_config_overrides, k, v)
+                    update_ha = True
+                continue
 
             # Set the value of named vartiables or add/update to extra_data dict
             if hasattr(self.config.runtime_data.default, k):
@@ -161,6 +166,9 @@ class ViewAssistSensor(SensorEntity):
         if self._type in DISPLAY_DEVICE_TYPES:
             attrs.update(self._get_display_device_status_attributes())
 
+        # Active overrides
+        attrs["active_overrides"] = self._get_active_overrides_attributes()
+
         # Add extra_data attributes from runtime data
         attrs.update(self.config.runtime_data.extra_data)
 
@@ -177,6 +185,7 @@ class ViewAssistSensor(SensorEntity):
             "mute_switch": get_mute_switch_entity_id(self.hass, d.mic_device),
             "display_device": d.display_device,
             "intent_device": d.intent_device,
+            "orientation_sensor": d.orientation_sensor,
             "mediaplayer_device": d.mediaplayer_device,
             "musicplayer_device": d.musicplayer_device,
             "voice_device_id": get_device_id_from_entity_id(self.hass, d.mic_device),
@@ -214,3 +223,13 @@ class ViewAssistSensor(SensorEntity):
             "view_timeout": d.default.view_timeout,
             "weather_entity": d.default.weather_entity,
         }
+
+    def _get_active_overrides_attributes(self) -> dict[str, Any]:
+        """Build active runtime override attributes dictionary."""
+        d = self.config.runtime_data.runtime_config_overrides
+        attrs = {}
+        if d.home is not None and d.home != "":
+            attrs["home"] = d.home
+        if d.assist_prompt is not None and d.assist_prompt != "":
+            attrs["assist_prompt"] = d.assist_prompt
+        return attrs

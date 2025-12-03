@@ -48,7 +48,7 @@ JSMODULES = [
     {
         "name": "View Assist Helper",
         "filename": "view_assist.js",
-        "version": "1.0.24",
+        "version": "1.0.25",
     },
 ]
 # mins between checks for updated versions of dashboard and views
@@ -64,6 +64,7 @@ class VAMode(StrEnum):
     HOLD = "hold"
     NIGHT = "night"
     ROTATE = "rotate"
+    GAME = "game"
 
 
 VAMODE_REVERTS = {
@@ -85,6 +86,7 @@ CONF_MEDIAPLAYER_DEVICE = "mediaplayer_device"
 CONF_MUSICPLAYER_DEVICE = "musicplayer_device"
 CONF_DISPLAY_DEVICE = "display_device"
 CONF_INTENT_DEVICE = "intent_device"
+CONF_ORIENTATION_SENSOR = "orientation_sensor"
 
 CONF_DASHBOARD = "dashboard"
 CONF_HOME = "home"
@@ -115,6 +117,8 @@ CONF_DO_NOT_DISTURB = "do_not_disturb"
 CONF_USE_ANNOUNCE = "use_announce"
 CONF_MIC_UNMUTE = "micunmute"
 CONF_DUCKING_VOLUME = "ducking_volume"
+CONF_MUSIC_MODE_AUTO = "music_mode_auto"
+CONF_MUSIC_MODE_TIMEOUT = "music_mode_timeout"
 
 CONF_ENABLE_UPDATES = "enable_updates"
 CONF_TRANSLATION_ENGINE = "translation_engine"
@@ -165,6 +169,8 @@ DEFAULT_VALUES = {
     CONF_USE_ANNOUNCE: "off",
     CONF_MIC_UNMUTE: "off",
     CONF_DUCKING_VOLUME: 70,
+    CONF_MUSIC_MODE_AUTO: False,
+    CONF_MUSIC_MODE_TIMEOUT: 300,
     # Default integration options
     CONF_ENABLE_UPDATES: True,
     # Default developer otions
