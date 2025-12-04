@@ -135,6 +135,7 @@ class DisplayConfig:
     menu_timeout: int = 10
     time_format: VATimeFormat | None = None
     screen_mode: VAScreenMode | None = None
+    cycle_views: list[str] = field(default_factory=list)
 
 
 @dataclass

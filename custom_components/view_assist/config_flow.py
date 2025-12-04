@@ -38,6 +38,7 @@ from .const import (
     CONF_BACKGROUND,
     CONF_BACKGROUND_MODE,
     CONF_BACKGROUND_SETTINGS,
+    CONF_CYCLE_VIEWS,
     CONF_DASHBOARD,
     CONF_DEVELOPER_DEVICE,
     CONF_DEVELOPER_MIMIC_DEVICE,
@@ -305,6 +306,15 @@ async def get_dashboard_options_schema(
                 options=[e.value for e in VAScreenMode],
                 mode=SelectSelectorMode.DROPDOWN,
                 translation_key="lookup_selector",
+            )
+        ),
+        vol.Optional(CONF_CYCLE_VIEWS): SelectSelector(
+            SelectSelectorConfig(
+                translation_key="cycle_views_selector",
+                options=[],
+                mode=SelectSelectorMode.LIST,
+                multiple=True,
+                custom_value=True,
             )
         ),
     }
