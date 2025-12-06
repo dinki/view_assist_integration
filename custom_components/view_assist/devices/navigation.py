@@ -162,7 +162,7 @@ class NavigationManager:
         path = (
             self.config.runtime_data.runtime_config_overrides.home
             if self.config.runtime_data.runtime_config_overrides.home
-            else self.config.runtime_data.dashboard.dashboard
+            else self.config.runtime_data.dashboard.home
         )
         self.browser_navigate(
             path=path,
