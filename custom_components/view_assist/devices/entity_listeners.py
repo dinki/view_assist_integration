@@ -453,8 +453,8 @@ class EntityStateChangedHandler:
         self.entity_id: str | None = None
 
         # Music mode auto-switching configuration
-        self.music_mode_auto = config.options.get(CONF_MUSIC_MODE_AUTO, False)
-        self.music_mode_timeout = config.options.get(CONF_MUSIC_MODE_TIMEOUT, 300)
+        self.music_mode_auto = config.runtime_data.default.music_mode_auto or False
+        self.music_mode_timeout = config.runtime_data.default.music_mode_timeout or 300
         self.music_timeout_task: asyncio.Task | None = None
 
     def register_listeners(self) -> None:
