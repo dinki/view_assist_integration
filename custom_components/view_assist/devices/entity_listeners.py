@@ -666,6 +666,10 @@ class EntityStateChangedHandler:
                 message_font_size = ["10vw", "8vw", "6vw", "4vw"][
                     min(word_count // 6, 3)
                 ]
+                # Navigate first to trigger title clear
+                if navigation_manager:
+                    navigation_manager.browser_navigate("view-assist/info")
+                # Then set the title/message after navigation to prevent clearing
                 updates.update(
                     {
                         "title": "AI Response",
@@ -674,8 +678,6 @@ class EntityStateChangedHandler:
                     }
                 )
                 self._update_sensor_entity(updates)
-                if navigation_manager:
-                    navigation_manager.browser_navigate("view-assist/info")
 
     @callback
     def _async_cc_on_conversation_ended_handler(self, event: Event):

@@ -125,7 +125,8 @@
               "menu_items": "Menu items",
               "menu_timeout": "Menu timeout",
               "time_format": "Time format",
-              "screen_mode": "Show/hide header and sidebar"
+              "screen_mode": "Show/hide header and sidebar",
+              "cycle_views": "Cycle views"
             },
             "data_description": {
               "assist_prompt": "The Assist notification prompt style to use for wake word detection and intent processing",
@@ -136,7 +137,8 @@
               "menu_items": "List of items to show in the menu when activated",
               "menu_timeout": "Time in seconds before menu automatically closes (0 to disable timeout)",
               "time_format": "Sets clock display time format",
-              "screen_mode": "Show or hide the header and sidebar"
+              "screen_mode": "Show or hide the header and sidebar",
+              "cycle_views": "List of items to show when in cycle mode"
             }
           }
         }

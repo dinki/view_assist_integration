@@ -104,6 +104,9 @@ class NavigationManager:
             self.config.runtime_data.default.mode,
         )
 
+        # Clear title on navigation
+        self.config.runtime_data.extra_data["title"] = ""
+
         # Update current_path attribute
         self.config.runtime_data.extra_data["current_path"] = path
         
@@ -162,7 +165,7 @@ class NavigationManager:
         path = (
             self.config.runtime_data.runtime_config_overrides.home
             if self.config.runtime_data.runtime_config_overrides.home
-            else self.config.runtime_data.dashboard.dashboard
+            else self.config.runtime_data.dashboard.home
         )
         self.browser_navigate(
             path=path,
