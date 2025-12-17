@@ -26,6 +26,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from ..assets import AssetClass, AssetsManager  # noqa: TID252
 from ..const import (  # noqa: TID252
     CC_CONVERSATION_ENDED_EVENT,
+    CYCLE_VIEWS,
     CONF_MUSIC_MODE_AUTO,
     CONF_MUSIC_MODE_TIMEOUT,
     DEVICES,
@@ -434,8 +435,7 @@ class SensorAttributeChangedHandler:
         elif new_mode == VAMode.CYCLE:
             # Start cycling views
             if self.navigation_manager:
-                cycle_views = self.config.runtime_data.dashboard.display_settings.cycle_views
-                self.navigation_manager.start_display_view_cycle(cycle_views)
+                self.navigation_manager.start_display_view_cycle(CYCLE_VIEWS)
 
         elif new_mode == VAMode.HOLD:
             # Hold mode, so cancel any revert timer
@@ -453,8 +453,8 @@ class EntityStateChangedHandler:
         self.entity_id: str | None = None
 
         # Music mode auto-switching configuration
-        self.music_mode_auto = config.runtime_data.default.music_mode_auto or False
-        self.music_mode_timeout = config.runtime_data.default.music_mode_timeout or 300
+        self.music_mode_auto = config.options.get(CONF_MUSIC_MODE_AUTO, False)
+        self.music_mode_timeout = config.options.get(CONF_MUSIC_MODE_TIMEOUT, 300)
         self.music_timeout_task: asyncio.Task | None = None
 
     def register_listeners(self) -> None:
@@ -666,6 +666,10 @@ class EntityStateChangedHandler:
                 message_font_size = ["10vw", "8vw", "6vw", "4vw"][
                     min(word_count // 6, 3)
                 ]
+                # Navigate first to trigger title clear
+                if navigation_manager:
+                    navigation_manager.browser_navigate("view-assist/info")
+                # Then set the title/message after navigation to prevent clearing
                 updates.update(
                     {
                         "title": "AI Response",
@@ -674,8 +678,6 @@ class EntityStateChangedHandler:
                     }
                 )
                 self._update_sensor_entity(updates)
-                if navigation_manager:
-                    navigation_manager.browser_navigate("view-assist/info")
 
     @callback
     def _async_cc_on_conversation_ended_handler(self, event: Event):

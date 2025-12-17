@@ -104,6 +104,9 @@ class NavigationManager:
             self.config.runtime_data.default.mode,
         )
 
+        # Clear title on navigation
+        self.config.runtime_data.extra_data["title"] = ""
+
         # Update current_path attribute
         self.config.runtime_data.extra_data["current_path"] = path
         
