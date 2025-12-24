@@ -132,16 +132,18 @@ class VAUpdateEntity(UpdateEntity):
     def release_url(self) -> str:
         """Return the URL of the release page."""
         base = f"https://github.com/{GITHUB_REPO}/tree/{GITHUB_BRANCH}"
+        # GH uses _ but wiki uses - so here's a dirty hack
+        name_hyphenated = self._name.replace('_', '-')
         if self._asset_class == AssetClass.DASHBOARD:
             return f"{base}/{DASHBOARD_VIEWS_GITHUB_PATH}/{DASHBOARD_DIR}/dashboard"
         if self._asset_class == AssetClass.VIEW:
-            return f"{WIKI_URL}/docs/extend-functionality/{VIEWS_DIR}/{self._name}#changelog"
+            return f"{WIKI_URL}/docs/extend-functionality/{VIEWS_DIR}/{name_hyphenated}#changelog"
         if self._asset_class == AssetClass.BLUEPRINT:
             return (
-                f"{WIKI_URL}/docs/extend-functionality/sentences/{self._name}#changelog"
+                f"{WIKI_URL}/docs/extend-functionality/sentences/{name_hyphenated}#changelog"
             )
         return base
-
+    
     @property
     def installed_version(self) -> str:
         """Return downloaded version of the entity."""
