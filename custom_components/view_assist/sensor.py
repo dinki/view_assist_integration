@@ -80,26 +80,64 @@ class ViewAssistSensor(RestoreSensor):
             last_state = await self.async_get_last_state()
 
             if last_state and last_state.attributes:
+                # FIRST: Restore status_icons and menu_items for MenuManager
+                # These contain runtime additions from add_status_item service
+                # Store them in extra_data so MenuManager can access them during async_setup
+                restored_status_icons = last_state.attributes.get("status_icons")
+                restored_menu_items = last_state.attributes.get("menu_items")
+                
+                if restored_status_icons is not None:
+                    self.config.runtime_data.extra_data["restored_status_icons"] = restored_status_icons
+                    _LOGGER.debug(
+                        "Saved %d restored status icons for MenuManager: %s",
+                        len(restored_status_icons),
+                        self.entity_id
+                    )
+
+                if restored_menu_items is not None:
+                    self.config.runtime_data.extra_data["restored_menu_items"] = restored_menu_items
+                    _LOGGER.debug(
+                        "Saved %d restored menu items for MenuManager: %s",
+                        len(restored_menu_items),
+                        self.entity_id
+                    )
+
                 # Restore extra_data attributes
                 # extra_data is used to store dynamic attributes set via view_assist.set_state
                 restored_extra_data = {}
 
-                # Get list of known core attributes that shouldn't be restored to extra_data
-                core_attrs = {
+                # Define attributes that are system-managed and should NOT be restored
+                # These are rebuilt fresh on startup by their respective managers
+                system_managed_attrs = {
+                    # Core entity properties (from config/runtime_data)
                     "name", "type", "mic_device", "mic_device_id", "mute_switch",
                     "display_device", "intent_device", "orientation_sensor",
                     "mediaplayer_device", "musicplayer_device", "voice_device_id",
-                    "last_updated", "do_not_disturb", "use_announce", "timers",
-                    "status_icons", "status_icons_size", "menu_config", "menu_items",
-                    "menu_active", "font_style", "use_24_hour_time", "background",
-                    "mode", "view_timeout", "weather_entity", "screen_mode",
-                    "active_overrides", "friendly_name", "icon", "device_class",
+
+                    # Managed by MenuManager (now restored via extra_data above)
+                    "status_icons", "menu_items", "menu_active",
+
+                    # Managed by TimerManager (has its own storage)
+                    "timers",
+
+                    # From configuration/runtime_data
+                    "status_icons_size", "menu_config", "font_style", 
+                    "use_24_hour_time", "background", "mode", "view_timeout", 
+                    "weather_entity", "screen_mode", "do_not_disturb", 
+                    "use_announce",
+
+                    # Generated/ephemeral
+                    "last_updated", "active_overrides",
+
+                    # Standard entity attributes
+                    "friendly_name", "icon", "device_class", 
                     "unit_of_measurement", "state_class"
                 }
 
-                # Restore any non-core attributes to extra_data
+                # Restore user/automation-set attributes
+                # These include: alert_data, title, message, image, message_font_size, etc.
                 for attr_name, attr_value in last_state.attributes.items():
-                    if attr_name not in core_attrs:
+                    if attr_name not in system_managed_attrs:
                         restored_extra_data[attr_name] = attr_value
 
                 # Update extra_data with restored values
