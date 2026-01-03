@@ -8,7 +8,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import RestoreSensor
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
@@ -46,7 +46,7 @@ async def async_setup_entry(
     async_add_entities(sensors)
 
 
-class ViewAssistSensor(SensorEntity):
+class ViewAssistSensor(RestoreSensor):
     """Representation of a View Assist Sensor."""
 
     _attr_should_poll = False
@@ -72,6 +72,83 @@ class ViewAssistSensor(SensorEntity):
     async def async_added_to_hass(self) -> None:
         """Run when entity is about to be added to hass."""
 
+        # Restore previous sensor data if available
+        last_sensor_data = await self.async_get_last_sensor_data()
+
+        if last_sensor_data:
+            # Get the last state to access attributes
+            last_state = await self.async_get_last_state()
+
+            if last_state and last_state.attributes:
+                # FIRST: Restore status_icons and menu_items for MenuManager
+                # These contain runtime additions from add_status_item service
+                # Store them in extra_data so MenuManager can access them during async_setup
+                restored_status_icons = last_state.attributes.get("status_icons")
+                restored_menu_items = last_state.attributes.get("menu_items")
+                
+                if restored_status_icons is not None:
+                    self.config.runtime_data.extra_data["restored_status_icons"] = restored_status_icons
+                    _LOGGER.debug(
+                        "Saved %d restored status icons for MenuManager: %s",
+                        len(restored_status_icons),
+                        self.entity_id
+                    )
+
+                if restored_menu_items is not None:
+                    self.config.runtime_data.extra_data["restored_menu_items"] = restored_menu_items
+                    _LOGGER.debug(
+                        "Saved %d restored menu items for MenuManager: %s",
+                        len(restored_menu_items),
+                        self.entity_id
+                    )
+
+                # Restore extra_data attributes
+                # extra_data is used to store dynamic attributes set via view_assist.set_state
+                restored_extra_data = {}
+
+                # Define attributes that are system-managed and should NOT be restored
+                # These are rebuilt fresh on startup by their respective managers
+                system_managed_attrs = {
+                    # Core entity properties (from config/runtime_data)
+                    "name", "type", "mic_device", "mic_device_id", "mute_switch",
+                    "display_device", "intent_device", "orientation_sensor",
+                    "mediaplayer_device", "musicplayer_device", "voice_device_id",
+
+                    # Managed by MenuManager (now restored via extra_data above)
+                    "status_icons", "menu_items", "menu_active",
+
+                    # Managed by TimerManager (has its own storage)
+                    "timers",
+
+                    # From configuration/runtime_data
+                    "status_icons_size", "menu_config", "font_style", 
+                    "use_24_hour_time", "background", "mode", "view_timeout", 
+                    "weather_entity", "screen_mode", "do_not_disturb", 
+                    "use_announce",
+
+                    # Generated/ephemeral
+                    "last_updated", "active_overrides",
+
+                    # Standard entity attributes
+                    "friendly_name", "icon", "device_class", 
+                    "unit_of_measurement", "state_class"
+                }
+
+                # Restore user/automation-set attributes
+                # These include: alert_data, title, message, image, message_font_size, etc.
+                for attr_name, attr_value in last_state.attributes.items():
+                    if attr_name not in system_managed_attrs:
+                        restored_extra_data[attr_name] = attr_value
+
+                # Update extra_data with restored values
+                if restored_extra_data:
+                    self.config.runtime_data.extra_data.update(restored_extra_data)
+                    _LOGGER.info(
+                        "Restored %d extra attributes for %s: %s",
+                        len(restored_extra_data),
+                        self.entity_id,
+                        list(restored_extra_data.keys())
+                    )
         # Add internal event listeners
         self.async_on_remove(
             async_dispatcher_connect(
