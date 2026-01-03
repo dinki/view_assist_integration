@@ -1,0 +1,271 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Gerät ist bereits konfiguriert",
+      "reconfigure_successful": "Neukonfiguration erfolgreich",
+      "already_in_progress": "Eine Einrichtung für diese Integration läuft bereits"
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "invalid_auth": "Ungültige Authentifizierung",
+      "invalid_settings": "Ungültige Einstellungen",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "step": {
+      "master_config": {
+        "title": "Master-Konfiguration",
+        "description": "Dies fügt eine Master-Konfigurationsinstanz von View Assist hinzu\n\nSie muss vor der Einrichtung von View Assist-Geräteinstanzen hinzugefügt werden (bei Neuinstallation) oder vor weiteren View Assist-Geräteinstanzen (bei bestehender Installation)\n\nMöglicherweise müssen Sie vorhandene View Assist-Geräte aktualisieren, um die volle Funktionalität zu aktivieren"
+      },
+      "options": {
+        "title": "View Assist-Gerät konfigurieren",
+        "data": {
+          "name": "Satellitenname",
+          "mic_device": "Mikrofongerät",
+          "mediaplayer_device": "Mediaplayer-Gerät",
+          "musicplayer_device": "Musikplayer-Gerät",
+          "display_device": "Anzeigegerät",
+          "intent_device": "Intent-Gerät (optional)",
+          "orientation_sensor": "Ausrichtungssensor (optional)",
+          "dev_mimic": "Nachahmen für View-Entwicklung"
+        },
+        "data_description": {
+          "name": "Der Name des View Assist-Satelliten",
+          "mic_device": "Das Mikrofongerät für diesen Satelliten",
+          "mediaplayer_device": "Das Mediaplayer-Gerät für diesen Satelliten",
+          "musicplayer_device": "Das Musikplayer-Gerät für diesen Satelliten",
+          "display_device": "Das Anzeigegerät für diesen Satelliten",
+          "intent_device": "Das Gerät, das Intent-Daten für diesen Satelliten bereitstellt",
+          "orientation_sensor": "Sensor, der die Geräteausrichtung meldet (Hoch-/Querformat)",
+          "dev_mimic": "Dieses Gerät für die View-Entwicklung auf einem anderen Rechner verwenden"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Konfiguration",
+        "description": "Wählen Sie aus, welche Optionen geändert werden sollen",
+        "menu_options": {
+          "integration_options": "Integrationsoptionen",
+          "main_config": "Grundlegende Gerätekonfiguration",
+          "dashboard_options": "Dashboard-Optionen",
+          "default_options": "Standardoptionen",
+          "developer_options": "Entwickleroptionen"
+        }
+      },
+      "main_config": {
+        "title": "{name} Grundlegende Gerätekonfiguration",
+        "description": "",
+        "data": {
+          "name": "Satellitenname",
+          "mic_device": "Mikrofongerät",
+          "mediaplayer_device": "Mediaplayer-Gerät",
+          "musicplayer_device": "Musikplayer-Gerät",
+          "display_device": "Anzeigegerät",
+          "intent_device": "Intent-Gerät (optional)",
+          "orientation_sensor": "Ausrichtungssensor (optional)",
+          "dev_mimic": "Nachahmen für View-Entwicklung"
+        },
+        "data_description": {
+          "name": "Der Name des View Assist-Satelliten",
+          "mic_device": "Das Mikrofongerät für diesen Satelliten",
+          "mediaplayer_device": "Das Mediaplayer-Gerät für diesen Satelliten",
+          "musicplayer_device": "Das Musikplayer-Gerät für diesen Satelliten",
+          "intent_device": "Das Gerät, das Intent-Daten für diesen Satelliten bereitstellt",
+          "orientation_sensor": "Sensor, der die Geräteausrichtung meldet (Hoch-/Querformat)",
+          "display_device": "Das Anzeigegerät für diesen Satelliten",
+          "dev_mimic": "Dieses Gerät für die View-Entwicklung auf einem anderen Rechner verwenden"
+        }
+      },
+      "dashboard_options": {
+        "title": "{name} Dashboard-Optionen",
+        "description": "{description}",
+        "data": {
+          "dashboard": "Dashboard",
+          "home": "Startbildschirm",
+          "music": "Musikansicht",
+          "intent": "Intent-Ansicht",
+          "list_view": "Listenansicht"
+        },
+        "data_description": {
+          "dashboard": "Das Basis-Dashboard für View Assist (ohne abschließenden Schrägstrich)",
+          "home": "Der Bildschirm, zu dem nach Timeout zurückgekehrt wird",
+          "music": "Die Ansicht, zu der im Musikmodus zurückgekehrt wird",
+          "intent": "Die Ansicht, die für Standard-HA-Aktionen zur Anzeige dieser Entitäten verwendet wird",
+          "list_view": "Die Ansicht, die beim Aktualisieren einer Liste angezeigt wird"
+        },
+        "sections": {
+          "background_settings": {
+            "name": "Hintergrundeinstellungen",
+            "description": "Optionen für das Hintergrundbild",
+            "data": {
+              "background_mode": "Hintergrundbildquelle",
+              "background": "Standard-Hintergrund",
+              "rotate_background_path": "Bildpfad oder URL",
+              "rotate_background_linked_entity": "Verknüpfte Entität",
+              "rotate_background_interval": "Rotationsintervall"
+            },
+            "data_description": {
+              "background": "Die Standard-Hintergrundbild-URL",
+              "rotate_background_path": "Ein Pfad unter config/view_assist zum Laden von Bildern in lokalen Dateimodi. Eine URL zum Laden von Bildern im URL-Modus",
+              "rotate_background_linked_entity": "View Assist-Entität, mit der der Hintergrund verknüpft werden soll",
+              "rotate_background_interval": "Intervall in Minuten für die Hintergrundrotation"
+            }
+          },
+          "display_settings": {
+            "name": "Anzeigeeinstellungen",
+            "description": "Optionen für das Anzeigegerät",
+            "data": {
+              "assist_prompt": "Assist-Eingabeaufforderung",
+              "font_style": "Schriftstil",
+              "status_icons_size": "Größe der Statussymbole",
+              "status_icons": "Start-Symbole",
+              "menu_config": "Menükonfiguration",
+              "menu_items": "Menüeinträge",
+              "menu_timeout": "Menü-Timeout",
+              "time_format": "Zeitformat",
+              "screen_mode": "Kopfzeile und Seitenleiste ein-/ausblenden",
+              "cycle_views": "Ansichten durchlaufen"
+            },
+            "data_description": {
+              "assist_prompt": "Der Assist-Benachrichtigungsstil für Weckworterkennung und Intent-Verarbeitung",
+              "font_style": "Die Standardschriftart für dieses Satellitengerät. Der Schriftname muss exakt übereinstimmen und verfügbar sein",
+              "status_icons_size": "Größe der Symbole in der Statussymbolanzeige",
+              "status_icons": "Erweiterte Option! Liste benutzerdefinierter Start-Symbole, die beim Start festgelegt werden. Ändern Sie dies nicht, wenn Sie nicht wissen, was Sie tun",
+              "menu_config": "Menüverhalten konfigurieren",
+              "menu_items": "Liste der Einträge, die im aktivierten Menü angezeigt werden",
+              "menu_timeout": "Zeit in Sekunden, bevor das Menü automatisch geschlossen wird (0 zum Deaktivieren)",
+              "time_format": "Legt das Zeitformat der Uhranzeige fest",
+              "screen_mode": "Kopfzeile und Seitenleiste anzeigen oder ausblenden",
+              "cycle_views": "Liste der Einträge, die im Zyklusmodus angezeigt werden"
+            }
+          }
+        }
+      },
+      "default_options": {
+        "title": "{name} Standardoptionen",
+        "description": "{description}",
+        "data": {
+          "weather_entity": "Wetterentität für Wetteranzeige",
+          "mic_type": "Die Integration für Mikrofoneingabe",
+          "mode": "Standardmodus",
+          "view_timeout": "Ansichts-Timeout",
+          "do_not_disturb": "Nicht stören beim Start aktivieren",
+          "use_announce": "Ankündigungen auf diesem Gerät deaktivieren",
+          "micunmute": "Mikrofon bei HA-Start/-Neustart aktivieren",
+          "ducking_volume": "Prozentsatz der Lautstärkeabsenkung",
+          "music_mode_auto": "Automatischer Musikmodus",
+          "music_mode_timeout": "Musikmodus-Timeout"
+        },
+        "data_description": {
+          "mode": "Der Standardmodus für dieses Satellitengerät",
+          "view_timeout": "Der Standard-Timeout-Wert für dieses Satellitengerät in Sekunden, bevor zur Standardansicht zurückgekehrt wird",
+          "do_not_disturb": "Standardzustand für den Nicht-stören-Modus beim HA-Neustart",
+          "use_announce": "Einige Mediaplayer-Geräte, wie BrowserMod, können die Home Assistant-Ankündigungsfunktion nicht verwenden, während Medien abgespielt werden. Diese Option ermöglicht das Ausschalten von Ankündigungsnachrichten bei Problemen. Standard ist aktiviert.",
+          "micunmute": "Hilfreich für Stream Assist-Geräte",
+          "ducking_volume": "Medienwiedergabelautstärke um diesen Prozentsatz senken, wenn Assist aktiv ist",
+          "music_mode_auto": "Automatisch in den Musikmodus wechseln, wenn der Musikplayer mit der Wiedergabe beginnt",
+          "music_mode_timeout": "Zeit in Sekunden, bevor der Musikmodus nach dem Stoppen der Musik automatisch beendet wird (0 = deaktiviert)"
+        }
+      },
+      "integration_options": {
+        "title": "{name} Integrationsoptionen",
+        "data": {
+          "enable_updates": "Update-Benachrichtigungen aktivieren",
+          "translation_engine": "Übersetzungs-Engine"
+        },
+        "data_description": {
+          "enable_updates": "Update-Benachrichtigungen für Dashboard, Ansichten und Blueprints aktivieren oder deaktivieren",
+          "translation_engine": "Die Übersetzungs-Engine für Timer (experimentell)"
+        }
+      },
+      "developer_options": {
+        "title": "{name} Entwickleroptionen",
+        "data": {
+          "developer_device": "Entwicklergerät",
+          "developer_mimic_device": "Nachzuahmendes Gerät"
+        },
+        "data_description": {
+          "developer_device": "Die Browser-ID des Geräts, das Sie für die Entwicklung verwenden möchten",
+          "developer_mimic_device": "Das Gerät, das für die Entwicklung nachgeahmt werden soll"
+        }
+      }
+    }
+  },
+  "selector": {
+    "type_selector": {
+      "options": {
+        "vaca": "View Assist Companion App-Gerät",
+        "view_audio": "View Assist-Gerät mit Display",
+        "audio_only": "View Assist-Gerät ohne Display"
+      }
+    },
+    "assist_prompt_selector": {
+      "options": {
+        "blur_pop_up": "Verschwimmt den Bildschirm und zeigt Pop-up an",
+        "flashing_bar": "Blinkender Balken unten",
+        "kitt_bar": "KITT-Stil-Balken unten"
+      }
+    },
+    "status_icons_size_selector": {
+      "options": {
+        "6vw": "Klein",
+        "7vw": "Mittel",
+        "8vw": "Groß"
+      }
+    },
+    "menu_config_selector": {
+      "options": {
+        "menu_disabled": "Menü deaktiviert",
+        "menu_enabled_button_visible": "Menü aktiviert, Schaltfläche sichtbar",
+        "menu_enabled_button_hidden": "Menü aktiviert, Schaltfläche ausgeblendet"
+      }
+    },
+    "mic_type_selector": {
+      "options": {
+        "home_assistant_voice_satellite": "Home Assistant Voice Satellite",
+        "hassmic": "HassMic",
+        "stream_assist": "Stream Assist"
+      }
+    },
+    "display_type_selector": {
+      "options": {
+        "browser_mod": "BrowserMod",
+        "remote_assist_display": "Remote Assist Display",
+        "stream_assist": "Stream Assist"
+      }
+    },
+    "rotate_backgound_source_selector": {
+      "options": {
+        "default_background": "Standard-Hintergrund",
+        "local_sequence": "Sequenziertes Bild aus lokalem Dateipfad",
+        "local_random": "Zufälliges Bild aus lokalem Dateipfad",
+        "download": "Zufälliges Bild von unsplash.com",
+        "custom_url": "Bild von benutzerdefinierter URL",
+        "link_to_entity": "Anderes View Assist-Gerät spiegeln"
+      }
+    },
+    "menu_icons_selector": {
+      "options": {}
+    },
+    "lookup_selector": {
+      "options": {
+        "hour_12": "12 Stunden",
+        "hour_24": "24 Stunden",
+        "on": "Ein",
+        "off": "Aus",
+        "hide_header_sidebar": "Kopfzeile und Seitenmenü ausblenden",
+        "hide_header": "Kopfzeile ausblenden",
+        "hide_sidebar": "Seitenmenü ausblenden",
+        "no_hide": "Elemente nicht ausblenden"
+      }
+    }
+  },
+  "issues": {
+    "no_resource_version": {
+      "title": "View Assist-Ressourcenversionsprobleme beheben",
+      "description": "Die View Assist Helper-Plugin-Ressource hat keine Versionskennung. Dies kann dazu führen, dass nicht die neueste Version verwendet wird. Bitte entfernen Sie die Ressource und starten Sie Home Assistant neu, um das Problem zu beheben."
+    }
+  }
+}
