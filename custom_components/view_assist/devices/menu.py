@@ -90,12 +90,48 @@ class MenuManager:
 
         d = self.config.runtime_data.dashboard.display_settings
 
-        self._internal_status_icons = list(d.status_icons.copy())
-        self._internal_menu_items = [
-            item
-            for item in d.menu_items.copy()
-            if item not in self._internal_status_icons
-        ]
+        # Check for restored runtime state in extra_data
+        # These are status icons/menu items that were added via add_status_item service
+        # and persisted through a restart
+        restored_status_icons = self.config.runtime_data.extra_data.get("restored_status_icons")
+        restored_menu_items = self.config.runtime_data.extra_data.get("restored_menu_items")
+
+        # Use restored state if available, otherwise use config defaults
+        if restored_status_icons is not None:
+            # Restored state takes precedence over config
+            # This preserves runtime additions from add_status_item service
+            self._internal_status_icons = list(restored_status_icons)
+            _LOGGER.info(
+                "Restored %d status icons for %s (including runtime additions)",
+                len(restored_status_icons),
+                self.name
+            )
+
+            # Clean up the extra_data key since we've consumed it
+            self.config.runtime_data.extra_data.pop("restored_status_icons", None)
+        else:
+            # Fresh start or first run - use config defaults
+            self._internal_status_icons = list(d.status_icons.copy())
+
+        if restored_menu_items is not None:
+            # Restored state takes precedence over config
+            self._internal_menu_items = list(restored_menu_items)
+            _LOGGER.info(
+                "Restored %d menu items for %s (including runtime additions)",
+                len(restored_menu_items),
+                self.name
+            )
+
+            # Clean up the extra_data key since we've consumed it
+            self.config.runtime_data.extra_data.pop("restored_menu_items", None)
+        else:
+            # Fresh start or first run - use config defaults
+            self._internal_menu_items = [
+                item
+                for item in d.menu_items.copy()
+                if item not in self._internal_status_icons
+            ]
+
         self._menu_timeout = d.menu_timeout
 
         self._build()
