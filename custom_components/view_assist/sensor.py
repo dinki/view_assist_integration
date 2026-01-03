@@ -8,7 +8,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import RestoreSensor
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
@@ -46,7 +46,7 @@ async def async_setup_entry(
     async_add_entities(sensors)
 
 
-class ViewAssistSensor(SensorEntity):
+class ViewAssistSensor(RestoreSensor):
     """Representation of a View Assist Sensor."""
 
     _attr_should_poll = False
@@ -72,6 +72,45 @@ class ViewAssistSensor(SensorEntity):
     async def async_added_to_hass(self) -> None:
         """Run when entity is about to be added to hass."""
 
+        # Restore previous sensor data if available
+        last_sensor_data = await self.async_get_last_sensor_data()
+
+        if last_sensor_data:
+            # Get the last state to access attributes
+            last_state = await self.async_get_last_state()
+
+            if last_state and last_state.attributes:
+                # Restore extra_data attributes
+                # extra_data is used to store dynamic attributes set via view_assist.set_state
+                restored_extra_data = {}
+
+                # Get list of known core attributes that shouldn't be restored to extra_data
+                core_attrs = {
+                    "name", "type", "mic_device", "mic_device_id", "mute_switch",
+                    "display_device", "intent_device", "orientation_sensor",
+                    "mediaplayer_device", "musicplayer_device", "voice_device_id",
+                    "last_updated", "do_not_disturb", "use_announce", "timers",
+                    "status_icons", "status_icons_size", "menu_config", "menu_items",
+                    "menu_active", "font_style", "use_24_hour_time", "background",
+                    "mode", "view_timeout", "weather_entity", "screen_mode",
+                    "active_overrides", "friendly_name", "icon", "device_class",
+                    "unit_of_measurement", "state_class"
+                }
+
+                # Restore any non-core attributes to extra_data
+                for attr_name, attr_value in last_state.attributes.items():
+                    if attr_name not in core_attrs:
+                        restored_extra_data[attr_name] = attr_value
+
+                # Update extra_data with restored values
+                if restored_extra_data:
+                    self.config.runtime_data.extra_data.update(restored_extra_data)
+                    _LOGGER.info(
+                        "Restored %d extra attributes for %s: %s",
+                        len(restored_extra_data),
+                        self.entity_id,
+                        list(restored_extra_data.keys())
+                    )
         # Add internal event listeners
         self.async_on_remove(
             async_dispatcher_connect(
