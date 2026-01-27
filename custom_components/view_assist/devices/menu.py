@@ -81,6 +81,10 @@ class MenuManager:
         self._internal_menu_items: list[str] = []
         self._menu_timeout: int = 10
 
+        # NEW: Explicit tracking of runtime additions
+        self._runtime_status_icons: list[str] = []
+        self._runtime_menu_items: list[str] = []
+
         self.status_icons: list[str] = []
         self.menu_items: list[str] = []
         self.active: bool = False
@@ -90,50 +94,47 @@ class MenuManager:
 
         d = self.config.runtime_data.dashboard.display_settings
 
-        # Check for restored runtime state in extra_data
-        # These are status icons/menu items that were added via add_status_item service
-        # and persisted through a restart
-        restored_status_icons = self.config.runtime_data.extra_data.get("restored_status_icons")
-        restored_menu_items = self.config.runtime_data.extra_data.get("restored_menu_items")
+        # Restore runtime additions from extra_data (if present)
+        restored_runtime_status = self.config.runtime_data.extra_data.get("runtime_status_icons", [])
+        restored_runtime_menu = self.config.runtime_data.extra_data.get("runtime_menu_items", [])
 
-        # Use restored state if available, otherwise use config defaults
-        if restored_status_icons is not None:
-            # Restored state takes precedence over config
-            # This preserves runtime additions from add_status_item service
-            self._internal_status_icons = list(restored_status_icons)
+        if restored_runtime_status:
+            self._runtime_status_icons = list(restored_runtime_status)
             _LOGGER.info(
-                "Restored %d status icons for %s (including runtime additions)",
-                len(restored_status_icons),
+                "Restored %d runtime status icons for %s",
+                len(self._runtime_status_icons),
                 self.name
             )
+            # Clean up
+            self.config.runtime_data.extra_data.pop("runtime_status_icons", None)
 
-            # Clean up the extra_data key since we've consumed it
-            self.config.runtime_data.extra_data.pop("restored_status_icons", None)
-        else:
-            # Fresh start or first run - use config defaults
-            self._internal_status_icons = list(d.status_icons.copy())
-
-        if restored_menu_items is not None:
-            # Restored state takes precedence over config
-            self._internal_menu_items = list(restored_menu_items)
+        if restored_runtime_menu:
+            self._runtime_menu_items = list(restored_runtime_menu)
             _LOGGER.info(
-                "Restored %d menu items for %s (including runtime additions)",
-                len(restored_menu_items),
+                "Restored %d runtime menu items for %s",
+                len(self._runtime_menu_items),
                 self.name
             )
+            # Clean up
+            self.config.runtime_data.extra_data.pop("runtime_menu_items", None)
 
-            # Clean up the extra_data key since we've consumed it
-            self.config.runtime_data.extra_data.pop("restored_menu_items", None)
-        else:
-            # Fresh start or first run - use config defaults
-            self._internal_menu_items = [
-                item
-                for item in d.menu_items.copy()
-                if item not in self._internal_status_icons
-            ]
+        # Build internal lists: config + runtime
+        # Config icons first
+        self._internal_status_icons = list(d.status_icons.copy())
+
+        # Add runtime icons (avoid duplicates)
+        for icon in self._runtime_status_icons:
+            if icon not in self._internal_status_icons:
+                self._internal_status_icons.append(icon)
+
+        # Same for menu items
+        self._internal_menu_items = list(d.menu_items.copy())
+
+        for item in self._runtime_menu_items:
+            if item not in self._internal_menu_items and item not in self._internal_status_icons:
+                self._internal_menu_items.append(item)
 
         self._menu_timeout = d.menu_timeout
-
         self._build()
 
         return True
@@ -256,12 +257,16 @@ class MenuManager:
             if item not in self.status_icons
         ]
 
+        # Save runtime tracking lists to extra_data for restoration
+        # This allows runtime additions to persist through restarts
+        self.config.runtime_data.extra_data["runtime_status_icons"] = self._runtime_status_icons
+        self.config.runtime_data.extra_data["runtime_menu_items"] = self._runtime_menu_items
+
         if show_menu:
             self.toggle_menu(show_menu)
         else:
             # Update sensor attributes via dispatcher
             self._notify_update()
-
     def _notify_update(self) -> None:
         """Notify that an update has occurred."""
 
@@ -284,9 +289,21 @@ class MenuManager:
             if icon not in self._internal_status_icons:
                 self._internal_status_icons.append(icon)
                 _LOGGER.debug("Added status icon %s to %s", icon, self.name)
-        elif icon in self._internal_status_icons:
-            self._internal_status_icons.remove(icon)
-            _LOGGER.debug("Removed status icon %s from %s", icon, self.name)
+
+            # Track as runtime addition (if not already tracked)
+            if icon not in self._runtime_status_icons:
+                self._runtime_status_icons.append(icon)
+                _LOGGER.debug("Tracked %s as runtime status icon for %s", icon, self.name)
+        else:
+            # Remove from internal list
+            if icon in self._internal_status_icons:
+                self._internal_status_icons.remove(icon)
+                _LOGGER.debug("Removed status icon %s from %s", icon, self.name)
+
+            # Remove from runtime tracking
+            if icon in self._runtime_status_icons:
+                self._runtime_status_icons.remove(icon)
+                _LOGGER.debug("Removed %s from runtime tracking for %s", icon, self.name)
 
     def _add_remove_menu_item(self, icon: str, add: bool) -> None:
         """Add or remove a menu item."""
@@ -294,9 +311,21 @@ class MenuManager:
             if icon not in self._internal_menu_items:
                 self._internal_menu_items.append(icon)
                 _LOGGER.debug("Added menu item %s to %s", icon, self.name)
-        elif icon in self._internal_menu_items:
-            self._internal_menu_items.remove(icon)
-            _LOGGER.debug("Removed menu item %s from %s", icon, self.name)
+
+            # Track as runtime addition (if not already tracked)
+            if icon not in self._runtime_menu_items:
+                self._runtime_menu_items.append(icon)
+                _LOGGER.debug("Tracked %s as runtime menu item for %s", icon, self.name)
+        else:
+            # Remove from internal list
+            if icon in self._internal_menu_items:
+                self._internal_menu_items.remove(icon)
+                _LOGGER.debug("Removed menu item %s from %s", icon, self.name)
+
+            # Remove from runtime tracking
+            if icon in self._runtime_menu_items:
+                self._runtime_menu_items.remove(icon)
+                _LOGGER.debug("Removed %s from runtime tracking for %s", icon, self.name)
 
     async def _delayed_remove_items(
         self, task_id: int, items: StatusOrMenuItemsType, menu: bool, delay: int
