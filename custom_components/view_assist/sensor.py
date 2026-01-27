@@ -80,28 +80,6 @@ class ViewAssistSensor(RestoreSensor):
             last_state = await self.async_get_last_state()
 
             if last_state and last_state.attributes:
-                # FIRST: Restore status_icons and menu_items for MenuManager
-                # These contain runtime additions from add_status_item service
-                # Store them in extra_data so MenuManager can access them during async_setup
-                restored_status_icons = last_state.attributes.get("status_icons")
-                restored_menu_items = last_state.attributes.get("menu_items")
-                
-                if restored_status_icons is not None:
-                    self.config.runtime_data.extra_data["restored_status_icons"] = restored_status_icons
-                    _LOGGER.debug(
-                        "Saved %d restored status icons for MenuManager: %s",
-                        len(restored_status_icons),
-                        self.entity_id
-                    )
-
-                if restored_menu_items is not None:
-                    self.config.runtime_data.extra_data["restored_menu_items"] = restored_menu_items
-                    _LOGGER.debug(
-                        "Saved %d restored menu items for MenuManager: %s",
-                        len(restored_menu_items),
-                        self.entity_id
-                    )
-
                 # Restore extra_data attributes
                 # extra_data is used to store dynamic attributes set via view_assist.set_state
                 restored_extra_data = {}
@@ -114,7 +92,7 @@ class ViewAssistSensor(RestoreSensor):
                     "display_device", "intent_device", "orientation_sensor",
                     "mediaplayer_device", "musicplayer_device", "voice_device_id",
 
-                    # Managed by MenuManager (now restored via extra_data above)
+                    # Managed by MenuManager
                     "status_icons", "menu_items", "menu_active",
 
                     # Managed by TimerManager (has its own storage)
@@ -144,11 +122,12 @@ class ViewAssistSensor(RestoreSensor):
                 if restored_extra_data:
                     self.config.runtime_data.extra_data.update(restored_extra_data)
                     _LOGGER.info(
-                        "Restored %d extra attributes for %s: %s",
+                        "Restored %d custom attributes for %s: %s",
                         len(restored_extra_data),
                         self.entity_id,
                         list(restored_extra_data.keys())
                     )
+
         # Add internal event listeners
         self.async_on_remove(
             async_dispatcher_connect(
