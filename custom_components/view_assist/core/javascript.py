@@ -7,6 +7,7 @@ from pathlib import Path
 
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.lovelace import LovelaceData
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
@@ -27,19 +28,25 @@ class JSModuleRegistration:
         self.config = config
         self.lovelace: LovelaceData = self.hass.data.get("lovelace")
 
+        # Fix for change to name of mode to resource_mode in 2026.2
+        if MAJOR_VERSION >= 2026 and MINOR_VERSION >= 2:
+            self.resource_mode = self.lovelace.resource_mode
+        else:
+            self.resource_mode = self.lovelace.mode
+
     async def async_setup(self) -> bool:
         """Register view_assist path."""
         # Remove previous registration - can be removed after this version
         await self.async_unregister(URL_BASE)
 
         await self._async_register_path()
-        if self.lovelace.mode == "storage":
+        if self.resource_mode == "storage":
             await self._async_wait_for_lovelace_resources()
         return True
 
     async def async_unload(self) -> bool:
         """Unload javascript module registration."""
-        if self.lovelace.mode == "storage":
+        if self.resource_mode == "storage":
             await self.async_unregister()
         return True
 
@@ -129,13 +136,16 @@ class JSModuleRegistration:
         return url.split("?")[0]
 
     def _get_resource_version(self, url: str):
-        if version := url.split("?")[1].replace("v=", ""):
-            return version
+        try:
+            if version := url.split("?")[1].replace("v=", ""):
+                return version
+        except IndexError:
+            pass
         return 0
 
     async def async_unregister(self, url: str = JS_URL):
         """Unload lovelace module resource."""
-        if self.hass.data["lovelace"].mode == "storage":
+        if self.resource_mode == "storage":
             for module in JSMODULES:
                 url = f"{url}/{module.get('filename')}"
                 resources = [
