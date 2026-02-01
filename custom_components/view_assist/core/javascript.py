@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.components.lovelace import LovelaceData
+from homeassistant.components.lovelace import MODE_STORAGE, LovelaceData
 from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
@@ -40,13 +40,13 @@ class JSModuleRegistration:
         await self.async_unregister(URL_BASE)
 
         await self._async_register_path()
-        if self.resource_mode == "storage":
+        if self.resource_mode == MODE_STORAGE:
             await self._async_wait_for_lovelace_resources()
         return True
 
     async def async_unload(self) -> bool:
         """Unload javascript module registration."""
-        if self.resource_mode == "storage":
+        if self.resource_mode == MODE_STORAGE:
             await self.async_unregister()
         return True
 
@@ -145,7 +145,7 @@ class JSModuleRegistration:
 
     async def async_unregister(self, url: str = JS_URL):
         """Unload lovelace module resource."""
-        if self.resource_mode == "storage":
+        if self.resource_mode == MODE_STORAGE:
             for module in JSMODULES:
                 url = f"{url}/{module.get('filename')}"
                 resources = [
