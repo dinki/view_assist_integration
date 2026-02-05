@@ -1,0 +1,79 @@
+{
+  "decimal_separator": ",",
+
+  "numbers": {
+    "zero": "zero",
+    "one": "unu",
+    "two": "doi",
+    "three": "trei",
+    "four": "patru",
+    "five": "cinci",
+    "six": "șase",
+    "seven": "șapte",
+    "eight": "opt",
+    "nine": "nouă",
+    "ten": "zece",
+    "eleven": "unsprezece",
+    "twelve": "doisprezece",
+    "thirteen": "treisprezece",
+    "fourteen": "paisprezece",
+    "fifteen": "cincisprezece",
+    "sixteen": "șaisprezece",
+    "seventeen": "șaptesprezece",
+    "eighteen": "optsprezece",
+    "nineteen": "nouăsprezece",
+    "twenty": "douăzeci",
+    "thirty": "treizeci",
+    "forty": "patruzeci",
+    "fifty": "cincizeci",
+    "sixty": "șaizeci",
+    "seventy": "șaptezeci",
+    "eighty": "optzeci",
+    "ninety": "nouăzeci"
+  },
+
+  "days": {
+    "today": ["azi", "astăzi"],
+    "tomorrow": ["mâine"],
+    "day_after_tomorrow": ["poimâine"]
+  },
+
+  "structures": {
+    "basic_time": [
+      "ora {hours}:{minutes}",
+      "{hours}:{minutes}",
+      "ora {hours}:{minutes} de minute",
+      "{hours}:{minutes} de minute"
+    ],
+
+    "advanced_time": [
+      "{day} la {basic_time}",
+      "{day} {basic_time}",
+      "pentru {day} la {basic_time}"
+    ],
+
+    "advanced_interval": [
+      "{hours} ore și {minutes} minute",
+      "{minutes} minute și {seconds} secunde"
+    ]
+  },
+
+    "responses": {
+    "timer_set": "Timer setat pentru {time}",
+    "timer_named_set": "Timerul {name} a fost setat pentru {time}",
+
+    "timer_none": "Nu există timere setate",
+    "timer_list": "Ai următoarele timere setate: {timers}",
+
+    "timer_cancelled": "Timerul {name} a fost anulat",
+    "timer_not_found": "Nu s-a găsit niciun timer numit {name}",
+    "timer_already_exists": "Există deja un timer numit {name}",
+
+    "time_remaining": "Au mai rămas {remaining} din {name}",
+    "timer_remaining": "Au mai rămas {remaining} din timer",
+    "alarm_remaining": "Au mai rămas {remaining} din alarmă",
+    "reminder_remaining": "Au mai rămas {remaining} din reminder",
+
+    "timer_error": "Nu s-a putut interpreta timpul sau intervalul setat"
+  }
+}
