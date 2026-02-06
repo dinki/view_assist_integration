@@ -441,6 +441,17 @@ class SensorAttributeChangedHandler:
             # Hold mode, so cancel any revert timer
             if self.navigation_manager:
                 self.navigation_manager.cancel_display_revert_task()
+                self.config.runtime_data.extra_data["hold_path"] = (
+                    self.config.runtime_data.extra_data.get("current_path")
+                )
+
+        # If hold mode disabled, go home and clear hold path
+        if new_mode != VAMode.HOLD and self.config.runtime_data.extra_data.get(
+            "hold_path"
+        ):
+            if self.navigation_manager:
+                self.navigation_manager.navigate_home()
+            self.config.runtime_data.extra_data["hold_path"] = None
 
 
 class EntityStateChangedHandler:
@@ -859,9 +870,7 @@ class EntityStateChangedHandler:
 
     def _get_current_mode(self) -> str:
         """Get the current mode from the sensor entity."""
-        sensor_entity = get_sensor_entity_from_instance(
-            self.hass, self.config.entry_id
-        )
+        sensor_entity = get_sensor_entity_from_instance(self.hass, self.config.entry_id)
         if sensor_entity and (state := self.hass.states.get(sensor_entity)):
             return state.attributes.get("mode", VAMode.NORMAL)
         return VAMode.NORMAL
@@ -872,9 +881,7 @@ class EntityStateChangedHandler:
 
     def _set_mode(self, mode: str) -> None:
         """Set the mode using the view_assist.set_state service."""
-        sensor_entity = get_sensor_entity_from_instance(
-            self.hass, self.config.entry_id
-        )
+        sensor_entity = get_sensor_entity_from_instance(self.hass, self.config.entry_id)
         if sensor_entity:
             self.hass.async_create_task(
                 self.hass.services.async_call(

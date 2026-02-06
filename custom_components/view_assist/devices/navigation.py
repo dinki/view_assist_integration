@@ -109,7 +109,7 @@ class NavigationManager:
 
         # Update current_path attribute
         self.config.runtime_data.extra_data["current_path"] = path
-        
+
         # Notify sensor entity to update (triggers schedule_update_ha_state)
         async_dispatcher_send(
             self.hass,
@@ -132,21 +132,27 @@ class NavigationManager:
         if timeout == 0:
             return
 
-        # Find required revert action
-        revert, revert_view = get_revert_settings_for_mode(
-            self.config.runtime_data.default.mode
-        )
-        if (
-            revert_view == "home"
-            and self.config.runtime_data.runtime_config_overrides.home
-        ):
-            revert_path = self.config.runtime_data.runtime_config_overrides.home
+        # If we have a hold path, revert to that instead of the default revert path
+        if hold_path := self.config.runtime_data.extra_data.get("hold_path"):
+            _LOGGER.debug("Using hold path for revert: %s", hold_path)
+            revert = True
+            revert_path = self.config.runtime_data.extra_data["hold_path"]
         else:
-            revert_path = (
-                getattr(self.config.runtime_data.dashboard, revert_view)
-                if revert_view
-                else None
+            # Find required revert action
+            revert, revert_view = get_revert_settings_for_mode(
+                self.config.runtime_data.default.mode
             )
+            if (
+                revert_view == "home"
+                and self.config.runtime_data.runtime_config_overrides.home
+            ):
+                revert_path = self.config.runtime_data.runtime_config_overrides.home
+            else:
+                revert_path = (
+                    getattr(self.config.runtime_data.dashboard, revert_view)
+                    if revert_view
+                    else None
+                )
 
         # Set revert action if required
         if revert and path != revert_path:
