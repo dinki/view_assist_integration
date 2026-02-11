@@ -278,7 +278,9 @@ class ViewAssistSensor(RestoreSensor):
             "mode": d.default.mode,
             "view_timeout": d.default.view_timeout,
             "weather_entity": d.default.weather_entity,
-            "screen_mode": self.config.runtime_data.dashboard.display_settings.screen_mode,
+            "screen_mode": d.dashboard.display_settings.screen_mode,
+            "home_screen": d.runtime_config_overrides.home if
+            d.runtime_config_overrides.home else d.dashboard.home,
         }
 
     def _get_active_overrides_attributes(self) -> dict[str, Any]:
