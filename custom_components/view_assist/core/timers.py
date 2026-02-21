@@ -1084,8 +1084,6 @@ class TimerManagerServices:
         extra_data = call.data.get(ATTR_EXTRA)
 
         if timer_type and str(timer_type).lower() in ["reminder", "alarm"]:
-            # TODO: What is this for?
-            timer_type = TimerClass.REMINDER
             time_type = "time"
         else:
             time_type = "interval"
