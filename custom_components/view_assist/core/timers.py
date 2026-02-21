@@ -1087,7 +1087,11 @@ class TimerManagerServices:
             time_type = "time"
         else:
             time_type = "interval"
-
+            
+        # Some STT add additional chars.  This removes those that add - or .
+        if timer_time:
+            timer_time = timer_time.replace("-", "").replace(".", "")
+        
         sentence, timer_info = await self.decode_time_sentence(
             timer_time, language=language, time_type=time_type
         )
