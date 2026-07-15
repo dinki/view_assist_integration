@@ -318,8 +318,10 @@ class TimeSentenceTranslator:
         # Preprocess sentence to ensure structure
         s = self.clean_sentence(sentence)
 
-        # Perform any direct translations first
+        # Perform compound and direct translations before translating their
+        # individual words (for example, "a second" -> "1 seconds").
         s = self._unpack_compound_words(s)
+        s = self._translate_collection(s, LangPackKeys.DIRECT_TRANSLATIONS)
 
         # Convert basic numbers
         s = self._translate_collection(s, LangPackKeys.NUMBERS)
