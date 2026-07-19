@@ -1088,9 +1088,11 @@ class TimerManagerServices:
         else:
             time_type = "interval"
             
-        # Some STT add additional chars.  This removes those that add - or .
+        # Some STT returns durations hyphenated ("5-minute", "forty-five").
+        # Replace those with space and preserve periods to support decimals,
+        # e.g. "2.5"
         if timer_time:
-            timer_time = timer_time.replace("-", "").replace(".", "")
+            timer_time = timer_time.replace("-", " ")
         
         sentence, timer_info = await self.decode_time_sentence(
             timer_time, language=language, time_type=time_type
