@@ -53,6 +53,9 @@ from .navigation import NavigationManager
 
 _LOGGER = logging.getLogger(__name__)
 
+# Allows for players rounding volume, whilst below the 0.1 volume_up/down step
+DUCKING_VOLUME_TOLERANCE = 0.02
+
 
 class EntityListeners:
     """Class to manage entity monitors."""
@@ -99,6 +102,7 @@ class AssistEntityListenerHandler:
         self.mic_integration = None
         self.music_player_entity = config.runtime_data.core.musicplayer_device
         self.music_player_volume: float = 0.0
+        self.ducked_volume: float | None = None
         self.is_ducked: bool = False
         self.ducking_task: asyncio.Task | None = None
 
@@ -243,6 +247,7 @@ class AssistEntityListenerHandler:
                         },
                     )
                     self.is_ducked = True
+                    self.ducked_volume = ducking_volume
 
             else:
                 _LOGGER.debug(
@@ -277,6 +282,23 @@ class AssistEntityListenerHandler:
                     current_music_player_volume = music_player_state.attributes.get(
                         "volume_level"
                     )
+
+                    # Volume changed while ducked, so that is now the wanted volume
+                    if (
+                        self.ducked_volume is not None
+                        and current_music_player_volume is not None
+                        and abs(current_music_player_volume - self.ducked_volume)
+                        > DUCKING_VOLUME_TOLERANCE
+                    ):
+                        _LOGGER.debug(
+                            "Music player volume changed to %s while ducked "
+                            "(expected %s), skipping restore",
+                            current_music_player_volume,
+                            self.ducked_volume,
+                        )
+                        self._reset_ducking_state()
+                        return
+
                     for i in range(1, 11):
                         volume = min(
                             self.music_player_volume,
@@ -292,9 +314,15 @@ class AssistEntityListenerHandler:
                             blocking=True,
                         )
                         if volume == self.music_player_volume:
-                            self.is_ducked = False
+                            self._reset_ducking_state()
                             break
                         await asyncio.sleep(0.25)
+
+    def _reset_ducking_state(self) -> None:
+        """Clear ducking state so next duck stores the current volume."""
+        self.is_ducked = False
+        self.ducked_volume = None
+        self.music_player_volume = 0.0
 
     async def do_overlay_event(self, state: str) -> None:
         """Trigger overlay update."""
