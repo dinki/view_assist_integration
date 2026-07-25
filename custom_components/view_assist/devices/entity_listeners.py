@@ -59,6 +59,9 @@ DUCKING_VOLUME_TOLERANCE = 0.005
 # Time to let the music player report the volume it was actually ducked to
 DUCKING_SETTLE_TIME = 0.5
 
+# Well within what players can act on, whilst keeping float noise out of volumes
+VOLUME_DECIMAL_PLACES = 3
+
 
 class EntityListeners:
     """Class to manage entity monitors."""
@@ -366,9 +369,13 @@ class AssistEntityListenerHandler:
 
                         # Volume was stepped up or down from the ducked level, so
                         # apply that same step to the volume from before ducking
-                        step = current_music_player_volume - (self.ducked_volume or 0)
-                        self.music_player_volume = min(
-                            1.0, max(0.0, self.music_player_volume + step)
+                        step = round(
+                            current_music_player_volume - (self.ducked_volume or 0),
+                            VOLUME_DECIMAL_PLACES,
+                        )
+                        self.music_player_volume = round(
+                            min(1.0, max(0.0, self.music_player_volume + step)),
+                            VOLUME_DECIMAL_PLACES,
                         )
                         _LOGGER.debug(
                             "Music player volume stepped by %s whilst ducked, "
@@ -378,9 +385,12 @@ class AssistEntityListenerHandler:
                         )
 
                     for i in range(1, 11):
-                        volume = min(
-                            self.music_player_volume,
-                            (current_music_player_volume or 0) + (i * 0.1),
+                        volume = round(
+                            min(
+                                self.music_player_volume,
+                                (current_music_player_volume or 0) + (i * 0.1),
+                            ),
+                            VOLUME_DECIMAL_PLACES,
                         )
                         await self._async_set_music_player_volume(volume, blocking=True)
                         if volume == self.music_player_volume:
