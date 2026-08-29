@@ -371,17 +371,29 @@ class ViewManager(BaseAssetManager):
         file_path = base_views_dir / name
         core_info = CORE_VIEWS.get(name, {})
 
-        if variant and variant in core_info.get("variants", {}):
-            var_file = core_info["variants"][variant]["file"]
-            if "/" in var_file:
-                # E.g. community_contributions/clockaltwithmovement.yaml
-                target = base_views_dir / var_file
-                if target.exists():
-                    return target
-            else:
-                target = file_path / var_file
-                if target.exists():
-                    return target
+        if variant:
+            if variant in core_info.get("variants", {}):
+                var_file = core_info["variants"][variant]["file"]
+                if "/" in var_file:
+                    target = base_views_dir / var_file
+                    if target.exists():
+                        return target
+                else:
+                    target = file_path / var_file
+                    if target.exists():
+                        return target
+
+            # Check direct variant file in core folder
+            if (file_path / f"{variant}.yaml").exists():
+                return file_path / f"{variant}.yaml"
+            if (file_path / f"{variant}.yml").exists():
+                return file_path / f"{variant}.yml"
+
+            # Backward compatibility for community / custom variant files
+            if (base_views_dir / COMMUNITY_VIEWS_DIR / f"{variant}.yaml").exists():
+                return base_views_dir / COMMUNITY_VIEWS_DIR / f"{variant}.yaml"
+            if (base_views_dir / CUSTOM_VIEWS_DIR / f"{variant}.yaml").exists():
+                return base_views_dir / CUSTOM_VIEWS_DIR / f"{variant}.yaml"
 
         # Default search order for core views
         file_options = [

@@ -147,11 +147,7 @@ CORE_VIEWS = {
         "default_file": "clock.yaml",
         "variants": {
             "standard": {"name": "Standard Clock", "file": "clock.yaml"},
-            "alternative": {"name": "Clock Alternative", "file": "clockalt.yaml"},
-            "movement": {
-                "name": "Clock with Movement",
-                "file": f"{COMMUNITY_VIEWS_DIR}/clockaltwithmovement.yaml",
-            },
+            "alternative": {"name": "Clock Alternative (Stacked)", "file": "clockalt.yaml"},
         },
         "blueprints": ["What_time_is_it"],
     },
@@ -258,13 +254,7 @@ CORE_VIEWS = {
         "title": "Weather",
         "path": "weather",
         "default_file": "weather.yaml",
-        "variants": {
-            "standard": {"name": "Standard Weather", "file": "weather.yaml"},
-            "dynamic": {
-                "name": "Dynamic Weather",
-                "file": f"{COMMUNITY_VIEWS_DIR}/weatherdynamic.yaml",
-            },
-        },
+        "variants": {},
         "blueprints": ["Hows_the_weather"],
     },
     "webpage": {

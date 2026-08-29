@@ -495,6 +495,63 @@ def get_available_core_views(hass: HomeAssistant) -> dict[str, Any]:
     return CORE_VIEWS
 
 
+def get_available_core_view_variants(
+    hass: HomeAssistant,
+) -> dict[str, dict[str, str]]:
+    """Scan local core view directories and return available variants for each core view."""
+    results = {}
+    base_views_dir = Path(hass.config.path(DOMAIN, VIEWS_DIR))
+
+    for core_name, core_info in CORE_VIEWS.items():
+        variants_dict: dict[str, str] = {}
+        core_folder = base_views_dir / core_name
+
+        # 1. Registered variants in CORE_VIEWS definition
+        for var_key, var_data in core_info.get("variants", {}).items():
+            var_file = var_data.get("file", "")
+            if "/" in var_file:
+                target_file = base_views_dir / var_file
+            else:
+                target_file = core_folder / var_file
+
+            if target_file.exists() or var_key == "standard":
+                variants_dict[var_key] = var_data.get(
+                    "name", var_key.replace("_", " ").title()
+                )
+
+        # 2. Dynamic discovery: any other .yaml files in the core view's directory
+        if core_folder.exists():
+            for item in core_folder.iterdir():
+                if item.is_file() and item.suffix in (".yaml", ".yml"):
+                    matching_registered = [
+                        k
+                        for k, v in core_info.get("variants", {}).items()
+                        if v.get("file") == item.name
+                    ]
+                    if (
+                        not matching_registered
+                        and item.name != f"{core_name}.saved.yaml"
+                        and not item.name.endswith(".saved.yaml")
+                    ):
+                        try:
+                            data = load_yaml_dict(str(item)) or {}
+                        except Exception:  # noqa: BLE001
+                            data = {}
+                        title = data.get("title") if isinstance(data, dict) else None
+                        if not title:
+                            title = (
+                                item.stem.replace("_", " ").replace("-", " ").title()
+                            )
+                        var_key = item.stem
+                        variants_dict[var_key] = f"{title} ({item.name})"
+
+        # Only add to results if there is more than 1 option (meaning there is an actual choice to make)
+        if len(variants_dict) > 1:
+            results[core_name] = variants_dict
+
+    return results
+
+
 def get_available_community_views(hass: HomeAssistant) -> dict[str, dict[str, Any]]:
     """Get available community contribution views from local cache."""
     views = {}

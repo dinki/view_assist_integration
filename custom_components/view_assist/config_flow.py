@@ -96,6 +96,7 @@ from .const import (
 from .helpers import (
     get_available_community_blueprints,
     get_available_community_views,
+    get_available_core_view_variants,
     get_available_core_views,
     get_available_custom_blueprints,
     get_available_custom_views,
@@ -433,105 +434,23 @@ def get_view_options_schema(
         )
     )
 
-    # 2. View Variants
-    # Camera variant
-    schema_dict[
-        vol.Optional(
-            f"{CONF_VIEW_VARIANTS}_camera",
-            default="standard",
+    # 2. View Variants (Dynamically discovered from core view folders)
+    core_variants = get_available_core_view_variants(hass)
+    for view_name, variant_options in core_variants.items():
+        schema_dict[
+            vol.Optional(
+                f"{CONF_VIEW_VARIANTS}_{view_name}",
+                default="standard",
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    SelectOptionDict(value=val, label=lbl)
+                    for val, lbl in variant_options.items()
+                ],
+                mode=SelectSelectorMode.DROPDOWN,
+            )
         )
-    ] = SelectSelector(
-        SelectSelectorConfig(
-            options=[
-                SelectOptionDict(value="standard", label="Standard Camera (Grid)"),
-                SelectOptionDict(
-                    value="advanced",
-                    label="Advanced Camera Card (custom:advanced-camera-card)",
-                ),
-            ],
-            mode=SelectSelectorMode.DROPDOWN,
-        )
-    )
-
-    # Music variant
-    schema_dict[
-        vol.Optional(
-            f"{CONF_VIEW_VARIANTS}_music",
-            default="standard",
-        )
-    ] = SelectSelector(
-        SelectSelectorConfig(
-            options=[
-                SelectOptionDict(
-                    value="standard", label="Standard Music (Media Control)"
-                ),
-                SelectOptionDict(
-                    value="alternative",
-                    label="Mini Media Player (custom:mini-media-player)",
-                ),
-            ],
-            mode=SelectSelectorMode.DROPDOWN,
-        )
-    )
-
-    # List variant
-    schema_dict[
-        vol.Optional(
-            f"{CONF_VIEW_VARIANTS}_list",
-            default="standard",
-        )
-    ] = SelectSelector(
-        SelectSelectorConfig(
-            options=[
-                SelectOptionDict(
-                    value="standard", label="Standard List (with Checkboxes)"
-                ),
-                SelectOptionDict(value="no_checkbox", label="No Checkbox List"),
-            ],
-            mode=SelectSelectorMode.DROPDOWN,
-        )
-    )
-
-    # Weather variant
-    schema_dict[
-        vol.Optional(
-            f"{CONF_VIEW_VARIANTS}_weather",
-            default="standard",
-        )
-    ] = SelectSelector(
-        SelectSelectorConfig(
-            options=[
-                SelectOptionDict(value="standard", label="Standard Weather"),
-                SelectOptionDict(
-                    value="dynamic",
-                    label="Dynamic Weather (Condition Backgrounds)",
-                ),
-            ],
-            mode=SelectSelectorMode.DROPDOWN,
-        )
-    )
-
-    # Clock variant
-    schema_dict[
-        vol.Optional(
-            f"{CONF_VIEW_VARIANTS}_clock",
-            default="standard",
-        )
-    ] = SelectSelector(
-        SelectSelectorConfig(
-            options=[
-                SelectOptionDict(value="standard", label="Standard Digital Clock"),
-                SelectOptionDict(
-                    value="alternative", label="Clock Alternative (Stacked)"
-                ),
-                SelectOptionDict(
-                    value="movement",
-                    label="Clock with Movement (Burn-in Protection)",
-                ),
-            ],
-            mode=SelectSelectorMode.DROPDOWN,
-        )
-    )
 
     # ClockAlt secondary view toggle
     schema_dict[
@@ -824,12 +743,12 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
         data_schema = self.add_suggested_values_to_schema(schema, suggested)
 
         if user_input is not None:
-            # Reconstruct view_variants dict from individual dropdowns
+            # Reconstruct view_variants dict from all dynamic dropdowns
             variants = {}
-            for k in ["camera", "music", "list", "weather", "clock"]:
-                var_key = f"{CONF_VIEW_VARIANTS}_{k}"
-                if var_key in user_input:
-                    variants[k] = user_input.pop(var_key)
+            for k in list(user_input.keys()):
+                if isinstance(k, str) and k.startswith(f"{CONF_VIEW_VARIANTS}_"):
+                    view_name = k[len(f"{CONF_VIEW_VARIANTS}_") :]
+                    variants[view_name] = user_input.pop(k)
             user_input[CONF_VIEW_VARIANTS] = variants
 
             options = dict(self.config_entry.options) | user_input
