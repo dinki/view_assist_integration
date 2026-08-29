@@ -376,6 +376,13 @@ class AssetsManager:
                 }
                 await self.store.update(asset_class, name, self.data[asset_class][name])
 
+    async def async_sync_assets(self, options: dict[str, Any]) -> None:
+        """Synchronize all view and blueprint assets according to options."""
+        if view_mgr := self.managers.get(AssetClass.VIEW):
+            await view_mgr.async_sync_configured_views(options)
+        if bp_mgr := self.managers.get(AssetClass.BLUEPRINT):
+            await bp_mgr.async_sync_blueprints(options)
+
     def _fire_updates_update(
         self,
         asset_class: AssetClass,

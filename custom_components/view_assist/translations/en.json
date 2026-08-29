@@ -48,10 +48,41 @@
         "description": "Select which options to amend",
         "menu_options": {
           "integration_options": "Integration Options",
+          "view_options": "Manage Views & Features",
           "main_config": "Core Device Configuration",
           "dashboard_options": "Dashboard Options",
           "default_options": "Default Options",
           "developer_options": "Developer Options"
+        }
+      },
+      "view_options": {
+        "title": "Manage Views & Features",
+        "description": "Configure enabled dashboard views, alternative view variants, community contributions, and custom items",
+        "data": {
+          "enabled_core_views": "Core Standard Views",
+          "view_variants_camera": "Camera View Style",
+          "view_variants_music": "Music View Style",
+          "view_variants_list": "List View Style",
+          "view_variants_weather": "Weather View Style",
+          "view_variants_clock": "Clock View Style",
+          "enable_clockalt_view": "Enable ClockAlt Secondary View (tap-to-swap)",
+          "enabled_community_views": "Community Contribution Views",
+          "enabled_custom_views": "User Custom Views",
+          "enabled_community_blueprints": "Standalone Community Blueprints",
+          "enabled_custom_blueprints": "Custom Blueprints"
+        },
+        "data_description": {
+          "enabled_core_views": "Select which core views should be enabled in the View Assist dashboard",
+          "view_variants_camera": "Choose standard camera card or advanced camera card",
+          "view_variants_music": "Choose standard media-control or mini-media-player card",
+          "view_variants_list": "Choose standard list with checkboxes or clean display without checkboxes",
+          "view_variants_weather": "Choose standard weather forecast or dynamic weather condition backgrounds",
+          "view_variants_clock": "Choose clock template style",
+          "enable_clockalt_view": "Adds clockalt as an extra view so tapping time on the clock view seamlessly swaps between standard and alternative clock displays",
+          "enabled_community_views": "Official community contribution views cached locally. Enabling a community view automatically installs its associated blueprints",
+          "enabled_custom_views": "User-created custom view YAML files placed in config/view_assist/views/custom",
+          "enabled_community_blueprints": "Official community automation blueprints cached locally",
+          "enabled_custom_blueprints": "Custom automation blueprints placed in config/view_assist/blueprints/custom"
         }
       },
       "main_config": {

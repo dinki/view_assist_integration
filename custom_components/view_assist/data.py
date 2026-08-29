@@ -79,6 +79,12 @@ def set_runtime_data_for_config(  # noqa: C901
             if value is not None:
                 setattr(r.integration, attr, value)
 
+        # View options
+        for attr in r.views.__dict__:
+            value = get_config_value(attr, is_master=True)
+            if value is not None:
+                setattr(r.views, attr, value)
+
         # Developer options
         for attr in r.developer_settings.__dict__:
             if value := get_config_value(attr, is_master=True):
