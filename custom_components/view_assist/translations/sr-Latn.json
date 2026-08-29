@@ -126,7 +126,9 @@
               "menu_timeout": "Tajmaut menija",
               "time_format": "Format vremena",
               "screen_mode": "Prikaži/sakrij zaglavlje i bočni meni",
-              "cycle_views": "Ciklični prikazi"
+              "cycle_views": "Ciklični prikazi",
+              "enable_view_transitions": "Omogući prelaze prikaza",
+              "view_transition_time": "Trajanje prelaza prikaza"
             },
             "data_description": {
               "assist_prompt": "Stil Assist obaveštenja za detekciju reči za buđenje i obradu intenta",
@@ -138,7 +140,9 @@
               "menu_timeout": "Vreme u sekundama pre automatskog zatvaranja menija (0 za onemogućavanje)",
               "time_format": "Postavlja format prikaza vremena",
               "screen_mode": "Prikaži ili sakrij zaglavlje i bočni meni",
-              "cycle_views": "Lista stavki koje će se prikazivati u ciklus režimu"
+              "cycle_views": "Lista stavki koje će se prikazivati u ciklus režimu",
+              "enable_view_transitions": "Omogućava glatke CSS prelaze između prikaza",
+              "view_transition_time": "Trajanje animacije prelaza prikaza u sekundama"
             }
           }
         }

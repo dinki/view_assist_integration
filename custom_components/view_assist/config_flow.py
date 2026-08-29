@@ -47,6 +47,7 @@ from .const import (
     CONF_DO_NOT_DISTURB,
     CONF_DUCKING_VOLUME,
     CONF_ENABLE_UPDATES,
+    CONF_ENABLE_VIEW_TRANSITIONS,
     CONF_FONT_STYLE,
     CONF_HOME,
     CONF_INTENT,
@@ -73,6 +74,7 @@ from .const import (
     CONF_TRANSLATION_ENGINE,
     CONF_USE_ANNOUNCE,
     CONF_VIEW_TIMEOUT,
+    CONF_VIEW_TRANSITION_TIME,
     CONF_WEATHER_ENTITY,
     DEFAULT_NAME,
     DEFAULT_TYPE,
@@ -306,6 +308,16 @@ async def get_dashboard_options_schema(
                 options=[e.value for e in VAScreenMode],
                 mode=SelectSelectorMode.DROPDOWN,
                 translation_key="lookup_selector",
+            )
+        ),
+        vol.Optional(CONF_ENABLE_VIEW_TRANSITIONS): BooleanSelector(),
+        vol.Optional(CONF_VIEW_TRANSITION_TIME): NumberSelector(
+            NumberSelectorConfig(
+                min=0.1,
+                max=3.0,
+                step=0.1,
+                unit_of_measurement="s",
+                mode=NumberSelectorMode.SLIDER,
             )
         ),
         vol.Optional(CONF_CYCLE_VIEWS): SelectSelector(

@@ -126,7 +126,9 @@
               "menu_timeout": "Menü-Timeout",
               "time_format": "Zeitformat",
               "screen_mode": "Kopfzeile und Seitenleiste ein-/ausblenden",
-              "cycle_views": "Ansichten durchlaufen"
+              "cycle_views": "Ansichten durchlaufen",
+              "enable_view_transitions": "Ansichtsübergänge aktivieren",
+              "view_transition_time": "Dauer der Ansichtsübergänge"
             },
             "data_description": {
               "assist_prompt": "Der Assist-Benachrichtigungsstil für Weckworterkennung und Intent-Verarbeitung",
@@ -138,7 +140,9 @@
               "menu_timeout": "Zeit in Sekunden, bevor das Menü automatisch geschlossen wird (0 zum Deaktivieren)",
               "time_format": "Legt das Zeitformat der Uhranzeige fest",
               "screen_mode": "Kopfzeile und Seitenleiste anzeigen oder ausblenden",
-              "cycle_views": "Liste der Einträge, die im Zyklusmodus angezeigt werden"
+              "cycle_views": "Liste der Einträge, die im Zyklusmodus angezeigt werden",
+              "enable_view_transitions": "Aktiviert flüssige CSS-Fade-Übergänge zwischen Ansichten",
+              "view_transition_time": "Dauer der Ansichtsübergang-Animation in Sekunden"
             }
           }
         }

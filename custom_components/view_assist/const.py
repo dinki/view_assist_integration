@@ -111,6 +111,8 @@ CONF_MENU_TIMEOUT = "menu_timeout"
 CONF_TIME_FORMAT = "time_format"
 CONF_SCREEN_MODE = "screen_mode"
 CONF_CYCLE_VIEWS = "cycle_views"
+CONF_ENABLE_VIEW_TRANSITIONS = "enable_view_transitions"
+CONF_VIEW_TRANSITION_TIME = "view_transition_time"
 
 CONF_WEATHER_ENTITY = "weather_entity"
 CONF_VIEW_TIMEOUT = "view_timeout"
@@ -162,6 +164,8 @@ DEFAULT_VALUES = {
         CONF_TIME_FORMAT: VATimeFormat.HOUR_12,
         CONF_SCREEN_MODE: VAScreenMode.HIDE_HEADER_SIDEBAR,
         CONF_CYCLE_VIEWS: CYCLE_VIEWS,
+        CONF_ENABLE_VIEW_TRANSITIONS: False,
+        CONF_VIEW_TRANSITION_TIME: 0.5,
     },
     # Default options
     CONF_WEATHER_ENTITY: "weather.home",
