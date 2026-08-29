@@ -107,15 +107,46 @@ class ViewManager(BaseAssetManager):
     async def async_get_installed_version(self, name: str) -> str | None:
         """Get installed version of asset."""
         if view_config := await self._async_get_view_config(name):
-            # Get installed version from config
-            return self._read_view_version(name, view_config)
+            version = self._read_view_version(name, view_config)
+            if version and version != "0.0.0":
+                return version
+
+        # Fallback to checking local file on disk
+        variant = None
+        if self.config and self.config.options:
+            variant = self.config.options.get(CONF_VIEW_VARIANTS, {}).get(name)
+        if file_path := self._resolve_view_file(name, variant=variant, view_source="core"):
+            if file_path.exists():
+                try:
+                    file_data = await self.hass.async_add_executor_job(
+                        load_yaml_dict, file_path
+                    )
+                    if file_data and isinstance(file_data, dict):
+                        return self._read_view_version(name, file_data)
+                except Exception:  # noqa: BLE001
+                    pass
         return None
 
     async def async_get_latest_version(self, name: str) -> str | None:
         """Get latest version of asset."""
-        view_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{name}/{name}.yaml"
+        variant = None
+        if self.config and self.config.options:
+            variant = self.config.options.get(CONF_VIEW_VARIANTS, {}).get(name)
+
+        core_info = CORE_VIEWS.get(name, {})
+        var_file = None
+        if variant and variant in core_info.get("variants", {}):
+            var_file = core_info["variants"][variant].get("file")
+
+        if var_file:
+            if "/" in var_file:
+                view_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{var_file}"
+            else:
+                view_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{name}/{var_file}"
+        else:
+            view_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{name}/{name}.yaml"
+
         if view_data := await self.download_manager.get_file_contents(view_path):
-            # Parse yaml string to json
             try:
                 view_data = parse_yaml(view_data)
                 return self._read_view_version(name, view_data)
@@ -164,8 +195,20 @@ class ViewManager(BaseAssetManager):
         """Install or update asset."""
         self._ensure_directories()
         self._update_install_progress(name, 0)
-        success = False
-        installed_version = None
+        # Resolve variant and view_source from user config if not explicitly provided
+        if self.config and self.config.options:
+            if variant is None:
+                variant = self.config.options.get(CONF_VIEW_VARIANTS, {}).get(name)
+
+        # Check if the view is enabled in user configuration
+        enabled_core = (
+            self.config.options.get(CONF_ENABLED_CORE_VIEWS, DEFAULT_ENABLED_CORE_VIEWS)
+            if (self.config and self.config.options)
+            else DEFAULT_ENABLED_CORE_VIEWS
+        )
+        is_view_enabled = True
+        if view_source == "core" and name in CORE_VIEWS:
+            is_view_enabled = name in enabled_core
 
         target_path = (
             view_path
@@ -182,17 +225,18 @@ class ViewManager(BaseAssetManager):
         base_views_dir = Path(self.hass.config.path(DOMAIN, VIEWS_DIR))
 
         _LOGGER.debug(
-            "%s view %s (variant: %s, source: %s, path: %s)",
+            "%s view %s (variant: %s, source: %s, path: %s, enabled: %s)",
             "Updating" if view_index else "Adding",
             name,
             variant,
             view_source,
             target_path,
+            is_view_enabled,
         )
 
         self._update_install_progress(name, 10)
 
-        if view_index > 0 and backup_existing:
+        if view_index > 0 and backup_existing and is_view_enabled:
             _LOGGER.debug("Backing up existing view %s", target_path)
             await self.async_save(target_path)
 
@@ -272,6 +316,23 @@ class ViewManager(BaseAssetManager):
             ) from ex
 
         self._update_install_progress(name, 60)
+        installed_version = self._read_view_version(name, new_view_config)
+
+        # If the view is disabled in user configuration, do not install to dashboard
+        if not is_view_enabled:
+            _LOGGER.debug(
+                "View %s is disabled in configuration. Updated local cache (version %s), skipping dashboard install.",
+                name,
+                installed_version,
+            )
+            self._update_install_progress(name, 100)
+            return InstallStatus(
+                installed=True,
+                version=installed_version,
+                latest_version=installed_version
+                if downloaded
+                else await self.async_get_latest_version(name),
+            )
 
         # Get lovelace dashboard store
         lovelace: LovelaceData = self.hass.data["lovelace"]
@@ -317,7 +378,6 @@ class ViewManager(BaseAssetManager):
             self.hass.bus.async_fire(EVENT_PANELS_UPDATED)
 
             success = True
-            installed_version = self._read_view_version(name, new_view_config)
             self._update_install_progress(name, 100)
 
         _LOGGER.debug(
@@ -632,13 +692,38 @@ class ViewManager(BaseAssetManager):
 
     def _read_view_version(self, view: str, view_config: dict[str, Any]) -> str:
         """Get view version from config."""
-        if view_config:
+        if view_config and isinstance(view_config, dict):
             try:
+                # If wrapped as a panel view with cards
+                if "cards" in view_config and isinstance(view_config["cards"], list) and view_config["cards"]:
+                    inner_card = view_config["cards"][0]
+                    if isinstance(inner_card, dict) and "variables" in inner_card:
+                        view_config = inner_card
+
                 if variables := view_config.get("variables"):
-                    return variables.get(
-                        f"{view}version", variables.get(f"{view}cardversion", "0.0.0")
-                    )
-            except KeyError:
+                    if isinstance(variables, dict):
+                        # 1. Exact match for view
+                        for direct_key in (
+                            f"{view}version",
+                            f"{view}cardversion",
+                            f"{view}_version",
+                        ):
+                            if direct_key in variables:
+                                return str(variables[direct_key])
+
+                        # 2. Check any key in variables containing version and matching view or variant prefix
+                        for k, v in variables.items():
+                            if "version" in k.lower():
+                                clean_k = k.lower().replace("_", "").replace("-", "")
+                                clean_view = view.lower().replace("_", "").replace("-", "")
+                                if clean_view in clean_k or clean_k in clean_view:
+                                    return str(v)
+
+                        # 3. Any fallback version key in variables
+                        for k, v in variables.items():
+                            if k.endswith("version") or k.endswith("cardversion"):
+                                return str(v)
+            except (KeyError, AttributeError):
                 _LOGGER.debug("View %s version not found", view)
         return "0.0.0"
 
