@@ -133,7 +133,6 @@ CONF_DEVELOPER_MIMIC_DEVICE = "developer_mimic_device"
 CONF_VIEW_OPTIONS = "view_options"
 CONF_ENABLED_CORE_VIEWS = "enabled_core_views"
 CONF_VIEW_VARIANTS = "view_variants"
-CONF_ENABLE_CLOCKALT_VIEW = "enable_clockalt_view"
 CONF_ENABLED_COMMUNITY_VIEWS = "enabled_community_views"
 CONF_ENABLED_CUSTOM_VIEWS = "enabled_custom_views"
 CONF_ENABLED_COMMUNITY_BLUEPRINTS = "enabled_community_blueprints"
@@ -320,7 +319,6 @@ DEFAULT_VALUES = {
     # Default view options
     CONF_ENABLED_CORE_VIEWS: DEFAULT_ENABLED_CORE_VIEWS,
     CONF_VIEW_VARIANTS: {},
-    CONF_ENABLE_CLOCKALT_VIEW: True,
     CONF_ENABLED_COMMUNITY_VIEWS: [],
     CONF_ENABLED_CUSTOM_VIEWS: [],
     CONF_ENABLED_COMMUNITY_BLUEPRINTS: [],

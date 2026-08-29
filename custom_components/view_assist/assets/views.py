@@ -11,7 +11,6 @@ from homeassistant.util.yaml import load_yaml_dict, parse_yaml, save_yaml
 
 from ..const import (  # noqa: TID252
     COMMUNITY_VIEWS_DIR,
-    CONF_ENABLE_CLOCKALT_VIEW,
     CONF_ENABLED_COMMUNITY_VIEWS,
     CONF_ENABLED_CORE_VIEWS,
     CONF_ENABLED_CUSTOM_VIEWS,
@@ -459,15 +458,13 @@ class ViewManager(BaseAssetManager):
         """Synchronize dashboard views according to configuration options."""
         enabled_core = options.get(CONF_ENABLED_CORE_VIEWS, DEFAULT_ENABLED_CORE_VIEWS)
         variants = options.get(CONF_VIEW_VARIANTS, {})
-        enable_clockalt = options.get(CONF_ENABLE_CLOCKALT_VIEW, True)
         enabled_community = options.get(CONF_ENABLED_COMMUNITY_VIEWS, [])
         enabled_custom = options.get(CONF_ENABLED_CUSTOM_VIEWS, [])
 
         _LOGGER.debug(
-            "Syncing views: core=%s, variants=%s, clockalt=%s, community=%s, custom=%s",
+            "Syncing views: core=%s, variants=%s, community=%s, custom=%s",
             enabled_core,
             variants,
-            enable_clockalt,
             enabled_community,
             enabled_custom,
         )
@@ -487,17 +484,7 @@ class ViewManager(BaseAssetManager):
                     "title": CORE_VIEWS[core_name]["title"],
                 }
 
-        # 2. ClockAlt secondary view if enabled
-        if enable_clockalt and variants.get("clock") != "alternative":
-            target_views["clockalt"] = {
-                "name": "clockalt",
-                "variant": None,
-                "source": "core",
-                "path": "clockalt",
-                "title": "ClockAlt",
-            }
-
-        # 3. Community views
+        # 2. Community views
         for comm_name in enabled_community:
             target_views[f"comm_{comm_name}"] = {
                 "name": comm_name,

@@ -47,7 +47,6 @@ from .const import (
     CONF_DISPLAY_SETTINGS,
     CONF_DO_NOT_DISTURB,
     CONF_DUCKING_VOLUME,
-    CONF_ENABLE_CLOCKALT_VIEW,
     CONF_ENABLE_UPDATES,
     CONF_ENABLED_COMMUNITY_BLUEPRINTS,
     CONF_ENABLED_COMMUNITY_VIEWS,
@@ -451,14 +450,6 @@ def get_view_options_schema(
                 mode=SelectSelectorMode.DROPDOWN,
             )
         )
-
-    # ClockAlt secondary view toggle
-    schema_dict[
-        vol.Optional(
-            CONF_ENABLE_CLOCKALT_VIEW,
-            default=True,
-        )
-    ] = BooleanSelector()
 
     # 3. Community Views
     comm_views = get_available_community_views(hass)

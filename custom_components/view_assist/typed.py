@@ -172,7 +172,6 @@ class ViewManagementConfig:
 
     enabled_core_views: list[str] = field(default_factory=list)
     view_variants: dict[str, str] = field(default_factory=dict)
-    enable_clockalt_view: bool = True
     enabled_community_views: list[str] = field(default_factory=list)
     enabled_custom_views: list[str] = field(default_factory=list)
     enabled_community_blueprints: list[str] = field(default_factory=list)
