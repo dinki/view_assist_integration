@@ -35,6 +35,15 @@ _LOGGER = logging.getLogger(__name__)
 class ViewManager(BaseAssetManager):
     """Class to manage view assets."""
 
+    async def async_setup(self) -> None:
+        """Set up the ViewManager."""
+        self._ensure_directories()
+        comm_dir = Path(self.hass.config.path(DOMAIN, VIEWS_DIR, COMMUNITY_VIEWS_DIR))
+        # If community views directory is empty or missing yaml files, download from repo
+        if not any(comm_dir.glob("*.yaml")) and not any(comm_dir.glob("*.yml")):
+            _LOGGER.debug("Community views cache is empty, downloading from repo")
+            await self._download_community_views()
+
     async def async_onboard(self, force: bool = False) -> dict[str, Any] | None:
         """Onboard the user if not yet setup."""
         # Ensure local directories exist
@@ -220,6 +229,32 @@ class ViewManager(BaseAssetManager):
                 view_source=view_source,
             )
 
+            # If file does not exist locally and is from community contributions, try downloading
+            if (not file_to_load or not file_to_load.exists()) and (
+                view_source == "community"
+                or (
+                    variant
+                    and "community"
+                    in str(
+                        CORE_VIEWS.get(name, {})
+                        .get("variants", {})
+                        .get(variant, {})
+                        .get("file", "")
+                    )
+                )
+            ):
+                _LOGGER.debug(
+                    "View file not found in local cache for %s (%s), attempting download",
+                    name,
+                    variant,
+                )
+                await self._download_community_views()
+                file_to_load = self._resolve_view_file(
+                    name=name,
+                    variant=variant,
+                    view_source=view_source,
+                )
+
             if not file_to_load or not file_to_load.exists():
                 raise AssetManagerException(
                     f"Unable to install view {name}. File not found: {file_to_load}"
@@ -228,7 +263,7 @@ class ViewManager(BaseAssetManager):
             new_view_config = await self.hass.async_add_executor_job(
                 load_yaml_dict, file_to_load
             )
-            if new_view_config is None:
+            if not new_view_config or not isinstance(new_view_config, dict):
                 raise AssetManagerException(
                     f"Unable to install view {name}. File is empty or invalid YAML: {file_to_load}"
                 )
@@ -572,12 +607,12 @@ class ViewManager(BaseAssetManager):
         comm_dir.mkdir(parents=True, exist_ok=True)
         repo_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{COMMUNITY_VIEWS_DIR}"
         try:
-            if await self.download_manager.async_dir_exists(repo_path):
-                return await self.download_manager.async_download_dir(
-                    repo_path, comm_dir
-                )
+            _LOGGER.debug("Downloading community views from repo path: %s", repo_path)
+            return await self.download_manager.async_download_dir(
+                repo_path, str(comm_dir)
+            )
         except Exception as ex:  # noqa: BLE001
-            _LOGGER.debug("Could not download community views from repo: %s", ex)
+            _LOGGER.error("Could not download community views from repo: %s", ex)
         return False
 
     @property

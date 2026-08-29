@@ -285,6 +285,12 @@ class AssetsManager:
         if asset_class and asset_class in self.managers:
             managers = {k: v for k, v in self.managers.items() if k == asset_class}
 
+        # Refresh community assets cache from repo
+        if (not asset_class or asset_class == AssetClass.VIEW) and AssetClass.VIEW in self.managers:
+            await self.managers[AssetClass.VIEW]._download_community_views()
+        if (not asset_class or asset_class == AssetClass.BLUEPRINT) and AssetClass.BLUEPRINT in self.managers:
+            await self.managers[AssetClass.BLUEPRINT]._download_community_blueprints()
+
         for asset_class, manager in managers.items():  # noqa: PLR1704
             # If no key in self.data, return
             if not self.data.get(asset_class):

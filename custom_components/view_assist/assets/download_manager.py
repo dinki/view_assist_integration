@@ -127,16 +127,10 @@ class GitHubAPI:
     async def validate_path(self, path: str) -> bool:
         """Check if a path exists in the repo."""
         try:
-            url = f"{self.path_base}/{path}"
-            await self._rest_request(url)
-        except GithubNotFoundException:
-            _LOGGER.debug("Path not found: %s", path)
+            listing = await self.get_dir_listing(path)
+            return listing is not None and len(listing) > 0
+        except Exception:  # noqa: BLE001
             return False
-        except GithubAPIException as ex:
-            _LOGGER.error("Error validating path.  Error is %s", ex)
-            return False
-        else:
-            return True
 
     async def get_dir_listing(self, path: str) -> list[GithubFileDir]:
         """Get github repo dir listing."""

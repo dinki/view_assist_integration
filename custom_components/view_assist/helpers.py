@@ -642,17 +642,37 @@ def get_available_community_blueprints(
         return blueprints
 
     for item in bp_dir.rglob("*.yaml"):
-        # Relpath relative to bp_dir
-        rel = item.relative_to(bp_dir)
-        key = str(rel).replace("\\", "/")
+        # Ignore non-blueprint folders
+        if any(part in ("custom_sentences", "intent_script") for part in item.parts):
+            continue
+
         try:
             data = load_yaml_dict(str(item)) or {}
         except Exception:  # noqa: BLE001
             data = {}
-        name = data.get("name") if isinstance(data, dict) else None
+
+        is_bp = item.name.startswith("blueprint-") or (
+            isinstance(data, dict) and "blueprint" in data
+        )
+        if not is_bp:
+            continue
+
+        rel = item.relative_to(bp_dir)
+        key = str(rel).replace("\\", "/")
+
+        bp_meta = data.get("blueprint", {}) if isinstance(data, dict) else {}
+        name = (
+            bp_meta.get("name")
+            if isinstance(bp_meta, dict)
+            else (data.get("name") if isinstance(data, dict) else None)
+        )
         if not name:
             name = item.stem.replace("blueprint-", "").replace("_", " ").title()
-        desc = data.get("description", "") if isinstance(data, dict) else ""
+        desc = (
+            bp_meta.get("description", "")
+            if isinstance(bp_meta, dict)
+            else (data.get("description", "") if isinstance(data, dict) else "")
+        )
 
         blueprints[key] = {
             "key": key,
@@ -677,16 +697,37 @@ def get_available_custom_blueprints(
         return blueprints
 
     for item in bp_dir.rglob("*.yaml"):
-        rel = item.relative_to(bp_dir)
-        key = str(rel).replace("\\", "/")
+        # Ignore non-blueprint folders
+        if any(part in ("custom_sentences", "intent_script") for part in item.parts):
+            continue
+
         try:
             data = load_yaml_dict(str(item)) or {}
         except Exception:  # noqa: BLE001
             data = {}
-        name = data.get("name") if isinstance(data, dict) else None
+
+        is_bp = item.name.startswith("blueprint-") or (
+            isinstance(data, dict) and "blueprint" in data
+        )
+        if not is_bp:
+            continue
+
+        rel = item.relative_to(bp_dir)
+        key = str(rel).replace("\\", "/")
+
+        bp_meta = data.get("blueprint", {}) if isinstance(data, dict) else {}
+        name = (
+            bp_meta.get("name")
+            if isinstance(bp_meta, dict)
+            else (data.get("name") if isinstance(data, dict) else None)
+        )
         if not name:
             name = item.stem.replace("blueprint-", "").replace("_", " ").title()
-        desc = data.get("description", "") if isinstance(data, dict) else ""
+        desc = (
+            bp_meta.get("description", "")
+            if isinstance(bp_meta, dict)
+            else (data.get("description", "") if isinstance(data, dict) else "")
+        )
 
         blueprints[key] = {
             "key": key,

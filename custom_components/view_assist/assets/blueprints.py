@@ -48,6 +48,16 @@ BLUEPRINT_MANAGER = "blueprint_manager"
 class BlueprintManager(BaseAssetManager):
     """Manage blueprints for View Assist."""
 
+    async def async_setup(self) -> None:
+        """Set up the BlueprintManager."""
+        self._ensure_directories()
+        comm_dir = Path(
+            self.hass.config.path(DOMAIN, "blueprints", COMMUNITY_BLUEPRINTS_DIR)
+        )
+        if not any(comm_dir.rglob("*.yaml")) and not any(comm_dir.rglob("*.yml")):
+            _LOGGER.debug("Community blueprints cache is empty, downloading from repo")
+            await self._download_community_blueprints()
+
     async def async_onboard(self, force: bool = False) -> None:
         """Load blueprints for initialisation."""
         self._ensure_directories()
@@ -448,12 +458,12 @@ class BlueprintManager(BaseAssetManager):
         comm_dir.mkdir(parents=True, exist_ok=True)
         repo_path = f"{BLUEPRINT_GITHUB_PATH}/{COMMUNITY_BLUEPRINTS_DIR}"
         try:
-            if await self.download_manager.async_dir_exists(repo_path):
-                return await self.download_manager.async_download_dir(
-                    repo_path, comm_dir
-                )
+            _LOGGER.debug("Downloading community blueprints from repo path: %s", repo_path)
+            return await self.download_manager.async_download_dir(
+                repo_path, str(comm_dir)
+            )
         except Exception as ex:  # noqa: BLE001
-            _LOGGER.debug("Could not download community blueprints from repo: %s", ex)
+            _LOGGER.error("Could not download community blueprints from repo: %s", ex)
         return False
 
     def _read_blueprint_version(self, blueprint_config: dict[str, Any]) -> str:
