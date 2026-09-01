@@ -378,7 +378,7 @@ class ViewAssist {
 
       enabled ? elMain?.style?.setProperty("--mdc-drawer-width", "0px") : elMain?.style?.removeProperty("--mdc-drawer-width");
       //Fix for HA 2026.6 where they changed the sidebar width variable name
-      enabled ? elMain?.style?.setProperty("--ha-sidebar-width", "0px") : elMain?.style?.removeProperty("--ha-sidebar -width");
+      enabled ? elMain?.style?.setProperty("--ha-sidebar-width", "0px") : elMain?.style?.removeProperty("--ha-sidebar-width");
 
       await selectTree(
         elMain, "$ partial-panel-resolver"
@@ -409,7 +409,7 @@ class ViewAssist {
       });
     } catch (e) {
       clearTimeout(this.hide_sidebar_timeout);
-      this.hide_sidebar_timerout = setTimeout(() => {
+      this.hide_sidebar_timeout = setTimeout(() => {
         this.hide_sidebar(enabled);
       }, 200);
     }
@@ -502,29 +502,31 @@ class ViewAssist {
       customElements.define("viewassist-countdown", CountdownTimer)
       customElements.define("viewassist-clock", Clock)
 
-      await this.connect();
-
-      if (this.connected) {
-        window.addEventListener("connection-status", (ev) => {
-          if (ev.detail != "connected") {
-            console.log("View Assist - Connection lost");
-            this.connected = false;
-            this.hide_all_overlays();
-            clearInterval(this.serverTimeHandler)
-          } else {
-            if (!this.connected) {
-              this.connect();
-            }
+      // Register lifecycle handlers before connecting.  The server can send the
+      // initial registered/config event immediately after subscription; that
+      // event navigates to the home view and emits location-changed.  Installing
+      // this handler after connect makes the initial hide pass timing-dependent.
+      window.addEventListener("connection-status", (ev) => {
+        if (ev.detail != "connected") {
+          console.log("View Assist - Connection lost");
+          this.connected = false;
+          this.hide_all_overlays();
+          clearInterval(this.serverTimeHandler)
+        } else {
+          if (!this.connected) {
+            this.connect();
           }
-        });
+        }
+      });
 
-        window.addEventListener("location-changed", () => {
-          setTimeout(() => {
-            this.hide_sections(false);
-            this.display_browser_id();
-          }, 100);
-        });
-      }
+      window.addEventListener("location-changed", () => {
+        setTimeout(() => {
+          this.hide_sections(false);
+          this.display_browser_id();
+        }, 100);
+      });
+
+      await this.connect();
 
     } catch (e) {
       console.log("Error on initialisation: ", e.message);
@@ -665,6 +667,11 @@ class ViewAssist {
 
     // Set variables to payload
     this.variables.config = payload
+
+    // Apply display settings from the config event itself.  This also covers
+    // initial registration if its navigation event happened before the
+    // frontend finished rendering the Lovelace view.
+    setTimeout(() => this.hide_sections(), 100);
 
     if (!payload.mimic_device) {
       // On register, go to default page
