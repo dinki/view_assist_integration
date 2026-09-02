@@ -1,6 +1,6 @@
 import { timerCards } from "./timers.js?v=1.0.28";
 
-const version = "1.0.30"
+const version = "1.0.31"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 export async function await_element(el, hard = false) {
@@ -519,6 +519,7 @@ class ViewAssist {
         });
 
         window.addEventListener("location-changed", () => {
+          this._clear_fade_out();
           setTimeout(() => {
             this.hide_sections(false);
             this.display_browser_id();
@@ -733,7 +734,7 @@ class ViewAssist {
         if (!node) return;
         if (node.classList) {
           const tag = (node.nodeName || "").toLowerCase();
-          if (tag === "custom-button-card" || tag === "button-card" || node.id === "card" || node.id === "container" || tag === "hui-view" || tag === "ha-panel-lovelace") {
+          if (tag === "custom-button-card" || tag === "button-card") {
             node.classList.add("va-fade-out");
           }
         }
@@ -753,6 +754,32 @@ class ViewAssist {
       traverse(document.body);
     } catch (e) {
       console.error("ViewAssist - error applying fade out:", e);
+    }
+  }
+
+  _clear_fade_out() {
+    try {
+      function traverse(node) {
+        if (!node) return;
+        if (node.classList && node.classList.contains("va-fade-out")) {
+          node.classList.remove("va-fade-out");
+        }
+        if (node.shadowRoot) {
+          const card = node.shadowRoot.getElementById("card");
+          if (card) card.classList.remove("va-fade-out");
+          const container = node.shadowRoot.getElementById("container");
+          if (container) container.classList.remove("va-fade-out");
+          traverse(node.shadowRoot);
+        }
+        if (node.children) {
+          for (const child of node.children) {
+            traverse(child);
+          }
+        }
+      }
+      traverse(document.body);
+    } catch (e) {
+      console.error("ViewAssist - error clearing fade out:", e);
     }
   }
 
