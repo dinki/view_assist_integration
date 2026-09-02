@@ -1,6 +1,6 @@
 import { timerCards } from "./timers.js?v=1.0.28";
 
-const version = "1.0.29-rc2"
+const version = "1.0.30"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 export async function await_element(el, hard = false) {
