@@ -107,26 +107,7 @@ BASE_DEVICE_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): str,
         vol.Required(CONF_MIC_DEVICE): EntitySelector(
-            EntitySelectorConfig(
-                filter=[
-                    EntityFilterSelectorConfig(
-                        integration="esphome", domain=ASSIST_SAT_DOMAIN
-                    ),
-                    EntityFilterSelectorConfig(
-                        integration="hassmic", domain=[SENSOR_DOMAIN, ASSIST_SAT_DOMAIN]
-                    ),
-                    EntityFilterSelectorConfig(
-                        integration="stream_assist",
-                        domain=[SENSOR_DOMAIN, ASSIST_SAT_DOMAIN],
-                    ),
-                    EntityFilterSelectorConfig(
-                        integration="wyoming", domain=ASSIST_SAT_DOMAIN
-                    ),
-                    EntityFilterSelectorConfig(
-                        integration=VACA_DOMAIN, domain=ASSIST_SAT_DOMAIN
-                    ),
-                ]
-            )
+            EntitySelectorConfig(domain=ASSIST_SAT_DOMAIN)
         ),
         vol.Required(CONF_MEDIAPLAYER_DEVICE): EntitySelector(
             EntitySelectorConfig(domain=MEDIAPLAYER_DOMAIN)
