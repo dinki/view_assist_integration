@@ -1,6 +1,6 @@
 import { timerCards } from "./timers.js?v=1.0.28";
 
-const version = "1.0.31"
+const version = "1.0.32"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 export async function await_element(el, hard = false) {
@@ -532,7 +532,7 @@ class ViewAssist {
           if (link && link.href && link.origin === window.location.origin && link.pathname.startsWith("/view-assist")) {
             if (link.pathname !== window.location.pathname) {
               const entityId = localStorage.getItem("view_assist_sensor");
-              const stateObj = this._hass?.states?.[entityId];
+              const stateObj = this.hass?.states?.[entityId];
               if (stateObj?.attributes?.enable_view_transitions) {
                 e.preventDefault();
                 this.browser_navigate(link.pathname + link.search + link.hash);
@@ -545,6 +545,11 @@ class ViewAssist {
     } catch (e) {
       console.log("Error on initialisation: ", e.message);
     }
+  }
+
+  get hass() {
+    const base = document.querySelector("home-assistant") || document.querySelector("hc-main");
+    return base?.hass || this._hass;
   }
 
   get_browser_id() {
@@ -701,6 +706,14 @@ class ViewAssist {
     }
   }
 
+  is_custom_view(path) {
+    if (!path) return false;
+    const cleanPath = path.split("?")[0].split("#")[0].replace(/^\/+|\/+$/g, "").toLowerCase();
+    const slug = cleanPath.split("/").pop();
+    const sharedViews = ["clock", "clockalt", "calendar", "alarm", "camera", "advancedcamera", "clockaltwithmovement"];
+    return !sharedViews.includes(slug);
+  }
+
   browser_navigate(path) {
     // Navigate the browser window
     if (!path) return;
@@ -708,7 +721,7 @@ class ViewAssist {
     if (currentPath === path) return;
 
     const entityId = localStorage.getItem("view_assist_sensor");
-    const stateObj = this._hass?.states?.[entityId];
+    const stateObj = this.hass?.states?.[entityId];
     const transitionsEnabled = stateObj?.attributes?.enable_view_transitions;
 
     if (transitionsEnabled === true || transitionsEnabled === "true") {
@@ -716,7 +729,11 @@ class ViewAssist {
       const duration = (rawTime !== undefined && rawTime !== null && !isNaN(rawTime)) ? parseFloat(rawTime) : 0.5;
       const fadeOutDurationMs = Math.round((duration / 2) * 1000);
 
-      this._apply_fade_out();
+      const currentIsCustom = this.is_custom_view(currentPath);
+      const targetIsCustom = this.is_custom_view(path);
+      const fadeCardToBlack = currentIsCustom || targetIsCustom;
+
+      this._apply_fade_out(fadeCardToBlack ? "card" : "ui");
 
       setTimeout(() => {
         history.pushState(null, "", path);
@@ -728,21 +745,28 @@ class ViewAssist {
     }
   }
 
-  _apply_fade_out() {
+  _apply_fade_out(mode = "card") {
     try {
       function traverse(node) {
         if (!node) return;
         if (node.classList) {
           const tag = (node.nodeName || "").toLowerCase();
           if (tag === "custom-button-card" || tag === "button-card") {
-            node.classList.add("va-fade-out");
+            if (mode === "card") {
+              node.classList.add("va-fade-out");
+            } else {
+              node.classList.add("va-fade-out-ui");
+            }
           }
         }
         if (node.shadowRoot) {
-          const card = node.shadowRoot.getElementById("card");
-          if (card) card.classList.add("va-fade-out");
-          const container = node.shadowRoot.getElementById("container");
-          if (container) container.classList.add("va-fade-out");
+          if (mode === "card") {
+            const card = node.shadowRoot.getElementById("card");
+            if (card) card.classList.add("va-fade-out");
+          } else {
+            const container = node.shadowRoot.getElementById("container");
+            if (container) container.classList.add("va-fade-out-ui");
+          }
           traverse(node.shadowRoot);
         }
         if (node.children) {
@@ -761,14 +785,14 @@ class ViewAssist {
     try {
       function traverse(node) {
         if (!node) return;
-        if (node.classList && node.classList.contains("va-fade-out")) {
-          node.classList.remove("va-fade-out");
+        if (node.classList) {
+          node.classList.remove("va-fade-out", "va-fade-out-ui", "va-fade-out-card");
         }
         if (node.shadowRoot) {
           const card = node.shadowRoot.getElementById("card");
-          if (card) card.classList.remove("va-fade-out");
+          if (card) card.classList.remove("va-fade-out", "va-fade-out-card");
           const container = node.shadowRoot.getElementById("container");
-          if (container) container.classList.remove("va-fade-out");
+          if (container) container.classList.remove("va-fade-out", "va-fade-out-ui");
           traverse(node.shadowRoot);
         }
         if (node.children) {
