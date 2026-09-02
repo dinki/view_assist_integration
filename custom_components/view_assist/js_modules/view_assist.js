@@ -524,6 +524,21 @@ class ViewAssist {
             this.display_browser_id();
           }, 100);
         });
+
+        window.addEventListener("click", (e) => {
+          const path = e.composedPath ? e.composedPath() : [];
+          const link = path.find((el) => el && el.tagName === "A" && el.href);
+          if (link && link.href && link.origin === window.location.origin && link.pathname.startsWith("/view-assist")) {
+            if (link.pathname !== window.location.pathname) {
+              const entityId = localStorage.getItem("view_assist_sensor");
+              const stateObj = this._hass?.states?.[entityId];
+              if (stateObj?.attributes?.enable_view_transitions) {
+                e.preventDefault();
+                this.browser_navigate(link.pathname + link.search + link.hash);
+              }
+            }
+          }
+        }, true);
       }
 
     } catch (e) {
@@ -688,8 +703,57 @@ class ViewAssist {
   browser_navigate(path) {
     // Navigate the browser window
     if (!path) return;
-    history.pushState(null, "", path);
-    window.dispatchEvent(new CustomEvent("location-changed"));
+    const currentPath = window.location.pathname;
+    if (currentPath === path) return;
+
+    const entityId = localStorage.getItem("view_assist_sensor");
+    const stateObj = this._hass?.states?.[entityId];
+    const transitionsEnabled = stateObj?.attributes?.enable_view_transitions;
+
+    if (transitionsEnabled === true || transitionsEnabled === "true") {
+      const rawTime = stateObj?.attributes?.view_transition_time;
+      const duration = (rawTime !== undefined && rawTime !== null && !isNaN(rawTime)) ? parseFloat(rawTime) : 0.5;
+      const fadeOutDurationMs = Math.round((duration / 2) * 1000);
+
+      this._apply_fade_out();
+
+      setTimeout(() => {
+        history.pushState(null, "", path);
+        window.dispatchEvent(new CustomEvent("location-changed"));
+      }, fadeOutDurationMs);
+    } else {
+      history.pushState(null, "", path);
+      window.dispatchEvent(new CustomEvent("location-changed"));
+    }
+  }
+
+  _apply_fade_out() {
+    try {
+      function traverse(node) {
+        if (!node) return;
+        if (node.classList) {
+          const tag = (node.nodeName || "").toLowerCase();
+          if (tag === "custom-button-card" || tag === "button-card" || node.id === "card" || node.id === "container" || tag === "hui-view" || tag === "ha-panel-lovelace") {
+            node.classList.add("va-fade-out");
+          }
+        }
+        if (node.shadowRoot) {
+          const card = node.shadowRoot.getElementById("card");
+          if (card) card.classList.add("va-fade-out");
+          const container = node.shadowRoot.getElementById("container");
+          if (container) container.classList.add("va-fade-out");
+          traverse(node.shadowRoot);
+        }
+        if (node.children) {
+          for (const child of node.children) {
+            traverse(child);
+          }
+        }
+      }
+      traverse(document.body);
+    } catch (e) {
+      console.error("ViewAssist - error applying fade out:", e);
+    }
   }
 
   async inject_assist_listening_overlay() {
