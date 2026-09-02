@@ -1,6 +1,6 @@
 import { timerCards } from "./timers.js?v=1.0.28";
 
-const version = "1.0.33"
+const version = "1.0.34"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 export async function await_element(el, hard = false) {
@@ -773,6 +773,11 @@ class ViewAssist {
       const currentIsCustom = this.is_custom_view(currentPath);
       const targetIsCustom = this.is_custom_view(path);
       const fadeCardToBlack = currentIsCustom || targetIsCustom;
+
+      window.viewAssistPrevWasCustom = currentIsCustom;
+      try {
+        sessionStorage.setItem("va_prev_was_custom", currentIsCustom ? "true" : "false");
+      } catch (e) {}
 
       this._apply_fade_out(fadeCardToBlack ? "card" : "ui");
 
