@@ -136,6 +136,8 @@ class DisplayConfig:
     time_format: VATimeFormat | None = None
     screen_mode: VAScreenMode | None = None
     cycle_views: list[str] = field(default_factory=list)
+    enable_view_transitions: bool | None = None
+    view_transition_time: float | None = None
 
 
 @dataclass

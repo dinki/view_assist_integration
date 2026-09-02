@@ -117,9 +117,11 @@ def set_runtime_data_for_config(  # noqa: C901
                 if attr in (CONF_BACKGROUND_SETTINGS, CONF_DISPLAY_SETTINGS):
                     values = {}
                     for sub_attr in getattr(r.dashboard, attr).__dict__:
-                        if sub_value := get_config_value(
-                            f"{attr}.{sub_attr}", is_master=is_master
-                        ):
+                        if (
+                            sub_value := get_config_value(
+                                f"{attr}.{sub_attr}", is_master=is_master
+                            )
+                        ) is not None:
                             values[sub_attr] = sub_value
                     value = type(getattr(r.dashboard, attr))(**values)
                 setattr(r.dashboard, attr, value)

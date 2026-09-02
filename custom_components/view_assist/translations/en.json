@@ -126,7 +126,9 @@
               "menu_timeout": "Menu timeout",
               "time_format": "Time format",
               "screen_mode": "Show/hide header and sidebar",
-              "cycle_views": "Cycle views"
+              "cycle_views": "Cycle views",
+              "enable_view_transitions": "Enable view transitions",
+              "view_transition_time": "View transition duration"
             },
             "data_description": {
               "assist_prompt": "The Assist notification prompt style to use for wake word detection and intent processing",
@@ -138,7 +140,9 @@
               "menu_timeout": "Time in seconds before menu automatically closes (0 to disable timeout)",
               "time_format": "Sets clock display time format",
               "screen_mode": "Show or hide the header and sidebar",
-              "cycle_views": "List of items to show when in cycle mode"
+              "cycle_views": "List of items to show when in cycle mode",
+              "enable_view_transitions": "Enables smooth CSS fade transitions between views",
+              "view_transition_time": "Duration of the view transition animation in seconds"
             }
           }
         }

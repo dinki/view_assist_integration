@@ -102,7 +102,7 @@ class ViewAssistSensor(RestoreSensor):
                     "status_icons_size", "menu_config", "font_style", 
                     "use_24_hour_time", "background", "mode", "view_timeout", 
                     "weather_entity", "screen_mode", "do_not_disturb", 
-                    "use_announce",
+                    "use_announce", "enable_view_transitions", "view_transition_time",
 
                     # Generated/ephemeral
                     "last_updated", "active_overrides",
@@ -279,6 +279,8 @@ class ViewAssistSensor(RestoreSensor):
             "view_timeout": d.default.view_timeout,
             "weather_entity": d.default.weather_entity,
             "screen_mode": d.dashboard.display_settings.screen_mode,
+            "enable_view_transitions": d.dashboard.display_settings.enable_view_transitions,
+            "view_transition_time": d.dashboard.display_settings.view_transition_time,
             "home_screen": d.runtime_config_overrides.home if
             d.runtime_config_overrides.home else d.dashboard.home,
         }
