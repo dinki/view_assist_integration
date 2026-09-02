@@ -1,6 +1,6 @@
 import { timerCards } from "./timers.js?v=1.0.28";
 
-const version = "1.0.32"
+const version = "1.0.33"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 export async function await_element(el, hard = false) {
@@ -706,12 +706,53 @@ class ViewAssist {
     }
   }
 
+  get_lovelace_config() {
+    try {
+      const panel = document.querySelector("home-assistant")
+        ?.shadowRoot?.querySelector("home-assistant-main")
+        ?.shadowRoot?.querySelector("ha-panel-lovelace, partial-panel-resolver ha-panel-lovelace");
+      if (panel?.lovelace?.config) return panel.lovelace.config;
+
+      const root = panel?.shadowRoot?.querySelector("hui-root") || document.querySelector("hui-root");
+      if (root?.lovelace?.config) return root.lovelace.config;
+    } catch (e) {
+      console.debug("ViewAssist - error reading lovelace config:", e);
+    }
+    return null;
+  }
+
   is_custom_view(path) {
     if (!path) return false;
     const cleanPath = path.split("?")[0].split("#")[0].replace(/^\/+|\/+$/g, "").toLowerCase();
     const slug = cleanPath.split("/").pop();
-    const sharedViews = ["clock", "clockalt", "calendar", "alarm", "camera", "advancedcamera", "clockaltwithmovement"];
-    return !sharedViews.includes(slug);
+
+    const entityId = localStorage.getItem("view_assist_sensor");
+    const stateObj = this.hass?.states?.[entityId];
+    const defaultBackground = stateObj?.attributes?.background;
+
+    // Dynamically inspect the view configuration from Lovelace
+    const config = this.get_lovelace_config();
+    if (config?.views && Array.isArray(config.views)) {
+      const view = config.views.find((v, idx) => v.path === slug || String(idx) === slug);
+      if (view) {
+        function checkCard(card) {
+          if (!card) return false;
+          if (card.variables?.var_custom_background === true || card.variables?.var_custom_background === "true") return true;
+          if (card.variables?.var_custom_background === false || card.variables?.var_custom_background === "false") return false;
+          if (card.variables?.background && defaultBackground && card.variables.background !== defaultBackground) return true;
+          if (card.cards && Array.isArray(card.cards)) {
+            return card.cards.some(checkCard);
+          }
+          return false;
+        }
+
+        if (view.cards && Array.isArray(view.cards)) {
+          return view.cards.some(checkCard);
+        }
+      }
+    }
+
+    return false;
   }
 
   browser_navigate(path) {
