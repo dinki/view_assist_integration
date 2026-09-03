@@ -316,7 +316,12 @@ class ViewAssistHelpers {
 
   validateRequirements(requirements) {
     if (typeof requirements === "string") requirements = [requirements];
-    const missing = requirements.filter(req => window.customElements.get(req) === undefined);
+    const missing = requirements.filter(req => {
+      // card-mod is dead upstream on HA 2026.8+; UIX (https://uix.lf.technology/) is a
+      // same-syntax drop-in replacement, so treat its presence as satisfying a card-mod requirement.
+      const isCardModAlternative = req === "card-mod" && !!window.customElements.get("uix-node");
+      return window.customElements.get(req) === undefined && !isCardModAlternative;
+    });
     if (missing.length) {
       return "<div style='display: flex; align-items: center;'><p class='error'>Missing required resources: " + missing.join(", ") + "</p></div>";
     }
@@ -420,7 +425,10 @@ class ViewAssist {
     let missingModules = []
     const modules = ['button-card', 'layout-card', 'card-mod']
     modules.forEach((module) => {
-      if (!customElements.get(module)) {
+      // card-mod is dead upstream on HA 2026.8+; UIX (https://uix.lf.technology/) is a
+      // same-syntax drop-in replacement, so treat its presence as satisfying a card-mod requirement.
+      const isCardModAlternative = module === 'card-mod' && !!customElements.get('uix-node')
+      if (!customElements.get(module) && !isCardModAlternative) {
         missingModules.push(module)
       }
     })
