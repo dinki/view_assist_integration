@@ -162,8 +162,10 @@ class NavigationManager:
                 else timeout
             )
             _LOGGER.debug("Adding revert to %s in %ss", revert_path, timeout)
-            self.revert_view_task = self.hass.async_create_task(
-                self._display_revert_delay_task(path=revert_path, timeout=timeout)
+            self.revert_view_task = self.config.async_create_background_task(
+                self.hass,
+                self._display_revert_delay_task(path=revert_path, timeout=timeout),
+                f"{self.name} display revert",
             )
 
     def navigate_home(self):
@@ -197,8 +199,10 @@ class NavigationManager:
         if self.cycle_view_task and not self.cycle_view_task.done():
             _LOGGER.debug("Cycle display already running")
             return
-        self.cycle_view_task = self.hass.async_create_task(
-            self._async_display_view_cycle_runner(views)
+        self.cycle_view_task = self.config.async_create_background_task(
+            self.hass,
+            self._async_display_view_cycle_runner(views),
+            f"{self.name} display view cycle",
         )
 
     async def _async_display_view_cycle_runner(self, views: list[str]):
