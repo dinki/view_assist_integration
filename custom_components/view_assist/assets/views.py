@@ -11,8 +11,15 @@ from homeassistant.util.yaml import load_yaml_dict, parse_yaml, save_yaml
 
 from ..const import (  # noqa: TID252
     COMMUNITY_VIEWS_DIR,
+    CONF_ENABLED_COMMUNITY_VIEWS,
+    CONF_ENABLED_CORE_VIEWS,
+    CONF_ENABLED_CUSTOM_VIEWS,
+    CONF_VIEW_VARIANTS,
+    CORE_VIEWS,
+    CUSTOM_VIEWS_DIR,
     DASHBOARD_NAME,
     DASHBOARD_VIEWS_GITHUB_PATH,
+    DEFAULT_ENABLED_CORE_VIEWS,
     DEFAULT_VIEW,
     DOMAIN,
     GITHUB_BRANCH,
@@ -27,12 +34,28 @@ _LOGGER = logging.getLogger(__name__)
 class ViewManager(BaseAssetManager):
     """Class to manage view assets."""
 
+    async def async_setup(self) -> None:
+        """Set up the ViewManager."""
+        self._ensure_directories()
+        comm_dir = Path(self.hass.config.path(DOMAIN, VIEWS_DIR, COMMUNITY_VIEWS_DIR))
+        # If community views directory is empty or missing yaml files, download from repo
+        if not any(comm_dir.glob("*.yaml")) and not any(comm_dir.glob("*.yml")):
+            _LOGGER.debug("Community views cache is empty, downloading from repo")
+            await self._download_community_views()
+
     async def async_onboard(self, force: bool = False) -> dict[str, Any] | None:
         """Onboard the user if not yet setup."""
+        # Ensure local directories exist
+        self._ensure_directories()
+
         # Check if onboarding is needed and if so, run it
         if not self.data or force:
             self.onboarding = True
             vw_versions = {}
+
+            # Cache community views from repo if available
+            await self._download_community_views()
+
             views = await self._async_get_view_list()
             for view in views:
                 # If dashboard and views exist and we are just migrating to managed views
@@ -68,6 +91,13 @@ class ViewManager(BaseAssetManager):
             return vw_versions
         return None
 
+    def _ensure_directories(self) -> None:
+        """Ensure view directories exist."""
+        base = Path(self.hass.config.path(DOMAIN, VIEWS_DIR))
+        base.mkdir(parents=True, exist_ok=True)
+        (base / COMMUNITY_VIEWS_DIR).mkdir(parents=True, exist_ok=True)
+        (base / CUSTOM_VIEWS_DIR).mkdir(parents=True, exist_ok=True)
+
     async def async_get_last_commit(self) -> str | None:
         """Get if the repo has a new update."""
         return await self.download_manager.get_last_commit_id(
@@ -77,15 +107,46 @@ class ViewManager(BaseAssetManager):
     async def async_get_installed_version(self, name: str) -> str | None:
         """Get installed version of asset."""
         if view_config := await self._async_get_view_config(name):
-            # Get installed version from config
-            return self._read_view_version(name, view_config)
+            version = self._read_view_version(name, view_config)
+            if version and version != "0.0.0":
+                return version
+
+        # Fallback to checking local file on disk
+        variant = None
+        if self.config and self.config.options:
+            variant = self.config.options.get(CONF_VIEW_VARIANTS, {}).get(name)
+        if file_path := self._resolve_view_file(name, variant=variant, view_source="core"):
+            if file_path.exists():
+                try:
+                    file_data = await self.hass.async_add_executor_job(
+                        load_yaml_dict, file_path
+                    )
+                    if file_data and isinstance(file_data, dict):
+                        return self._read_view_version(name, file_data)
+                except Exception:  # noqa: BLE001
+                    pass
         return None
 
     async def async_get_latest_version(self, name: str) -> str | None:
         """Get latest version of asset."""
-        view_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{name}/{name}.yaml"
+        variant = None
+        if self.config and self.config.options:
+            variant = self.config.options.get(CONF_VIEW_VARIANTS, {}).get(name)
+
+        core_info = CORE_VIEWS.get(name, {})
+        var_file = None
+        if variant and variant in core_info.get("variants", {}):
+            var_file = core_info["variants"][variant].get("file")
+
+        if var_file:
+            if "/" in var_file:
+                view_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{var_file}"
+            else:
+                view_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{name}/{var_file}"
+        else:
+            view_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{name}/{name}.yaml"
+
         if view_data := await self.download_manager.get_file_contents(view_path):
-            # Parse yaml string to json
             try:
                 view_data = parse_yaml(view_data)
                 return self._read_view_version(name, view_data)
@@ -97,10 +158,12 @@ class ViewManager(BaseAssetManager):
         self, update_from_repo: bool = True
     ) -> dict[str, Any]:
         """Update versions from repo."""
-        # Get the latest versions of blueprints
         vw_versions = {}
-        if blueprints := await self._async_get_view_list():
-            for name in blueprints:
+        if update_from_repo:
+            await self._download_community_views()
+
+        if views := await self._async_get_view_list():
+            for name in views:
                 installed_version = await self.async_get_installed_version(name)
                 latest_version = (
                     await self.async_get_latest_version(name)
@@ -113,113 +176,197 @@ class ViewManager(BaseAssetManager):
                 }
         return vw_versions
 
-    async def async_is_installed(self, name):
+    async def async_is_installed(self, name: str) -> bool:
         """Return if asset is installed."""
         return await self._async_get_view_index(name) > 0
 
     async def async_install_or_update(
         self,
         name: str,
+        variant: str | None = None,
+        view_source: str = "core",
+        view_path: str | None = None,
+        view_title: str | None = None,
         download: bool = False,
         dev_branch: bool = False,
         discard_user_dashboard_changes: bool = False,
         backup_existing: bool = False,
     ) -> InstallStatus:
         """Install or update asset."""
-
+        self._ensure_directories()
         self._update_install_progress(name, 0)
-        success = False
-        installed_version = None
+        # Resolve variant and view_source from user config if not explicitly provided
+        if self.config and self.config.options:
+            if variant is None:
+                variant = self.config.options.get(CONF_VIEW_VARIANTS, {}).get(name)
 
-        view_index = await self._async_get_view_index(name)
-        file_path = Path(self.hass.config.path(DOMAIN), VIEWS_DIR, name)
+        # Check if the view is enabled in user configuration
+        enabled_core = (
+            self.config.options.get(CONF_ENABLED_CORE_VIEWS, DEFAULT_ENABLED_CORE_VIEWS)
+            if (self.config and self.config.options)
+            else DEFAULT_ENABLED_CORE_VIEWS
+        )
+        is_view_enabled = True
+        if view_source == "core" and name in CORE_VIEWS:
+            is_view_enabled = name in enabled_core
 
-        _LOGGER.debug("%s view %s", "Updating" if view_index else "Adding", name)
+        target_path = (
+            view_path
+            or CORE_VIEWS.get(name, {}).get("path")
+            or name.lower().replace(" ", "_")
+        )
+        target_title = (
+            view_title
+            or CORE_VIEWS.get(name, {}).get("title")
+            or name.replace("_", " ").title()
+        )
+
+        view_index = await self._async_get_view_index(target_path)
+        base_views_dir = Path(self.hass.config.path(DOMAIN, VIEWS_DIR))
+
+        _LOGGER.debug(
+            "%s view %s (variant: %s, source: %s, path: %s, enabled: %s)",
+            "Updating" if view_index else "Adding",
+            name,
+            variant,
+            view_source,
+            target_path,
+            is_view_enabled,
+        )
 
         self._update_install_progress(name, 10)
 
-        if view_index > 0 and backup_existing:
-            # Backup existing view
-            _LOGGER.debug("Backing up existing view %s", name)
-            await self.async_save(name)
+        if view_index > 0 and backup_existing and is_view_enabled:
+            _LOGGER.debug("Backing up existing view %s", target_path)
+            await self.async_save(target_path)
 
         self._update_install_progress(name, 30)
 
         # Download view if required
         downloaded = False
-        # Don't download if file exists during onboarding
-        if self.onboarding and Path(file_path, f"{name}.yaml").exists():
-            _LOGGER.debug("View file already exists for %s.  Not downloading", name)
-            downloaded = True
-        elif download:
-            # Download view files from github repo
-            _LOGGER.debug("Downloading view %s", name)
-            # Set branch to download from
+        if download:
             if dev_branch:
                 self.download_manager.set_branch(GITHUB_DEV_BRANCH)
             else:
                 self.download_manager.set_branch(GITHUB_BRANCH)
 
-            downloaded = await self._download_view(name)
-            if not downloaded:
-                raise AssetManagerException(
-                    f"Unable to download view {name}.  Please check the view name and try again."
-                )
+            if view_source == "core":
+                file_path = base_views_dir / name
+                if self.onboarding and (file_path / f"{name}.yaml").exists():
+                    _LOGGER.debug("View file already exists for %s. Not downloading", name)
+                    downloaded = True
+                else:
+                    _LOGGER.debug("Downloading view %s", name)
+                    downloaded = await self._download_view(name)
+            elif view_source == "community":
+                _LOGGER.debug("Downloading community views from repo")
+                downloaded = await self._download_community_views()
 
         self._update_install_progress(name, 50)
 
-        # Install view
+        # Find and load the view YAML file
         try:
-            _LOGGER.debug("Installing view %s", name)
-            # Load in order of existence - user view version (for later feature), default version, saved version
-            file: Path = None
-            file_options = [f"user_{name}.yaml", f"{name}.yaml", f"{name}.saved.yaml"]
+            file_to_load = self._resolve_view_file(
+                name=name,
+                variant=variant,
+                view_source=view_source,
+            )
 
-            for file_option in file_options:
-                if Path(file_path, file_option).exists():
-                    file = Path(file_path, file_option)
-                    break
-
-            if file:
-                new_view_config = await self.hass.async_add_executor_job(
-                    load_yaml_dict, file
+            # If file does not exist locally and is from community contributions, try downloading
+            if (not file_to_load or not file_to_load.exists()) and (
+                view_source == "community"
+                or (
+                    variant
+                    and "community"
+                    in str(
+                        CORE_VIEWS.get(name, {})
+                        .get("variants", {})
+                        .get(variant, {})
+                        .get("file", "")
+                    )
                 )
-            else:
+            ):
+                _LOGGER.debug(
+                    "View file not found in local cache for %s (%s), attempting download",
+                    name,
+                    variant,
+                )
+                await self._download_community_views()
+                file_to_load = self._resolve_view_file(
+                    name=name,
+                    variant=variant,
+                    view_source=view_source,
+                )
+
+            if not file_to_load or not file_to_load.exists():
                 raise AssetManagerException(
-                    f"Unable to install view {name}.  Unable to find a yaml file"
+                    f"Unable to install view {name}. File not found: {file_to_load}"
+                )
+
+            new_view_config = await self.hass.async_add_executor_job(
+                load_yaml_dict, file_to_load
+            )
+            if not new_view_config or not isinstance(new_view_config, dict):
+                raise AssetManagerException(
+                    f"Unable to install view {name}. File is empty or invalid YAML: {file_to_load}"
                 )
         except OSError as ex:
             raise AssetManagerException(
-                f"Unable to install view {name}.  Error is {ex}"
+                f"Unable to install view {name}. Error: {ex}"
             ) from ex
 
         self._update_install_progress(name, 60)
+        installed_version = self._read_view_version(name, new_view_config)
 
-        # Get lovelace (frontend) config data
+        # If the view is disabled in user configuration, do not install to dashboard
+        if not is_view_enabled:
+            _LOGGER.debug(
+                "View %s is disabled in configuration. Updated local cache (version %s), skipping dashboard install.",
+                name,
+                installed_version,
+            )
+            self._update_install_progress(name, 100)
+            return InstallStatus(
+                installed=True,
+                version=installed_version,
+                latest_version=installed_version
+                if downloaded
+                else await self.async_get_latest_version(name),
+            )
+
+        # Get lovelace dashboard store
         lovelace: LovelaceData = self.hass.data["lovelace"]
-        # Get access to dashboard store
         dashboard_store: dashboard.LovelaceStorage = lovelace.dashboards.get(
             self._dashboard_key
         )
 
-        # Load dashboard config data
         if new_view_config and dashboard_store:
             dashboard_config = await dashboard_store.async_load(False)
 
-            # Create new view and add it to dashboard
-            new_view = {
-                "type": "panel",
-                "title": name.title(),
-                "path": name,
-                "cards": [new_view_config],
-            }
+            # Check if root YAML is already a full view configuration
+            if isinstance(new_view_config, dict) and "cards" in new_view_config:
+                new_view = {
+                    "type": new_view_config.get("type", "panel"),
+                    "title": new_view_config.get("title", target_title),
+                    "path": new_view_config.get("path", target_path),
+                    "cards": new_view_config.get("cards", []),
+                }
+                if "badges" in new_view_config:
+                    new_view["badges"] = new_view_config["badges"]
+            else:
+                # Wrap card config as a panel view
+                new_view = {
+                    "type": "panel",
+                    "title": target_title,
+                    "path": target_path,
+                    "cards": [new_view_config],
+                }
 
-            if not dashboard_config["views"]:
+            if not dashboard_config.get("views"):
                 dashboard_config["views"] = [new_view]
-            elif view_index:
+            elif view_index > 0:
                 dashboard_config["views"][view_index - 1] = new_view
-            elif name == DEFAULT_VIEW:
-                # Insert default view as first view in list
+            elif target_path == DEFAULT_VIEW:
                 dashboard_config["views"].insert(0, new_view)
             else:
                 dashboard_config["views"].append(new_view)
@@ -231,9 +378,6 @@ class ViewManager(BaseAssetManager):
             self.hass.bus.async_fire(EVENT_PANELS_UPDATED)
 
             success = True
-
-            # Update installed version info
-            installed_version = self._read_view_version(name, new_view_config)
             self._update_install_progress(name, 100)
 
         _LOGGER.debug(
@@ -249,23 +393,241 @@ class ViewManager(BaseAssetManager):
             else await self.async_get_latest_version(name),
         )
 
-    async def async_save(self, name: str) -> bool:
-        """Backup a view to a file."""
+    def _resolve_view_file(
+        self,
+        name: str,
+        variant: str | None = None,
+        view_source: str = "core",
+    ) -> Path | None:
+        """Resolve the path to the view YAML file."""
+        base_views_dir = Path(self.hass.config.path(DOMAIN, VIEWS_DIR))
 
-        # Get lovelace (frontend) config data
+        if view_source == "community":
+            comm_dir = base_views_dir / COMMUNITY_VIEWS_DIR
+            options = [
+                comm_dir / f"{name}.yaml",
+                comm_dir / f"{name}.yml",
+                comm_dir / name / f"{name}.yaml",
+            ]
+            for opt in options:
+                if opt.exists():
+                    return opt
+            return options[0]
+
+        if view_source == "custom":
+            cust_dir = base_views_dir / CUSTOM_VIEWS_DIR
+            options = [
+                cust_dir / f"{name}.yaml",
+                cust_dir / f"{name}.yml",
+                cust_dir / name / f"{name}.yaml",
+            ]
+            for opt in options:
+                if opt.exists():
+                    return opt
+            return options[0]
+
+        # Core views
+        file_path = base_views_dir / name
+        core_info = CORE_VIEWS.get(name, {})
+
+        if variant:
+            if variant in core_info.get("variants", {}):
+                var_file = core_info["variants"][variant]["file"]
+                if "/" in var_file:
+                    target = base_views_dir / var_file
+                    if target.exists():
+                        return target
+                else:
+                    target = file_path / var_file
+                    if target.exists():
+                        return target
+
+            # Check direct variant file in core folder
+            if (file_path / f"{variant}.yaml").exists():
+                return file_path / f"{variant}.yaml"
+            if (file_path / f"{variant}.yml").exists():
+                return file_path / f"{variant}.yml"
+
+            # Backward compatibility for community / custom variant files
+            if (base_views_dir / COMMUNITY_VIEWS_DIR / f"{variant}.yaml").exists():
+                return base_views_dir / COMMUNITY_VIEWS_DIR / f"{variant}.yaml"
+            if (base_views_dir / CUSTOM_VIEWS_DIR / f"{variant}.yaml").exists():
+                return base_views_dir / CUSTOM_VIEWS_DIR / f"{variant}.yaml"
+
+        # Default search order for core views
+        file_options = [
+            file_path / f"user_{name}.yaml",
+            file_path / f"{name}.yaml",
+            file_path / f"{name}.saved.yaml",
+        ]
+        # Check if single YAML in views dir exists (e.g. clockalt.yaml)
+        if (file_path / f"{name}.yaml").exists():
+            return file_path / f"{name}.yaml"
+
+        for opt in file_options:
+            if opt.exists():
+                return opt
+
+        # Fallback for standalone core variant files like clockalt
+        if (base_views_dir / "clock" / f"{name}.yaml").exists():
+            return base_views_dir / "clock" / f"{name}.yaml"
+
+        return file_path / f"{name}.yaml"
+
+    async def async_uninstall_view(
+        self, name: str, view_path: str | None = None
+    ) -> bool:
+        """Uninstall a view from the dashboard."""
+        target_path = (
+            view_path
+            or CORE_VIEWS.get(name, {}).get("path")
+            or name.lower().replace(" ", "_")
+        )
+
         lovelace: LovelaceData = self.hass.data["lovelace"]
-
-        # Get access to dashboard store
         dashboard_store: dashboard.LovelaceStorage = lovelace.dashboards.get(
             self._dashboard_key
         )
 
-        # Load dashboard config data
         if dashboard_store:
             dashboard_config = await dashboard_store.async_load(False)
+            if not dashboard_config.get("views"):
+                return False
 
-            # Make list of existing view names for this dashboard
-            for view in dashboard_config["views"]:
+            removed = False
+            for index, ex_view in enumerate(list(dashboard_config["views"])):
+                if (
+                    ex_view.get("path") == target_path
+                    or ex_view.get("title", "").lower() == name.lower()
+                ):
+                    dashboard_config["views"].pop(index)
+                    removed = True
+                    _LOGGER.debug("Removed view %s from dashboard", target_path)
+                    break
+
+            if removed:
+                await dashboard_store.async_save(dashboard_config)
+                self.hass.bus.async_fire(EVENT_PANELS_UPDATED)
+                if name in self.data:
+                    self.data.pop(name)
+                return True
+
+        return False
+
+    async def async_sync_configured_views(self, options: dict[str, Any]) -> None:
+        """Synchronize dashboard views according to configuration options."""
+        enabled_core = options.get(CONF_ENABLED_CORE_VIEWS, DEFAULT_ENABLED_CORE_VIEWS)
+        variants = options.get(CONF_VIEW_VARIANTS, {})
+        enabled_community = options.get(CONF_ENABLED_COMMUNITY_VIEWS, [])
+        enabled_custom = options.get(CONF_ENABLED_CUSTOM_VIEWS, [])
+
+        _LOGGER.debug(
+            "Syncing views: core=%s, variants=%s, community=%s, custom=%s",
+            enabled_core,
+            variants,
+            enabled_community,
+            enabled_custom,
+        )
+
+        # Build target view definitions
+        target_views: dict[str, dict[str, Any]] = {}
+
+        # 1. Enabled core views
+        for core_name in enabled_core:
+            if core_name in CORE_VIEWS:
+                variant = variants.get(core_name)
+                target_views[core_name] = {
+                    "name": core_name,
+                    "variant": variant,
+                    "source": "core",
+                    "path": CORE_VIEWS[core_name]["path"],
+                    "title": CORE_VIEWS[core_name]["title"],
+                }
+
+        # 2. Community views
+        for comm_name in enabled_community:
+            target_views[f"comm_{comm_name}"] = {
+                "name": comm_name,
+                "variant": None,
+                "source": "community",
+                "path": comm_name,
+                "title": comm_name.replace("_", " ").title(),
+            }
+
+        # 4. Custom user views
+        for cust_name in enabled_custom:
+            target_views[f"cust_{cust_name}"] = {
+                "name": cust_name,
+                "variant": None,
+                "source": "custom",
+                "path": cust_name,
+                "title": f"{cust_name.replace('_', ' ').title()}",
+            }
+
+        # Load current dashboard views
+        lovelace: LovelaceData = self.hass.data["lovelace"]
+        dashboard_store: dashboard.LovelaceStorage = lovelace.dashboards.get(
+            self._dashboard_key
+        )
+        if not dashboard_store:
+            return
+
+        dashboard_config = await dashboard_store.async_load(False)
+        existing_paths = {
+            v.get("path"): v for v in dashboard_config.get("views", []) if v.get("path")
+        }
+
+        # Uninstall views that are managed but not in target list
+        # We only remove paths that belong to known core views or clockalt or community/custom
+        known_manageable_paths = set()
+        for k, v in CORE_VIEWS.items():
+            known_manageable_paths.add(v["path"])
+        known_manageable_paths.add("clockalt")
+
+        target_paths = {info["path"] for info in target_views.values()}
+
+        # Remove disabled core views
+        for path in list(existing_paths.keys()):
+            if (
+                path in known_manageable_paths or path.startswith("cust_")
+            ) and path not in target_paths:
+                await self.async_uninstall_view(path, view_path=path)
+
+        # Also remove any unselected community views
+        # Check all local community views
+        comm_dir = Path(
+            self.hass.config.path(DOMAIN, VIEWS_DIR, COMMUNITY_VIEWS_DIR)
+        )
+        if comm_dir.exists():
+            for comm_file in comm_dir.glob("*.yaml"):
+                comm_key = comm_file.stem
+                if comm_key in existing_paths and comm_key not in target_paths:
+                    await self.async_uninstall_view(comm_key, view_path=comm_key)
+
+        # Install or update target views
+        for target_info in target_views.values():
+            try:
+                await self.async_install_or_update(
+                    name=target_info["name"],
+                    variant=target_info.get("variant"),
+                    view_source=target_info.get("source", "core"),
+                    view_path=target_info.get("path"),
+                    view_title=target_info.get("title"),
+                    download=False,
+                )
+            except Exception as ex:  # noqa: BLE001
+                _LOGGER.error("Failed to install/sync view %s: %s", target_info["name"], ex)
+
+    async def async_save(self, name: str) -> bool:
+        """Backup a view to a file."""
+        lovelace: LovelaceData = self.hass.data["lovelace"]
+        dashboard_store: dashboard.LovelaceStorage = lovelace.dashboards.get(
+            self._dashboard_key
+        )
+
+        if dashboard_store:
+            dashboard_config = await dashboard_store.async_load(False)
+            for view in dashboard_config.get("views", []):
                 if view.get("path") == name.lower():
                     file_path = Path(
                         self.hass.config.path(DOMAIN), VIEWS_DIR, name.lower()
@@ -273,7 +635,6 @@ class ViewManager(BaseAssetManager):
                     file_name = f"{name.lower()}.saved.yaml"
 
                     if view.get("cards", []):
-                        # Ensure path exists
                         file_path.mkdir(parents=True, exist_ok=True)
                         return await self.hass.async_add_executor_job(
                             save_yaml,
@@ -297,6 +658,22 @@ class ViewManager(BaseAssetManager):
             ]
         return []
 
+    async def _download_community_views(self) -> bool:
+        """Download community views from repo into local cache."""
+        comm_dir = Path(
+            self.hass.config.path(DOMAIN, VIEWS_DIR, COMMUNITY_VIEWS_DIR)
+        )
+        comm_dir.mkdir(parents=True, exist_ok=True)
+        repo_path = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{COMMUNITY_VIEWS_DIR}"
+        try:
+            _LOGGER.debug("Downloading community views from repo path: %s", repo_path)
+            return await self.download_manager.async_download_dir(
+                repo_path, str(comm_dir)
+            )
+        except Exception as ex:  # noqa: BLE001
+            _LOGGER.error("Could not download community views from repo: %s", ex)
+        return False
+
     @property
     def _dashboard_key(self) -> str:
         """Return path for dashboard name."""
@@ -311,17 +688,42 @@ class ViewManager(BaseAssetManager):
     @property
     def _installed_views(self) -> list[str]:
         """Return installed views."""
-        return self.data.keys()
+        return list(self.data.keys())
 
     def _read_view_version(self, view: str, view_config: dict[str, Any]) -> str:
         """Get view version from config."""
-        if view_config:
+        if view_config and isinstance(view_config, dict):
             try:
+                # If wrapped as a panel view with cards
+                if "cards" in view_config and isinstance(view_config["cards"], list) and view_config["cards"]:
+                    inner_card = view_config["cards"][0]
+                    if isinstance(inner_card, dict) and "variables" in inner_card:
+                        view_config = inner_card
+
                 if variables := view_config.get("variables"):
-                    return variables.get(
-                        f"{view}version", variables.get(f"{view}cardversion", "0.0.0")
-                    )
-            except KeyError:
+                    if isinstance(variables, dict):
+                        # 1. Exact match for view
+                        for direct_key in (
+                            f"{view}version",
+                            f"{view}cardversion",
+                            f"{view}_version",
+                        ):
+                            if direct_key in variables:
+                                return str(variables[direct_key])
+
+                        # 2. Check any key in variables containing version and matching view or variant prefix
+                        for k, v in variables.items():
+                            if "version" in k.lower():
+                                clean_k = k.lower().replace("_", "").replace("-", "")
+                                clean_view = view.lower().replace("_", "").replace("-", "")
+                                if clean_view in clean_k or clean_k in clean_view:
+                                    return str(v)
+
+                        # 3. Any fallback version key in variables
+                        for k, v in variables.items():
+                            if k.endswith("version") or k.endswith("cardversion"):
+                                return str(v)
+            except (KeyError, AttributeError):
                 _LOGGER.debug("View %s version not found", view)
         return "0.0.0"
 
@@ -331,10 +733,9 @@ class ViewManager(BaseAssetManager):
         dashboard_store: dashboard.LovelaceStorage = lovelace.dashboards.get(
             self._dashboard_key
         )
-        # Load dashboard config data
         if dashboard_store:
             dashboard_config = await dashboard_store.async_load(False)
-            if not dashboard_config["views"]:
+            if not dashboard_config.get("views"):
                 return 0
 
             for index, ex_view in enumerate(dashboard_config["views"]):
@@ -348,14 +749,12 @@ class ViewManager(BaseAssetManager):
         dashboard_store: dashboard.LovelaceStorage = lovelace.dashboards.get(
             self._dashboard_key
         )
-        # Load dashboard config data
         if dashboard_store:
             dashboard_config = await dashboard_store.async_load(False)
-            for ex_view in dashboard_config["views"]:
+            for ex_view in dashboard_config.get("views", []):
                 if ex_view.get("path") == view:
                     if cards := ex_view.get("cards", []):
                         if isinstance(cards, list):
-                            # Get first card in list
                             return cards[0]
         return {}
 
@@ -366,8 +765,6 @@ class ViewManager(BaseAssetManager):
         cancel_if_exists: bool = False,
     ):
         """Download view files from a github repo directory."""
-
-        # Ensure download to path exists
         base = self.hass.config.path(f"{DOMAIN}/{VIEWS_DIR}")
         if community_view:
             dir_url = f"{DASHBOARD_VIEWS_GITHUB_PATH}/{VIEWS_DIR}/{COMMUNITY_VIEWS_DIR}/{view_name}"
@@ -377,17 +774,11 @@ class ViewManager(BaseAssetManager):
         if cancel_if_exists and Path(base, view_name, f"{view_name}.yaml").exists():
             return False
 
-        # Validate view dir on repo
         if await self.download_manager.async_dir_exists(dir_url):
-            # Create view directory
             Path(base, view_name).mkdir(parents=True, exist_ok=True)
-
-            # Download view files
             success = await self.download_manager.async_download_dir(
                 dir_url, Path(base, view_name)
             )
-
-            # Validate yaml file and install view
             if success and Path(base, view_name, f"{view_name}.yaml").exists():
                 _LOGGER.debug("Downloaded %s", view_name)
                 return True
@@ -396,28 +787,19 @@ class ViewManager(BaseAssetManager):
         return False
 
     async def delete_view(self, view: str):
-        """Delete view."""
-
-        # Get lovelace (frontend) config data
+        """Delete view by title."""
         lovelace: LovelaceData = self.hass.data["lovelace"]
-
-        # Get access to dashboard store
         dashboard_store: dashboard.LovelaceStorage = lovelace.dashboards.get(
             self._dashboard_key
         )
-
-        # Load dashboard config data
         if dashboard_store:
             dashboard_config = await dashboard_store.async_load(True)
-
-            # Remove view with title of home
             modified = False
-            for index, ex_view in enumerate(dashboard_config["views"]):
+            for index, ex_view in enumerate(dashboard_config.get("views", [])):
                 if ex_view.get("title", "").lower() == view.lower():
                     dashboard_config["views"].pop(index)
                     modified = True
                     break
 
-            # Save dashboard config back to HA
             if modified:
                 await dashboard_store.async_save(dashboard_config)

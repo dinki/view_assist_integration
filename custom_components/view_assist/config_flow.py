@@ -27,6 +27,7 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -47,6 +48,11 @@ from .const import (
     CONF_DO_NOT_DISTURB,
     CONF_DUCKING_VOLUME,
     CONF_ENABLE_UPDATES,
+    CONF_ENABLED_COMMUNITY_BLUEPRINTS,
+    CONF_ENABLED_COMMUNITY_VIEWS,
+    CONF_ENABLED_CORE_VIEWS,
+    CONF_ENABLED_CUSTOM_BLUEPRINTS,
+    CONF_ENABLED_CUSTOM_VIEWS,
     CONF_FONT_STYLE,
     CONF_HOME,
     CONF_INTENT,
@@ -72,8 +78,12 @@ from .const import (
     CONF_TIME_FORMAT,
     CONF_TRANSLATION_ENGINE,
     CONF_USE_ANNOUNCE,
+    CONF_VIEW_OPTIONS,
     CONF_VIEW_TIMEOUT,
+    CONF_VIEW_VARIANTS,
     CONF_WEATHER_ENTITY,
+    CORE_VIEWS,
+    DEFAULT_ENABLED_CORE_VIEWS,
     DEFAULT_NAME,
     DEFAULT_TYPE,
     DEFAULT_VALUES,
@@ -82,7 +92,16 @@ from .const import (
     VACA_DOMAIN,
     VAIconSizes,
 )
-from .helpers import get_available_overlays, get_master_config_entry
+from .helpers import (
+    get_available_community_blueprints,
+    get_available_community_views,
+    get_available_core_view_variants,
+    get_available_core_views,
+    get_available_custom_blueprints,
+    get_available_custom_views,
+    get_available_overlays,
+    get_master_config_entry,
+)
 from .typed import (
     DISPLAY_DEVICE_TYPES,
     VAAssistPrompt,
@@ -371,6 +390,132 @@ INTEGRATION_OPTIONS_SCHEMA = vol.Schema(
 )
 
 
+def get_view_options_schema(
+    hass: HomeAssistant, config_entry: VAConfigEntry | None
+) -> vol.Schema:
+    """Return schema for view and community asset options."""
+    schema_dict: dict[Any, Any] = {}
+
+    # 1. Core Views Multi-Select
+    core_views = get_available_core_views(hass)
+    schema_dict[
+        vol.Optional(
+            CONF_ENABLED_CORE_VIEWS,
+            default=DEFAULT_ENABLED_CORE_VIEWS,
+        )
+    ] = SelectSelector(
+        SelectSelectorConfig(
+            options=[
+                SelectOptionDict(value=k, label=v["title"])
+                for k, v in core_views.items()
+            ],
+            multiple=True,
+            mode=SelectSelectorMode.LIST,
+        )
+    )
+
+    # 2. View Variants (Dynamically discovered from core view folders)
+    core_variants = get_available_core_view_variants(hass)
+    for view_name, variant_options in core_variants.items():
+        schema_dict[
+            vol.Optional(
+                f"{CONF_VIEW_VARIANTS}_{view_name}",
+                default="standard",
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    SelectOptionDict(value=val, label=lbl)
+                    for val, lbl in variant_options.items()
+                ],
+                mode=SelectSelectorMode.DROPDOWN,
+            )
+        )
+
+    # 3. Community Views
+    comm_views = get_available_community_views(hass)
+    if comm_views:
+        schema_dict[
+            vol.Optional(
+                CONF_ENABLED_COMMUNITY_VIEWS,
+                default=[],
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    SelectOptionDict(
+                        value=k,
+                        label=f"{v['title']} (Includes: {', '.join(v['linked_blueprints'])})"
+                        if v.get("linked_blueprints")
+                        else v["title"],
+                    )
+                    for k, v in comm_views.items()
+                ],
+                multiple=True,
+                mode=SelectSelectorMode.LIST,
+            )
+        )
+
+    # 4. Custom User Views
+    custom_views = get_available_custom_views(hass)
+    if custom_views:
+        schema_dict[
+            vol.Optional(
+                CONF_ENABLED_CUSTOM_VIEWS,
+                default=[],
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    SelectOptionDict(value=k, label=v["title"])
+                    for k, v in custom_views.items()
+                ],
+                multiple=True,
+                mode=SelectSelectorMode.LIST,
+            )
+        )
+
+    # 5. Standalone Community Blueprints
+    comm_blueprints = get_available_community_blueprints(hass)
+    if comm_blueprints:
+        schema_dict[
+            vol.Optional(
+                CONF_ENABLED_COMMUNITY_BLUEPRINTS,
+                default=[],
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    SelectOptionDict(value=k, label=v["name"])
+                    for k, v in comm_blueprints.items()
+                ],
+                multiple=True,
+                mode=SelectSelectorMode.LIST,
+            )
+        )
+
+    # 6. Custom Blueprints
+    custom_blueprints = get_available_custom_blueprints(hass)
+    if custom_blueprints:
+        schema_dict[
+            vol.Optional(
+                CONF_ENABLED_CUSTOM_BLUEPRINTS,
+                default=[],
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    SelectOptionDict(value=k, label=v["name"])
+                    for k, v in custom_blueprints.items()
+                ],
+                multiple=True,
+                mode=SelectSelectorMode.LIST,
+            )
+        )
+
+    return vol.Schema(schema_dict)
+
+
 def get_developer_options_schema(
     hass: HomeAssistant, config_entry: VAConfigEntry | None
 ) -> vol.Schema:
@@ -547,6 +692,7 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
                 step_id="init",
                 menu_options=[
                     "integration_options",
+                    "view_options",
                     "dashboard_options",
                     "default_options",
                     "developer_options",
@@ -554,6 +700,51 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
             )
 
         return await self.async_step_main_config()
+
+    async def async_step_view_options(self, user_input=None):
+        """Handle view and community asset options flow."""
+        schema = get_view_options_schema(self.hass, self.config_entry)
+        suggested = get_suggested_option_values(self.config_entry)
+
+        # Unpack saved view variants dictionary into individual dropdown fields
+        if saved_variants := suggested.get(CONF_VIEW_VARIANTS):
+            if isinstance(saved_variants, dict):
+                for k, v in saved_variants.items():
+                    suggested[f"{CONF_VIEW_VARIANTS}_{k}"] = v
+
+        data_schema = self.add_suggested_values_to_schema(schema, suggested)
+
+        if user_input is not None:
+            # Reconstruct view_variants dict from all dynamic dropdowns
+            variants = {}
+            for k in list(user_input.keys()):
+                if isinstance(k, str) and k.startswith(f"{CONF_VIEW_VARIANTS}_"):
+                    view_name = k[len(f"{CONF_VIEW_VARIANTS}_") :]
+                    variants[view_name] = user_input.pop(k)
+            user_input[CONF_VIEW_VARIANTS] = variants
+
+            options = dict(self.config_entry.options) | user_input
+            for o in data_schema.schema:
+                if o not in user_input and o != CONF_VIEW_VARIANTS:
+                    options.pop(o, None)
+
+            # Update entry options
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, options=options
+            )
+
+            # Sync assets immediately
+            am = AssetsManager.get(self.hass)
+            if am:
+                self.hass.async_create_task(am.async_sync_assets(options))
+
+            return self.async_create_entry(data=options)
+
+        return self.async_show_form(
+            step_id="view_options",
+            data_schema=data_schema,
+            description_placeholders={"name": self.config_entry.title},
+        )
 
     async def async_step_main_config(self, user_input=None):
         """Handle main config flow."""

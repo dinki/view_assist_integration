@@ -11,9 +11,16 @@ from homeassistant.const import CONF_TYPE, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
+from homeassistant.util.yaml import load_yaml_dict
+
 from .const import (
     BROWSERMOD_DOMAIN,
+    COMMUNITY_BLUEPRINTS_DIR,
+    COMMUNITY_VIEWS_DIR,
     CONF_DISPLAY_DEVICE,
+    CORE_VIEWS,
+    CUSTOM_BLUEPRINTS_DIR,
+    CUSTOM_VIEWS_DIR,
     DASHBOARD_DIR,
     DOMAIN,
     HASSMIC_DOMAIN,
@@ -21,6 +28,7 @@ from .const import (
     REMOTE_ASSIST_DISPLAY_DOMAIN,
     VAMODE_REVERTS,
     VAMode,
+    VIEWS_DIR,
 )
 from .typed import VAConfigEntry, VADisplayType, VAType, DISPLAY_DEVICE_TYPES
 
@@ -480,3 +488,312 @@ def get_available_overlays(hass: HomeAssistant) -> dict[str, str]:
     if overlays:
         return overlays
     return {}
+
+
+def get_available_core_views(hass: HomeAssistant) -> dict[str, Any]:
+    """Get catalog of available core views and variants."""
+    return CORE_VIEWS
+
+
+def get_available_core_view_variants(
+    hass: HomeAssistant,
+) -> dict[str, dict[str, str]]:
+    """Scan local core view directories and return available variants for each core view."""
+    results = {}
+    base_views_dir = Path(hass.config.path(DOMAIN, VIEWS_DIR))
+
+    for core_name, core_info in CORE_VIEWS.items():
+        variants_dict: dict[str, str] = {}
+        core_folder = base_views_dir / core_name
+
+        # 1. Registered variants in CORE_VIEWS definition
+        for var_key, var_data in core_info.get("variants", {}).items():
+            var_file = var_data.get("file", "")
+            if "/" in var_file:
+                target_file = base_views_dir / var_file
+            else:
+                target_file = core_folder / var_file
+
+            if target_file.exists() or var_key == "standard":
+                variants_dict[var_key] = var_data.get(
+                    "name", var_key.replace("_", " ").title()
+                )
+
+        # 2. Dynamic discovery: any other .yaml files in the core view's directory
+        if core_folder.exists():
+            for item in core_folder.iterdir():
+                if item.is_file() and item.suffix in (".yaml", ".yml"):
+                    matching_registered = [
+                        k
+                        for k, v in core_info.get("variants", {}).items()
+                        if v.get("file") == item.name
+                    ]
+                    if (
+                        not matching_registered
+                        and item.name != f"{core_name}.saved.yaml"
+                        and not item.name.endswith(".saved.yaml")
+                    ):
+                        try:
+                            data = load_yaml_dict(str(item)) or {}
+                        except Exception:  # noqa: BLE001
+                            data = {}
+                        title = data.get("title") if isinstance(data, dict) else None
+                        if not title:
+                            title = (
+                                item.stem.replace("_", " ").replace("-", " ").title()
+                            )
+                        var_key = item.stem
+                        variants_dict[var_key] = f"{title} ({item.name})"
+
+        # Only add to results if there is more than 1 option (meaning there is an actual choice to make)
+        if len(variants_dict) > 1:
+            results[core_name] = variants_dict
+
+    return results
+
+
+def get_available_community_views(hass: HomeAssistant) -> dict[str, dict[str, Any]]:
+    """Get available community contribution views from local cache."""
+    views = {}
+    community_dir = Path(hass.config.path(DOMAIN, VIEWS_DIR, COMMUNITY_VIEWS_DIR))
+    if not community_dir.exists():
+        return views
+
+    for item in community_dir.iterdir():
+        if item.is_file() and item.suffix in (".yaml", ".yml"):
+            key = item.stem
+            try:
+                data = load_yaml_dict(str(item)) or {}
+            except Exception:  # noqa: BLE001
+                data = {}
+            title = data.get("title") if isinstance(data, dict) else None
+            if not title:
+                title = key.replace("_", " ").replace("-", " ").title()
+
+            views[key] = {
+                "key": key,
+                "title": title,
+                "path": data.get("path", key) if isinstance(data, dict) else key,
+                "file": item.name,
+                "full_path": str(item),
+                "source": "community",
+                "linked_blueprints": find_linked_blueprints_for_view(
+                    hass, key, "community"
+                ),
+            }
+        elif item.is_dir():
+            yaml_file = item / f"{item.name}.yaml"
+            if yaml_file.exists():
+                key = item.name
+                try:
+                    data = load_yaml_dict(str(yaml_file)) or {}
+                except Exception:  # noqa: BLE001
+                    data = {}
+                title = data.get("title") if isinstance(data, dict) else None
+                if not title:
+                    title = key.replace("_", " ").replace("-", " ").title()
+                views[key] = {
+                    "key": key,
+                    "title": title,
+                    "path": data.get("path", key) if isinstance(data, dict) else key,
+                    "file": f"{item.name}/{yaml_file.name}",
+                    "full_path": str(yaml_file),
+                    "source": "community",
+                    "linked_blueprints": find_linked_blueprints_for_view(
+                        hass, key, "community"
+                    ),
+                }
+
+    return views
+
+
+def get_available_custom_views(hass: HomeAssistant) -> dict[str, dict[str, Any]]:
+    """Get available user custom views from local custom folder."""
+    views = {}
+    custom_dir = Path(hass.config.path(DOMAIN, VIEWS_DIR, CUSTOM_VIEWS_DIR))
+    if not custom_dir.exists():
+        return views
+
+    for item in custom_dir.iterdir():
+        if item.is_file() and item.suffix in (".yaml", ".yml"):
+            key = item.stem
+            try:
+                data = load_yaml_dict(str(item)) or {}
+            except Exception:  # noqa: BLE001
+                data = {}
+            title = data.get("title") if isinstance(data, dict) else None
+            if not title:
+                title = key.replace("_", " ").replace("-", " ").title()
+
+            views[key] = {
+                "key": key,
+                "title": f"{title} [Custom]",
+                "path": data.get("path", key) if isinstance(data, dict) else key,
+                "file": item.name,
+                "full_path": str(item),
+                "source": "custom",
+                "linked_blueprints": find_linked_blueprints_for_view(
+                    hass, key, "custom"
+                ),
+            }
+        elif item.is_dir():
+            yaml_file = item / f"{item.name}.yaml"
+            if yaml_file.exists():
+                key = item.name
+                try:
+                    data = load_yaml_dict(str(yaml_file)) or {}
+                except Exception:  # noqa: BLE001
+                    data = {}
+                title = data.get("title") if isinstance(data, dict) else None
+                if not title:
+                    title = key.replace("_", " ").replace("-", " ").title()
+                views[key] = {
+                    "key": key,
+                    "title": f"{title} [Custom]",
+                    "path": data.get("path", key) if isinstance(data, dict) else key,
+                    "file": f"{item.name}/{yaml_file.name}",
+                    "full_path": str(yaml_file),
+                    "source": "custom",
+                    "linked_blueprints": find_linked_blueprints_for_view(
+                        hass, key, "custom"
+                    ),
+                }
+
+    return views
+
+
+def find_linked_blueprints_for_view(
+    hass: HomeAssistant, view_key: str, source: str = "community"
+) -> list[str]:
+    """Find blueprint filenames associated with a given community or custom view."""
+    linked = []
+    sub_dir = (
+        COMMUNITY_BLUEPRINTS_DIR if source == "community" else CUSTOM_BLUEPRINTS_DIR
+    )
+    bp_base = Path(hass.config.path(DOMAIN, "blueprints", sub_dir))
+    if not bp_base.exists():
+        return linked
+
+    clean_key = view_key.lower().replace("_", "").replace("-", "")
+
+    # Check for direct matching subdirectory (e.g. Slideshow/)
+    for item in bp_base.iterdir():
+        clean_item = item.name.lower().replace("_", "").replace("-", "")
+        if item.is_dir() and clean_item == clean_key:
+            for bp_file in item.glob("*.yaml"):
+                linked.append(f"{item.name}/{bp_file.name}")
+        elif item.is_file() and item.suffix in (".yaml", ".yml"):
+            if clean_key in clean_item:
+                linked.append(item.name)
+
+    return linked
+
+
+def get_available_community_blueprints(
+    hass: HomeAssistant,
+) -> dict[str, dict[str, Any]]:
+    """Get standalone community blueprints from local cache."""
+    blueprints = {}
+    bp_dir = Path(hass.config.path(DOMAIN, "blueprints", COMMUNITY_BLUEPRINTS_DIR))
+    if not bp_dir.exists():
+        return blueprints
+
+    for item in bp_dir.rglob("*.yaml"):
+        # Ignore non-blueprint folders
+        if any(part in ("custom_sentences", "intent_script") for part in item.parts):
+            continue
+
+        try:
+            data = load_yaml_dict(str(item)) or {}
+        except Exception:  # noqa: BLE001
+            data = {}
+
+        is_bp = item.name.startswith("blueprint-") or (
+            isinstance(data, dict) and "blueprint" in data
+        )
+        if not is_bp:
+            continue
+
+        rel = item.relative_to(bp_dir)
+        key = str(rel).replace("\\", "/")
+
+        bp_meta = data.get("blueprint", {}) if isinstance(data, dict) else {}
+        name = (
+            bp_meta.get("name")
+            if isinstance(bp_meta, dict)
+            else (data.get("name") if isinstance(data, dict) else None)
+        )
+        if not name:
+            name = item.stem.replace("blueprint-", "").replace("_", " ").title()
+        desc = (
+            bp_meta.get("description", "")
+            if isinstance(bp_meta, dict)
+            else (data.get("description", "") if isinstance(data, dict) else "")
+        )
+
+        blueprints[key] = {
+            "key": key,
+            "name": name,
+            "description": desc,
+            "file": item.name,
+            "full_path": str(item),
+            "folder": str(rel.parent) if rel.parent != Path(".") else None,
+            "source": "community",
+        }
+
+    return blueprints
+
+
+def get_available_custom_blueprints(
+    hass: HomeAssistant,
+) -> dict[str, dict[str, Any]]:
+    """Get custom blueprints from local custom folder."""
+    blueprints = {}
+    bp_dir = Path(hass.config.path(DOMAIN, "blueprints", CUSTOM_BLUEPRINTS_DIR))
+    if not bp_dir.exists():
+        return blueprints
+
+    for item in bp_dir.rglob("*.yaml"):
+        # Ignore non-blueprint folders
+        if any(part in ("custom_sentences", "intent_script") for part in item.parts):
+            continue
+
+        try:
+            data = load_yaml_dict(str(item)) or {}
+        except Exception:  # noqa: BLE001
+            data = {}
+
+        is_bp = item.name.startswith("blueprint-") or (
+            isinstance(data, dict) and "blueprint" in data
+        )
+        if not is_bp:
+            continue
+
+        rel = item.relative_to(bp_dir)
+        key = str(rel).replace("\\", "/")
+
+        bp_meta = data.get("blueprint", {}) if isinstance(data, dict) else {}
+        name = (
+            bp_meta.get("name")
+            if isinstance(bp_meta, dict)
+            else (data.get("name") if isinstance(data, dict) else None)
+        )
+        if not name:
+            name = item.stem.replace("blueprint-", "").replace("_", " ").title()
+        desc = (
+            bp_meta.get("description", "")
+            if isinstance(bp_meta, dict)
+            else (data.get("description", "") if isinstance(data, dict) else "")
+        )
+
+        blueprints[key] = {
+            "key": key,
+            "name": f"{name} [Custom]",
+            "description": desc,
+            "file": item.name,
+            "full_path": str(item),
+            "folder": str(rel.parent) if rel.parent != Path(".") else None,
+            "source": "custom",
+        }
+
+    return blueprints

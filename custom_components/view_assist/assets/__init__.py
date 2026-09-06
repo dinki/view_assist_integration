@@ -285,6 +285,12 @@ class AssetsManager:
         if asset_class and asset_class in self.managers:
             managers = {k: v for k, v in self.managers.items() if k == asset_class}
 
+        # Refresh community assets cache from repo
+        if (not asset_class or asset_class == AssetClass.VIEW) and AssetClass.VIEW in self.managers:
+            await self.managers[AssetClass.VIEW]._download_community_views()
+        if (not asset_class or asset_class == AssetClass.BLUEPRINT) and AssetClass.BLUEPRINT in self.managers:
+            await self.managers[AssetClass.BLUEPRINT]._download_community_blueprints()
+
         for asset_class, manager in managers.items():  # noqa: PLR1704
             # If no key in self.data, return
             if not self.data.get(asset_class):
@@ -375,6 +381,13 @@ class AssetsManager:
                     "latest": status.latest_version,
                 }
                 await self.store.update(asset_class, name, self.data[asset_class][name])
+
+    async def async_sync_assets(self, options: dict[str, Any]) -> None:
+        """Synchronize all view and blueprint assets according to options."""
+        if view_mgr := self.managers.get(AssetClass.VIEW):
+            await view_mgr.async_sync_configured_views(options)
+        if bp_mgr := self.managers.get(AssetClass.BLUEPRINT):
+            await bp_mgr.async_sync_blueprints(options)
 
     def _fire_updates_update(
         self,

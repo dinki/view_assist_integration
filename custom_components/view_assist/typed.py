@@ -167,6 +167,18 @@ class DefaultConfig:
 
 
 @dataclass
+class ViewManagementConfig:
+    """Class to hold view management config data."""
+
+    enabled_core_views: list[str] = field(default_factory=list)
+    view_variants: dict[str, str] = field(default_factory=dict)
+    enabled_community_views: list[str] = field(default_factory=list)
+    enabled_custom_views: list[str] = field(default_factory=list)
+    enabled_community_blueprints: list[str] = field(default_factory=list)
+    enabled_custom_blueprints: list[str] = field(default_factory=list)
+
+
+@dataclass
 class DeveloperConfig:
     """Class to hold developer config data."""
 
@@ -189,6 +201,7 @@ class MasterConfigRuntimeData:
         """Initialize runtime data."""
         self.integration: IntegrationConfig = IntegrationConfig()
         self.dashboard: DashboardConfig = DashboardConfig()
+        self.views: ViewManagementConfig = ViewManagementConfig()
         self.default: DefaultConfig = DefaultConfig()
         self.developer_settings: DeveloperConfig = DeveloperConfig()
         # Extra data for holding key/value pairs passed in by set_state service call

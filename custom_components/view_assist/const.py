@@ -23,6 +23,9 @@ DASHBOARD_VIEWS_GITHUB_PATH = "View Assist dashboard and views"
 BLUEPRINT_GITHUB_PATH = "View_Assist_custom_sentences"
 VIEWS_DIR = "views"
 COMMUNITY_VIEWS_DIR = "community_contributions"
+CUSTOM_VIEWS_DIR = "custom"
+COMMUNITY_BLUEPRINTS_DIR = "community_contributions"
+CUSTOM_BLUEPRINTS_DIR = "custom"
 DASHBOARD_DIR = "dashboard"
 DASHBOARD_NAME = "View Assist"
 WIKI_URL = "https://dinki.github.io/View-Assist"
@@ -127,6 +130,144 @@ CONF_DEVELOPER_DEVICE = "developer_device"
 CONF_DEVELOPER_MIMIC_DEVICE = "developer_mimic_device"
 
 
+CONF_VIEW_OPTIONS = "view_options"
+CONF_ENABLED_CORE_VIEWS = "enabled_core_views"
+CONF_VIEW_VARIANTS = "view_variants"
+CONF_ENABLED_COMMUNITY_VIEWS = "enabled_community_views"
+CONF_ENABLED_CUSTOM_VIEWS = "enabled_custom_views"
+CONF_ENABLED_COMMUNITY_BLUEPRINTS = "enabled_community_blueprints"
+CONF_ENABLED_CUSTOM_BLUEPRINTS = "enabled_custom_blueprints"
+
+# Core Views Registry
+CORE_VIEWS = {
+    "clock": {
+        "title": "Clock",
+        "path": "clock",
+        "default_file": "clock.yaml",
+        "variants": {
+            "standard": {"name": "Standard Clock", "file": "clock.yaml"},
+            "alternative": {"name": "Clock Alternative (Stacked)", "file": "clockalt.yaml"},
+        },
+        "blueprints": ["What_time_is_it"],
+    },
+    "alarm": {
+        "title": "Alarm",
+        "path": "alarm",
+        "default_file": "alarm.yaml",
+        "variants": {},
+        "blueprints": ["Alarms_Reminders_Timers"],
+    },
+    "alert": {
+        "title": "Alert",
+        "path": "alert",
+        "default_file": "alert.yaml",
+        "variants": {},
+        "blueprints": ["Device_Alerts"],
+    },
+    "calendar": {
+        "title": "Calendar",
+        "path": "calendar",
+        "default_file": "calendar.yaml",
+        "variants": {},
+        "blueprints": ["View_Calendar"],
+    },
+    "camera": {
+        "title": "Camera",
+        "path": "camera",
+        "default_file": "camera.yaml",
+        "variants": {
+            "standard": {"name": "Standard Camera (Grid)", "file": "camera.yaml"},
+            "advanced": {"name": "Advanced Camera Card", "file": "advancedcamera.yaml"},
+        },
+        "blueprints": ["View_Camera"],
+    },
+    "info": {
+        "title": "Info",
+        "path": "info",
+        "default_file": "info.yaml",
+        "variants": {},
+        "blueprints": ["Search_Wikipedia", "Spell_a_Word"],
+    },
+    "infopic": {
+        "title": "Infopic",
+        "path": "infopic",
+        "default_file": "infopic.yaml",
+        "variants": {},
+        "blueprints": ["Search_Wikipedia"],
+    },
+    "intent": {
+        "title": "Intent",
+        "path": "intent",
+        "default_file": "intent.yaml",
+        "variants": {},
+        "blueprints": [],
+    },
+    "list": {
+        "title": "List",
+        "path": "list",
+        "default_file": "list.yaml",
+        "variants": {
+            "standard": {"name": "Standard List (Checkboxes)", "file": "list.yaml"},
+            "no_checkbox": {"name": "No Checkbox List", "file": "list-nocheckbox.yaml"},
+        },
+        "blueprints": ["List_Management"],
+    },
+    "locate": {
+        "title": "Locate",
+        "path": "locate",
+        "default_file": "locate.yaml",
+        "variants": {},
+        "blueprints": ["Locate_a_Person"],
+    },
+    "music": {
+        "title": "Music",
+        "path": "music",
+        "default_file": "music.yaml",
+        "variants": {
+            "standard": {"name": "Standard Music Player", "file": "music.yaml"},
+            "alternative": {
+                "name": "Mini Media Player",
+                "file": "music-alternative.yaml",
+            },
+        },
+        "blueprints": [
+            "Play_Music_with_Music_Assistant",
+            "Play_Radio_with_Music_Assistant",
+        ],
+    },
+    "sports": {
+        "title": "Sports",
+        "path": "sports",
+        "default_file": "sports.yaml",
+        "variants": {},
+        "blueprints": ["Get_Sports_Scores"],
+    },
+    "thermostat": {
+        "title": "Thermostat",
+        "path": "thermostat",
+        "default_file": "thermostat.yaml",
+        "variants": {},
+        "blueprints": ["Thermostat_Control"],
+    },
+    "weather": {
+        "title": "Weather",
+        "path": "weather",
+        "default_file": "weather.yaml",
+        "variants": {},
+        "blueprints": ["Hows_the_weather"],
+    },
+    "webpage": {
+        "title": "Webpage",
+        "path": "webpage",
+        "default_file": "webpage.yaml",
+        "variants": {},
+        "blueprints": ["Show_Webpage"],
+    },
+}
+
+DEFAULT_ENABLED_CORE_VIEWS = list(CORE_VIEWS.keys())
+
+
 # Legacy
 CONF_MIC_TYPE = "mic_type"
 CONF_USE_24H_TIME = "use_24_hour_time"
@@ -175,6 +316,13 @@ DEFAULT_VALUES = {
     CONF_MUSIC_MODE_TIMEOUT: 300,
     # Default integration options
     CONF_ENABLE_UPDATES: True,
+    # Default view options
+    CONF_ENABLED_CORE_VIEWS: DEFAULT_ENABLED_CORE_VIEWS,
+    CONF_VIEW_VARIANTS: {},
+    CONF_ENABLED_COMMUNITY_VIEWS: [],
+    CONF_ENABLED_CUSTOM_VIEWS: [],
+    CONF_ENABLED_COMMUNITY_BLUEPRINTS: [],
+    CONF_ENABLED_CUSTOM_BLUEPRINTS: [],
     # Default developer otions
     CONF_DEVELOPER_DEVICE: "",
     CONF_DEVELOPER_MIMIC_DEVICE: "",
