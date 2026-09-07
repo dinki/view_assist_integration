@@ -11,7 +11,7 @@ from awesomeversion import AwesomeVersion
 # pylint: disable-next=hass-component-root-import
 from homeassistant.components.assist_satellite.entity import AssistSatelliteState
 from homeassistant.components.media_player import MediaPlayerState
-from homeassistant.const import STATE_ON
+from homeassistant.const import EVENT_CALL_SERVICE, STATE_ON
 from homeassistant.core import (
     Context,
     Event,
@@ -52,6 +52,15 @@ from .menu import MenuManager
 from .navigation import NavigationManager
 
 _LOGGER = logging.getLogger(__name__)
+
+# Volume difference small enough to be float noise rather than a real change
+DUCKING_VOLUME_TOLERANCE = 0.005
+
+# Time to let the music player report the volume it was actually ducked to
+DUCKING_SETTLE_TIME = 0.5
+
+# Well within what players can act on, whilst keeping float noise out of volumes
+VOLUME_DECIMAL_PLACES = 3
 
 
 class EntityListeners:
@@ -99,6 +108,10 @@ class AssistEntityListenerHandler:
         self.mic_integration = None
         self.music_player_entity = config.runtime_data.core.musicplayer_device
         self.music_player_volume: float = 0.0
+        self.ducked_volume: float | None = None
+        self.ducked_volume_set: float | None = None
+        self.set_volume_whilst_ducked: float | None = None
+        self.own_volume_call_ids: set[str] = set()
         self.is_ducked: bool = False
         self.ducking_task: asyncio.Task | None = None
 
@@ -126,6 +139,12 @@ class AssistEntityListenerHandler:
                     self.hass, assist_entity_id, self.on_state_change
                 )
             )
+            if self.music_player_entity:
+                self.config.async_on_unload(
+                    self.hass.bus.async_listen(
+                        EVENT_CALL_SERVICE, self._async_on_volume_service_call
+                    )
+                )
         else:
             _LOGGER.warning(
                 "Unable to find entity for pipeline status for %s",
@@ -162,6 +181,60 @@ class AssistEntityListenerHandler:
             self.hass,
             self.do_volume_ducking(old_state.state, new_state.state),
             name="VA Volume Ducking Task",
+        )
+
+    @callback
+    def _async_on_volume_service_call(self, event: Event) -> None:
+        """Note volume_set calls to the music player made whilst ducked."""
+        if not self.is_ducked or event.context.id in self.own_volume_call_ids:
+            return
+        if (
+            event.data.get("domain") != "media_player"
+            or event.data.get("service") != "volume_set"
+        ):
+            return
+
+        service_data = event.data.get("service_data", {})
+        entity_id = service_data.get("entity_id")
+        entity_ids = [entity_id] if isinstance(entity_id, str) else entity_id or []
+        if self.music_player_entity not in entity_ids:
+            return
+
+        if (volume := service_data.get("volume_level")) is not None:
+            _LOGGER.debug("Volume of music player set to %s whilst ducked", volume)
+            self.set_volume_whilst_ducked = float(volume)
+
+    def _volume_changed_whilst_ducked(self, volume: float | None) -> bool:
+        """Check if a volume differs from the level the player was ducked to."""
+        if volume is None:
+            return False
+
+        # Compare against both the volume asked for and the volume reported back, as
+        # a player rounding the volume it was set to is not a change in itself
+        ducked_volumes = [
+            ducked
+            for ducked in (self.ducked_volume, self.ducked_volume_set)
+            if ducked is not None
+        ]
+        return bool(ducked_volumes) and all(
+            abs(volume - ducked) > DUCKING_VOLUME_TOLERANCE for ducked in ducked_volumes
+        )
+
+    async def _async_set_music_player_volume(
+        self, volume: float, blocking: bool = False
+    ) -> None:
+        """Set the music player volume, marking the call as our own."""
+        context = Context()
+        self.own_volume_call_ids.add(context.id)
+        await self.hass.services.async_call(
+            "media_player",
+            "volume_set",
+            {
+                "entity_id": self.music_player_entity,
+                "volume_level": volume,
+            },
+            blocking=blocking,
+            context=context,
         )
 
     async def do_volume_ducking(self, old_state: str, new_state: str) -> None:
@@ -234,15 +307,20 @@ class AssistEntityListenerHandler:
 
                 if self.music_player_volume > ducking_volume:
                     _LOGGER.debug("Ducking music player volume to: %s", ducking_volume)
-                    await self.hass.services.async_call(
-                        "media_player",
-                        "volume_set",
-                        {
-                            "entity_id": self.music_player_entity,
-                            "volume_level": ducking_volume,
-                        },
-                    )
+                    await self._async_set_music_player_volume(ducking_volume)
                     self.is_ducked = True
+                    self.ducked_volume = self.ducked_volume_set = ducking_volume
+
+                    # Players round the volume they are set to, so use the volume
+                    # reported back as the level to compare against later
+                    await asyncio.sleep(DUCKING_SETTLE_TIME)
+                    if (
+                        ducked_state := self.hass.states.get(self.music_player_entity)
+                    ) and (
+                        reported := ducked_state.attributes.get("volume_level")
+                    ) is not None:
+                        _LOGGER.debug("Music player ducked to: %s", reported)
+                        self.ducked_volume = float(reported)
 
             else:
                 _LOGGER.debug(
@@ -277,24 +355,56 @@ class AssistEntityListenerHandler:
                     current_music_player_volume = music_player_state.attributes.get(
                         "volume_level"
                     )
-                    for i in range(1, 11):
-                        volume = min(
+
+                    if self._volume_changed_whilst_ducked(current_music_player_volume):
+                        # An absolute volume was asked for, so leave it alone
+                        if self.set_volume_whilst_ducked is not None:
+                            _LOGGER.debug(
+                                "Music player volume set to %s whilst ducked, "
+                                "skipping restore",
+                                current_music_player_volume,
+                            )
+                            self._reset_ducking_state()
+                            return
+
+                        # Volume was stepped up or down from the ducked level, so
+                        # apply that same step to the volume from before ducking
+                        step = round(
+                            current_music_player_volume - (self.ducked_volume or 0),
+                            VOLUME_DECIMAL_PLACES,
+                        )
+                        self.music_player_volume = round(
+                            min(1.0, max(0.0, self.music_player_volume + step)),
+                            VOLUME_DECIMAL_PLACES,
+                        )
+                        _LOGGER.debug(
+                            "Music player volume stepped by %s whilst ducked, "
+                            "restoring to %s instead",
+                            step,
                             self.music_player_volume,
-                            (current_music_player_volume or 0) + (i * 0.1),
                         )
-                        await self.hass.services.async_call(
-                            "media_player",
-                            "volume_set",
-                            {
-                                "entity_id": self.music_player_entity,
-                                "volume_level": volume,
-                            },
-                            blocking=True,
+
+                    for i in range(1, 11):
+                        volume = round(
+                            min(
+                                self.music_player_volume,
+                                (current_music_player_volume or 0) + (i * 0.1),
+                            ),
+                            VOLUME_DECIMAL_PLACES,
                         )
+                        await self._async_set_music_player_volume(volume, blocking=True)
                         if volume == self.music_player_volume:
-                            self.is_ducked = False
+                            self._reset_ducking_state()
                             break
                         await asyncio.sleep(0.25)
+
+    def _reset_ducking_state(self) -> None:
+        """Clear ducking state so next duck stores the current volume."""
+        self.is_ducked = False
+        self.ducked_volume = self.ducked_volume_set = None
+        self.set_volume_whilst_ducked = None
+        self.own_volume_call_ids.clear()
+        self.music_player_volume = 0.0
 
     async def do_overlay_event(self, state: str) -> None:
         """Trigger overlay update."""
