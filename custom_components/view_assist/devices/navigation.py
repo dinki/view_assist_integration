@@ -232,34 +232,6 @@ class NavigationManager:
             self.cycle_view_task.cancel()
             self.cycle_view_task = None
 
-    def handle_intent_navigation(self, intent: str):
-        """Handle navigation intents."""
-        # Lookup intent in INTENT_TO_VIEW_MAPPING and get config item for view
-        # If found, navigate to that view
-        view_matches = [
-            view
-            for view, intents in INTENT_TO_VIEW_MAPPING.items()
-            if intent in intents
-        ]
-        if not view_matches:
-            _LOGGER.debug("No view mapping found for intent: %s", intent)
-            return
-
-        view = view_matches[0]
-        dashboard = self.config.runtime_data.dashboard.dashboard
-
-        if hasattr(self.config.runtime_data.dashboard, view):
-            path = getattr(self.config.runtime_data.dashboard, view)
-        else:
-            # Navigation will fallback to using view as view name if config item not found
-            path = view
-
-        if dashboard and not path.startswith(dashboard):
-            path = f"{dashboard}/{path}"
-        if not path.startswith("/"):
-            path = f"/{path}"
-        self.browser_navigate(path=path)
-
 
 class NavigationManagerServices:
     """Class to manage navigation related services."""

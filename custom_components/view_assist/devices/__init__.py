@@ -5,8 +5,6 @@ To add a new module, create a new file in the devices folder and add the module 
 to the ALL_DEVICE_MODULES or VIEW_DEVICE_MODULES list.
 """
 
-from __future__ import annotations
-
 import asyncio
 import contextlib
 import logging
@@ -26,6 +24,7 @@ from ..typed import (  # noqa: TID252
 )
 from .background import BackgroundImageManager
 from .entity_listeners import EntityListeners
+from .intents import DeviceIntentsHandler
 from .menu import MenuManager
 from .navigation import NavigationManager
 
@@ -36,6 +35,7 @@ DEVICE_MANAGER = "device_manager"
 ALL_DEVICE_MODULES = [
     EntityListeners,
     NavigationManager,  # Added here to prevent error when navigation is called from non-display devices (e.g. mic) without error see issue #414 on View-Assist repo
+    DeviceIntentsHandler,
 ]
 
 VIEW_DEVICE_MODULES = [
