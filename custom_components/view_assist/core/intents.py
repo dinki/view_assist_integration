@@ -2,14 +2,15 @@
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+import importlib
+import inspect
 import logging
 from pathlib import Path
+import pkgutil
 from typing import Any
 
-import voluptuous as vol
-
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import dispatcher
 from homeassistant.helpers.intent import (
     DATA_KEY as INTENT_DATA_KEY,
     Intent,
@@ -22,24 +23,15 @@ from homeassistant.helpers.start import async_at_started
 
 from ..const import (  # noqa: TID252
     DOMAIN,
-    ENABLE_INTENT_HOOKS,
+    ENABLE_INTENT_OVERRIDES,
     INSTALL_CUSTOM_SENTENCES,
 )
-from ..devices.navigation import NavigationManager  # noqa: TID252
 from ..helpers import (  # noqa: TID252
-    get_config_entry_by_entity_id,
     get_entity_attribute,
     get_entity_id_from_conversation_device_id,
 )
 from ..typed import VAConfigEntry  # noqa: TID252
-from .intent_overrides import (
-    VABroadcastIntentHandler,
-    VACancelAllTimersIntentHandler,
-    VACancelTimerIntentHandler,
-    VAMediaSearchAndPlayHandler,
-    VAStartTimerIntentHandler,
-    VATimerStatusIntentHandler,
-)
+from . import intent_handlers
 
 CUSTOM_SENTENCE_FILES = {
     "timers": ["view_assist_Timers.yaml"],
@@ -50,12 +42,29 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
-class OverrideIntentHandler:
+class IntentHandlerInfo:
     """Definition of override handler for intent."""
 
     intent: str
     handler: Callable[[Any, Any], Awaitable[IntentResponse | None]]
     call_original: bool = False
+
+
+def discover_intent_handler_classes() -> list[type[IntentHandler]]:
+    """Discover IntentHandler subclasses defined in the intent_overrides package."""
+    handler_classes: list[type[IntentHandler]] = []
+    for module_info in pkgutil.iter_modules(
+        intent_handlers.__path__, f"{intent_handlers.__name__}."
+    ):
+        module = importlib.import_module(module_info.name)
+        for _, obj in inspect.getmembers(module, inspect.isclass):
+            if (
+                issubclass(obj, IntentHandler)
+                and obj is not IntentHandler
+                and obj.__module__ == module.__name__
+            ):
+                handler_classes.append(obj)
+    return handler_classes
 
 
 class IntentsManager:
@@ -73,24 +82,16 @@ class IntentsManager:
         """Initialise."""
         self.hass = hass
         self.config = config
-        self.overrides: dict[str, OverrideIntentHandler] = {}
+        self.overrides: dict[str, IntentHandlerInfo] = {}
 
     async def async_setup(self) -> bool:
         """Set up the Intents Manager."""
 
-        # async_register(self.hass, VAIntentHandler())
-
-        if ENABLE_INTENT_HOOKS:
-            self.register_override_handler(VAMediaSearchAndPlayHandler())
-            self.register_override_handler(VAStartTimerIntentHandler())
-            self.register_override_handler(VATimerStatusIntentHandler())
-            self.register_override_handler(VACancelTimerIntentHandler())
-            self.register_override_handler(VACancelAllTimersIntentHandler())
-            self.register_override_handler(VABroadcastIntentHandler())
-
-            # Hook into intent handlers after Home Assistant has started
-            # and hopefully all integrations have registered their intents
-            async_at_started(self.hass, self.register_intent_hooks)
+        if ENABLE_INTENT_OVERRIDES:
+            # Discover and register intent handlers, then hook into all
+            # registered intents, after Home Assistant has started and
+            # hopefully all integrations have registered their intents
+            async_at_started(self.hass, self.async_register_discovered_intent_handlers)
 
         # Enable custom sentences for intents
         if INSTALL_CUSTOM_SENTENCES:
@@ -105,11 +106,29 @@ class IntentsManager:
 
     async def async_unload(self) -> bool:
         """Unload the Intents Manager."""
-        # Currently nothing to unload
         self.unregister_intent_hooks()
         await self.unregister_custom_sentences()
-        async_remove(self.hass, VAIntentHandler.intent_type)
+
         return True
+
+    async def async_register_discovered_intent_handlers(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Import intent_overrides handlers and register each as an override or new intent."""
+        existing_intents = hass.data.get(INTENT_DATA_KEY, {})
+        classes = self.hass.async_add_executor_job(discover_intent_handler_classes)
+        for handler_cls in await classes:
+            handler = handler_cls()
+            if handler.intent_type in existing_intents:
+                _LOGGER.debug(
+                    "Registering override for intent: %s", handler.intent_type
+                )
+                self.register_intent_handler(handler)
+            else:
+                _LOGGER.debug("Registering new intent handler: %s", handler.intent_type)
+                async_register(hass, handler)
+
+        self.register_intent_hooks(hass)
 
     @callback
     def register_intent_hooks(self, hass: HomeAssistant) -> None:
@@ -139,11 +158,11 @@ class IntentsManager:
                 async_remove(self.hass, intent_type)
                 async_register(self.hass, handler.real_handler)
 
-    def register_override_handler(
+    def register_intent_handler(
         self, handler: IntentHandler, call_original: bool = False
     ) -> Callable:
         """Register a trigger."""
-        self.overrides[handler.intent_type] = OverrideIntentHandler(
+        self.overrides[handler.intent_type] = IntentHandlerInfo(
             intent=handler.intent_type,
             handler=handler,
             call_original=call_original,
@@ -248,28 +267,6 @@ class IntentsManager:
                     dest.unlink()
 
 
-class VAIntentHandler(IntentHandler):
-    """Intent handler for VA intents."""
-
-    intent_type = "VAQuestionAnswer"
-    description = "Handles question answers.  You should call this when providing an answer to an infomration request where no other tool is suitable."
-
-    @property
-    def slot_schema(self) -> dict | None:
-        """Return a slot schema."""
-        return {vol.Required("response"): cv.string}
-
-    async def async_handle(self, intent_obj: Intent) -> IntentResponse:
-        """Handle the intent."""
-        _LOGGER.debug("VAIntentHandler invoked with intent: %s", intent_obj.slots)
-        response = intent_obj.create_response()
-
-        # TODO: Add custom handling logic here with before/after hooks, pre-defined slots, etc.
-
-        _LOGGER.debug("Handling VAQuestionAnswer intent: %s", response.as_dict())
-        return response
-
-
 class IntentHookHandler(IntentHandler):
     """Base class for intent handlers with custom hooks."""
 
@@ -300,6 +297,23 @@ class IntentHookHandler(IntentHandler):
             "conversation_agent_id": intent_obj.conversation_agent_id,
         }
 
+    def intent_response_to_dict(self, response: IntentResponse) -> dict[str, Any]:
+        """Convert the intent response object to a dictionary."""
+        return {
+            "language": response.language,
+            "intent": response.intent,
+            "speech": response.speech,
+            "reprompt": response.reprompt,
+            "card": response.card,
+            "error_code": response.error_code,
+            "success_results": response.success_results,
+            "failed_results": response.failed_results,
+            "matched_states": response.matched_states,
+            "unmatched_states": response.unmatched_states,
+            "speech_slots": response.speech_slots,
+            "response_type": response.response_type,
+        }
+
     async def async_handle(self, intent_obj: Intent) -> IntentResponse:
         """Handle the intent with custom logic."""
         _LOGGER.debug(
@@ -316,19 +330,18 @@ class IntentHookHandler(IntentHandler):
         if not response or call_original:
             response = await self.real_handler.async_handle(intent_obj)
 
-        _LOGGER.debug("%s response: %s", self.__class__.__name__, response)
+        _LOGGER.debug(
+            "%s response: %s",
+            self.__class__.__name__,
+            self.intent_response_to_dict(response),
+        )
 
-        # Get config entry for device id
-        config_entry = None
-        if intent_obj.device_id:
-            if entiy_id := get_entity_id_from_conversation_device_id(
-                intent_obj.hass, intent_obj.device_id
-            ):
-                config_entry = get_config_entry_by_entity_id(intent_obj.hass, entiy_id)
-
-        if config_entry:
-            nm = NavigationManager.get(intent_obj.hass, config_entry)
-            nm.handle_intent_navigation(intent_obj.intent_type)
+        dispatcher.async_dispatcher_send(
+            intent_obj.hass,
+            f"{intent_obj.device_id}-intent_handled",
+            intent_obj,
+            response,
+        )
 
         return response
 

@@ -24,7 +24,7 @@ from .typed import (
 # -------------------------------------------------------------------------------------------------
 # These are here to enable experimental features that are not yet ready for general use.
 # They will be removed from here when they are ready for general use.
-ENABLE_INTENT_HOOKS = True
+ENABLE_INTENT_OVERRIDES = True
 INSTALL_CUSTOM_SENTENCES = True
 USE_LLM_FOR_TIMER_ENHANCEMENT = True
 # -------------------------------------------------------------------------------------------------
@@ -287,13 +287,14 @@ INTENT_TO_VIEW_MAPPING = {
         INTENT_MEDIA_UNPAUSE,
     ],
     CONF_CLIMATE: [intent.INTENT_GET_TEMPERATURE],
-    "weather": ["HassGetWeather"],
+    CONF_WEATHER: ["HassGetWeather"],
     "list": [
+        "todo__get_items",
         "HassShoppingListAddItem",
         "HassShoppingListCompleteItem",
         "HassListAddItem",
         "HassListCompleteItem",
         "HassListRemoveItem",
     ],
-    "info": ["HassBroadcast"],
+    "info": ["info", "HassBroadcast"],
 }

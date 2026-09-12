@@ -10,6 +10,7 @@ from awesomeversion import AwesomeVersion
 
 # pylint: disable-next=hass-component-root-import
 from homeassistant.components.assist_satellite.entity import AssistSatelliteState
+from homeassistant.components.conversation import ChatLog
 from homeassistant.components.media_player import MediaPlayerState
 from homeassistant.const import STATE_ON
 from homeassistant.core import (
@@ -26,9 +27,9 @@ from homeassistant.helpers.event import async_track_state_change_event
 from ..assets import AssetClass, AssetsManager  # noqa: TID252
 from ..const import (  # noqa: TID252
     CC_CONVERSATION_ENDED_EVENT,
-    CYCLE_VIEWS,
     CONF_MUSIC_MODE_AUTO,
     CONF_MUSIC_MODE_TIMEOUT,
+    CYCLE_VIEWS,
     DEVICES,
     DOMAIN,
     ESPHOME_DOMAIN,
@@ -486,10 +487,10 @@ class EntityStateChangedHandler:
             )
 
         # Add intent sensor listener
-        if intent_device := self.config.runtime_data.core.intent_device:
-            self._add_entity_state_listener(
-                intent_device, self._async_on_intent_device_change
-            )
+        # if intent_device := self.config.runtime_data.core.intent_device:
+        #    self._add_entity_state_listener(
+        #        intent_device, self._async_on_intent_device_change
+        #    )
 
         # Add listener for custom conversation intent event
         self.config.async_on_unload(

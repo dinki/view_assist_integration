@@ -29,7 +29,7 @@ class VABroadcastIntentHandler(intent.IntentHandler):
         """Return a slot schema."""
         return {
             vol.Required("message"): str,
-            vol.Required("area"): str,
+            vol.Optional("area"): str,
         }
 
     @override
