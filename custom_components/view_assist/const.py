@@ -287,7 +287,7 @@ INTENT_TO_VIEW_MAPPING = {
         INTENT_MEDIA_UNPAUSE,
     ],
     CONF_CLIMATE: [intent.INTENT_GET_TEMPERATURE],
-    "weather": ["HassGetWeather"],
+    "info": ["HassBroadcast"],
     "list": [
         "HassShoppingListAddItem",
         "HassShoppingListCompleteItem",
@@ -295,5 +295,9 @@ INTENT_TO_VIEW_MAPPING = {
         "HassListCompleteItem",
         "HassListRemoveItem",
     ],
-    "info": ["HassBroadcast"],
+    "thermostat": [
+        "HassClimateSetTemperature",
+        "HassClimateGetTemperature",
+    ],
+    "weather": ["HassGetWeather"],
 }
