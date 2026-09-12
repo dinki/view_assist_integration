@@ -42,7 +42,7 @@ class VASetModeIntentHandler(intent.IntentHandler):
         await hass.services.async_call(
             DOMAIN,
             "set_state",
-            {"message": mode},
+            {"data": {"mode": mode}},
             blocking=True,
             context=intent_obj.context,
             target={"entity_id": entity_id},
