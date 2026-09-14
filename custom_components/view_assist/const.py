@@ -66,7 +66,7 @@ JSMODULES = [
     {
         "name": "View Assist Helper",
         "filename": "view_assist.js",
-        "version": "1.0.31",
+        "version": "1.0.35",
     },
 ]
 # mins between checks for updated versions of dashboard and views
@@ -134,6 +134,9 @@ CONF_TIME_FORMAT = "time_format"
 CONF_SCREEN_MODE = "screen_mode"
 CONF_CYCLE_VIEWS = "cycle_views"
 CONF_NAVIGATION_TRANSITION = "navigation_transition"
+CONF_ENABLE_VIEW_TRANSITIONS = "enable_view_transitions"
+CONF_VIEW_TRANSITION_TIME = "view_transition_time"
+DEFAULT_VIEW_TRANSITION_TIME = 0.5
 
 CONF_WEATHER_ENTITY = "weather_entity"
 CONF_VIEW_TIMEOUT = "view_timeout"
@@ -187,6 +190,8 @@ DEFAULT_VALUES = {
         CONF_SCREEN_MODE: VAScreenMode.HIDE_HEADER_SIDEBAR,
         CONF_CYCLE_VIEWS: CYCLE_VIEWS,
         CONF_NAVIGATION_TRANSITION: False,
+        CONF_ENABLE_VIEW_TRANSITIONS: False,
+        CONF_VIEW_TRANSITION_TIME: DEFAULT_VIEW_TRANSITION_TIME,
     },
     # Default options
     CONF_WEATHER_ENTITY: "weather.home",

@@ -129,7 +129,9 @@
               "time_format": "Time format",
               "screen_mode": "Show/hide header and sidebar",
               "cycle_views": "Cycle views",
-              "navigation_transition": "Fade transition on navigation"
+              "navigation_transition": "Fade transition on navigation",
+              "enable_view_transitions": "Enable View Transitions",
+              "view_transition_time": "View Transition Duration (seconds)"
             },
             "data_description": {
               "assist_prompt": "The Assist notification prompt style to use for wake word detection and intent processing",
@@ -142,7 +144,9 @@
               "time_format": "Sets clock display time format",
               "screen_mode": "Show or hide the header and sidebar",
               "cycle_views": "List of items to show when in cycle mode",
-              "navigation_transition": "Fade the screen out and back in when navigating between views"
+              "navigation_transition": "Fade the screen out and back in when navigating between views",
+              "enable_view_transitions": "Enable smooth animated transitions between dashboard views.",
+              "view_transition_time": "Duration of the view transition animation in seconds (default: 0.5s)."
             }
           }
         }
