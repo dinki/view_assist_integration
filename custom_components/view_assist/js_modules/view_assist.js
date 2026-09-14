@@ -1,6 +1,6 @@
 import { timerCards } from "./timers.js?v=1.0.30";
 
-const version = "1.0.30"
+const version = "1.0.31"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 const INITIAL_LOAD_OVERLAY_ID = "view-assist-initial-load-overlay";
@@ -775,9 +775,18 @@ class ViewAssist {
 
   async fade_navigate(path) {
     // Fade out, navigate, wait for the new page to render, then fade back in
-    const FADE_DURATION_MS = 250;
-    document.body.style.transition = `opacity ${FADE_DURATION_MS}ms ease-in-out`;
-    document.body.style.opacity = "0";
+    const FADE_DURATION_MS = 800;
+    const elContainer = await selectTree(
+      document.body,
+      "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root $ div hui-view-container",
+      false,
+      2000
+    );
+
+    const container = elContainer ? elContainer : document.body;
+    container.style.transition = `filter ${FADE_DURATION_MS}ms ease-in-out`;
+    container.style.filter = "brightness(0)";
+
     await new Promise((r) => setTimeout(r, FADE_DURATION_MS));
 
     history.pushState(null, "", path);
@@ -787,19 +796,14 @@ class ViewAssist {
     // (toggling visibility), so instead of inspecting a single view element,
     // wait until the container's DOM stops mutating - that reliably spans
     // the view swap regardless of which child ends up active.
-    const elContainer = await selectTree(
-      document.body,
-      "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root $ div hui-view-container",
-      false,
-      2000
-    );
+
     if (elContainer) {
-      await this.wait_for_dom_settled(elContainer, 2000);
+      await this.wait_for_dom_settled(elContainer, 1000);
     } else {
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 100));
     }
 
-    document.body.style.opacity = "1";
+    container.style.filter = "brightness(1)";
   }
 
   wait_for_dom_settled(el, timeout = 2000, quiet_period = 150) {
