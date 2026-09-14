@@ -77,6 +77,7 @@ class VAMode(StrEnum):
     """View Assist modes."""
 
     NORMAL = "normal"
+    DEFAULT = "default"  # Backward compatibility for existing configurations
     MUSIC = "music"
     CYCLE = "cycle"
     HOLD = "hold"
@@ -87,6 +88,7 @@ class VAMode(StrEnum):
 
 VAMODE_REVERTS = {
     VAMode.NORMAL: {"revert": True, "view": "home"},
+    VAMode.DEFAULT: {"revert": True, "view": "home"},
     VAMode.MUSIC: {"revert": True, "view": "music"},
     VAMode.CYCLE: {"revert": False},
     VAMode.HOLD: {"revert": False},

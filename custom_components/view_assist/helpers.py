@@ -345,8 +345,10 @@ def get_display_type_from_browser_id(
     return "native"
 
 
-def get_revert_settings_for_mode(mode: VAMode) -> tuple:
+def get_revert_settings_for_mode(mode: VAMode | str) -> tuple:
     """Get revert settings from VAMODE_REVERTS for mode."""
+    if mode == "default":
+        mode = VAMode.NORMAL
     if mode in VAMODE_REVERTS:
         return VAMODE_REVERTS[mode].get("revert"), VAMODE_REVERTS[mode].get("view")
     return False, None

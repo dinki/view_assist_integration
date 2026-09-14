@@ -423,7 +423,7 @@ class SensorAttributeChangedHandler:
             if self.navigation_manager:
                 self.navigation_manager.stop_cycle_display()
 
-        if new_mode == VAMode.NORMAL:
+        if new_mode in (VAMode.NORMAL, VAMode.DEFAULT):
             # Add navigate to default view
             if self.navigation_manager:
                 self.navigation_manager.navigate_home()
