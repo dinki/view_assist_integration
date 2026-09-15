@@ -6,6 +6,8 @@ lists:
         out: music
       - in: normal
         out: normal
+      - in: default
+        out: normal
       - in: hold
         out: hold
       - in: cycle

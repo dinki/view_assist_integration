@@ -1,6 +1,6 @@
 import { timerCards } from "./timers.js?v=1.0.30";
 
-const version = "1.0.31"
+const version = "1.0.35"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 const INITIAL_LOAD_OVERLAY_ID = "view-assist-initial-load-overlay";
@@ -584,16 +584,43 @@ class ViewAssist {
         });
 
         window.addEventListener("location-changed", () => {
+          this._clear_fade_out();
           setTimeout(() => {
             this.hide_sections(false);
             this.display_browser_id();
           }, 100);
         });
+
+        document.addEventListener("click", (ev) => {
+          const path = ev.composedPath();
+          const link = path.find(
+            (el) => el.tagName === "A" && el.href && el.getAttribute("href")?.startsWith("/view-assist")
+          );
+          if (link) {
+            const entityId = localStorage.getItem("view_assist_sensor");
+            const stateObj = this.hass?.states?.[entityId];
+            const transitionsEnabled =
+              stateObj?.attributes?.enable_view_transitions ||
+              stateObj?.attributes?.navigation_transition ||
+              this.variables.config?.navigation_transition;
+            if (transitionsEnabled === true || transitionsEnabled === "true") {
+              const targetUrl = new URL(link.href, window.location.origin);
+              if (targetUrl.origin === window.location.origin) {
+                ev.preventDefault();
+                this.browser_navigate(link.pathname + link.search + link.hash);
+              }
+            }
+          }
+        }, true);
       }
 
     } catch (e) {
       console.log("Error on initialisation: ", e.message);
     }
+  }
+
+  get hass() {
+    return document.querySelector("home-assistant")?.hass || this._hass;
   }
 
   get_browser_id() {
@@ -755,14 +782,72 @@ class ViewAssist {
     }
   }
 
+  get_lovelace_config() {
+    try {
+      const panel = document.querySelector("home-assistant")
+        ?.shadowRoot?.querySelector("home-assistant-main")
+        ?.shadowRoot?.querySelector("ha-panel-lovelace, partial-panel-resolver ha-panel-lovelace");
+      if (panel?.lovelace?.config) return panel.lovelace.config;
+
+      const root = panel?.shadowRoot?.querySelector("hui-root") || document.querySelector("hui-root");
+      if (root?.lovelace?.config) return root.lovelace.config;
+    } catch (e) {
+      console.debug("ViewAssist - error reading lovelace config:", e);
+    }
+    return null;
+  }
+
+  is_custom_view(path) {
+    if (!path) return false;
+    const cleanPath = path.split("?")[0].split("#")[0].replace(/^\/+|\/+$/g, "").toLowerCase();
+    const slug = cleanPath.split("/").pop();
+
+    const entityId = localStorage.getItem("view_assist_sensor");
+    const stateObj = this.hass?.states?.[entityId];
+    const defaultBackground = stateObj?.attributes?.background;
+
+    // Dynamically inspect the view configuration from Lovelace
+    const config = this.get_lovelace_config();
+    if (config?.views && Array.isArray(config.views)) {
+      const view = config.views.find((v, idx) => v.path === slug || String(idx) === slug);
+      if (view) {
+        function checkCard(card) {
+          if (!card) return false;
+          if (card.variables?.var_custom_background === true || card.variables?.var_custom_background === "true") return true;
+          if (card.variables?.var_custom_background === false || card.variables?.var_custom_background === "false") return false;
+          if (card.variables?.background && defaultBackground && card.variables.background !== defaultBackground) return true;
+          if (card.cards && Array.isArray(card.cards)) {
+            return card.cards.some(checkCard);
+          }
+          return false;
+        }
+
+        if (view.cards && Array.isArray(view.cards)) {
+          return view.cards.some(checkCard);
+        }
+      }
+    }
+
+    return false;
+  }
+
   browser_navigate(path) {
     // Navigate the browser window
     if (!path) return;
     if (this.is_current_path(path)) return;
-    if (this.variables.config?.navigation_transition) {
+
+    const entityId = localStorage.getItem("view_assist_sensor");
+    const stateObj = this.hass?.states?.[entityId];
+    const transitionsEnabled =
+      stateObj?.attributes?.enable_view_transitions ||
+      stateObj?.attributes?.navigation_transition ||
+      this.variables.config?.navigation_transition;
+
+    if (transitionsEnabled === true || transitionsEnabled === "true") {
       this.fade_navigate(path);
       return;
     }
+
     history.pushState(null, "", path);
     window.dispatchEvent(new CustomEvent("location-changed"));
   }
@@ -774,36 +859,111 @@ class ViewAssist {
   }
 
   async fade_navigate(path) {
-    // Fade out, navigate, wait for the new page to render, then fade back in
-    const FADE_DURATION_MS = 800;
-    const elContainer = await selectTree(
-      document.body,
-      "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root $ div hui-view-container",
-      false,
-      2000
-    );
+    const currentPath = window.location.pathname;
+    const entityId = localStorage.getItem("view_assist_sensor");
+    const stateObj = this.hass?.states?.[entityId];
+    const rawTime =
+      stateObj?.attributes?.view_transition_time ??
+      this.variables.config?.view_transition_time;
+    const duration =
+      rawTime !== undefined && rawTime !== null && !isNaN(rawTime)
+        ? parseFloat(rawTime)
+        : 0.5;
+    const fadeOutDurationMs = Math.round((duration / 2) * 1000);
 
-    const container = elContainer ? elContainer : document.body;
-    container.style.transition = `filter ${FADE_DURATION_MS}ms ease-in-out`;
-    container.style.filter = "brightness(0)";
+    const currentIsCustom = this.is_custom_view(currentPath);
+    const targetIsCustom = this.is_custom_view(path);
+    const fadeCardToBlack = currentIsCustom || targetIsCustom;
 
-    await new Promise((r) => setTimeout(r, FADE_DURATION_MS));
+    window.viewAssistPrevWasCustom = currentIsCustom;
+    try {
+      sessionStorage.setItem(
+        "va_prev_was_custom",
+        currentIsCustom ? "true" : "false"
+      );
+    } catch (e) {}
+
+    // Apply scoped fade out to outgoing view
+    this._apply_fade_out(fadeCardToBlack ? "card" : "ui");
+    await new Promise((r) => setTimeout(r, fadeOutDurationMs));
 
     history.pushState(null, "", path);
     window.dispatchEvent(new CustomEvent("location-changed"));
 
-    // hui-view-container can keep several hui-view instances mounted at once
-    // (toggling visibility), so instead of inspecting a single view element,
-    // wait until the container's DOM stops mutating - that reliably spans
-    // the view swap regardless of which child ends up active.
-
+    // Wait for incoming view to settle in DOM so async cards (like weather forecast) render
+    const elContainer = await selectTree(
+      document.body,
+      "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root $ div hui-view-container",
+      false,
+      1000
+    );
     if (elContainer) {
       await this.wait_for_dom_settled(elContainer, 1000);
-    } else {
-      await new Promise((r) => setTimeout(r, 100));
     }
 
-    container.style.filter = "brightness(1)";
+    this._clear_fade_out();
+  }
+
+  _apply_fade_out(mode = "card") {
+    try {
+      function traverse(node) {
+        if (!node) return;
+        if (node.classList) {
+          const tag = (node.nodeName || "").toLowerCase();
+          if (tag === "custom-button-card" || tag === "button-card") {
+            if (mode === "card") {
+              node.classList.add("va-fade-out");
+            } else {
+              node.classList.add("va-fade-out-ui");
+            }
+          }
+        }
+        if (node.shadowRoot) {
+          if (mode === "card") {
+            const card = node.shadowRoot.getElementById("card");
+            if (card) card.classList.add("va-fade-out");
+          } else {
+            const container = node.shadowRoot.getElementById("container");
+            if (container) container.classList.add("va-fade-out-ui");
+          }
+          traverse(node.shadowRoot);
+        }
+        if (node.children) {
+          for (const child of node.children) {
+            traverse(child);
+          }
+        }
+      }
+      traverse(document.body);
+    } catch (e) {
+      console.error("ViewAssist - error applying fade out:", e);
+    }
+  }
+
+  _clear_fade_out() {
+    try {
+      function traverse(node) {
+        if (!node) return;
+        if (node.classList) {
+          node.classList.remove("va-fade-out", "va-fade-out-ui", "va-fade-out-card");
+        }
+        if (node.shadowRoot) {
+          const card = node.shadowRoot.getElementById("card");
+          if (card) card.classList.remove("va-fade-out", "va-fade-out-card");
+          const container = node.shadowRoot.getElementById("container");
+          if (container) container.classList.remove("va-fade-out", "va-fade-out-ui");
+          traverse(node.shadowRoot);
+        }
+        if (node.children) {
+          for (const child of node.children) {
+            traverse(child);
+          }
+        }
+      }
+      traverse(document.body);
+    } catch (e) {
+      console.error("ViewAssist - error clearing fade out:", e);
+    }
   }
 
   wait_for_dom_settled(el, timeout = 2000, quiet_period = 150) {

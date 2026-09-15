@@ -120,6 +120,9 @@ class ViewAssistSensor(RestoreSensor):
                     "music_mode_auto",
                     "music_mode_timeout",
                     "home_screen",
+                    "navigation_transition",
+                    "enable_view_transitions",
+                    "view_transition_time",
                     # Generated/ephemeral
                     "last_updated",
                     "active_overrides",
@@ -299,6 +302,15 @@ class ViewAssistSensor(RestoreSensor):
             "weather_entity": d.default.weather_entity,
             "screen_mode": d.dashboard.display_settings.screen_mode,
             "home_screen": d.runtime_config_overrides.home or d.dashboard.home,
+            "navigation_transition": bool(
+                d.dashboard.display_settings.navigation_transition
+                or d.dashboard.display_settings.enable_view_transitions
+            ),
+            "enable_view_transitions": bool(
+                d.dashboard.display_settings.navigation_transition
+                or d.dashboard.display_settings.enable_view_transitions
+            ),
+            "view_transition_time": d.dashboard.display_settings.view_transition_time,
         }
 
     def _get_active_overrides_attributes(self) -> dict[str, Any]:

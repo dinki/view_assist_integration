@@ -304,7 +304,15 @@ class WebsocketListenerHandler:
                     ],
                     "hide_header": data.dashboard.display_settings.screen_mode
                     in [VAScreenMode.HIDE_HEADER_SIDEBAR, VAScreenMode.HIDE_HEADER],
-                    "navigation_transition": data.dashboard.display_settings.navigation_transition,
+                    "navigation_transition": bool(
+                        data.dashboard.display_settings.navigation_transition
+                        or data.dashboard.display_settings.enable_view_transitions
+                    ),
+                    "enable_view_transitions": bool(
+                        data.dashboard.display_settings.navigation_transition
+                        or data.dashboard.display_settings.enable_view_transitions
+                    ),
+                    "view_transition_time": data.dashboard.display_settings.view_transition_time,
                 }
             except Exception:  # noqa: BLE001
                 output = {}

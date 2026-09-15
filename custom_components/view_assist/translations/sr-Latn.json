@@ -128,19 +128,25 @@
               "menu_timeout": "Tajmaut menija",
               "time_format": "Format vremena",
               "screen_mode": "Prikaži/sakrij zaglavlje i bočni meni",
-              "cycle_views": "Ciklični prikazi"
+              "cycle_views": "Ciklični prikazi",
+              "navigation_transition": "Animacija prelaza pri navigaciji",
+              "enable_view_transitions": "Omogući prelaze prikaza",
+              "view_transition_time": "Trajanje prelaza prikaza (sekunde)"
             },
             "data_description": {
-              "assist_prompt": "Stil Assist obaveštenja za detekciju reči za buđenje i obradu intenta",
-              "font_style": "Podrazumevani font za ovaj satelitski uređaj. Naziv fonta mora tačno da se poklapa i da bude dostupan",
-              "status_icons_size": "Veličina ikona u prikazu ikona statusa",
-              "status_icons": "Napredna opcija! Lista prilagođenih ikona za pokretanje koja se podešava pri pokretanju. Ne menjajte ako niste sigurni šta radite",
-              "menu_config": "Konfigurišite ponašanje menija",
-              "menu_items": "Lista stavki koje će se prikazati u meniju kada je aktiviran",
-              "menu_timeout": "Vreme u sekundama pre automatskog zatvaranja menija (0 za onemogućavanje)",
-              "time_format": "Postavlja format prikaza vremena",
-              "screen_mode": "Prikaži ili sakrij zaglavlje i bočni meni",
-              "cycle_views": "Lista stavki koje će se prikazivati u ciklus režimu"
+              "assist_prompt": "Stil obaveštenja Assist prompta koji se koristi za detekciju reči za buđenje i obradu namere",
+              "font_style": "Podrazumevani font za ovaj satelit uređaj. Ime fonta se mora savršeno poklapati i biti dostupno",
+              "status_icons_size": "Veličina ikona u prikazu statusnih ikona",
+              "status_icons": "Napredna opcija! Lista prilagođenih ikona za pokretanje pri pokretanju. Nemojte menjati ako ne znate šta radite",
+              "menu_config": "Podesite ponašanje menija",
+              "menu_items": "Lista stavki koje se prikazuju u meniju kada je aktiviran",
+              "menu_timeout": "Vreme u sekundama pre nego što se meni automatski zatvori (0 za onemogućavanje tajmauta)",
+              "time_format": "Postavlja format prikaza vremena na satu",
+              "screen_mode": "Prikaži ili sakrij zaglavlje i bočnu traku",
+              "cycle_views": "Lista stavki koje će se prikazivati u ciklus režimu",
+              "navigation_transition": "Zatamni i ponovo osvetli ekran pri prelazu između prikaza",
+              "enable_view_transitions": "Omogućite glatke animirane prelaze između prikaza kontrolne table.",
+              "view_transition_time": "Trajanje animacije prelaza prikaza u sekundama (podrazumevano: 0.5s)."
             }
           }
         }

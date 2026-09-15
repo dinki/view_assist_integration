@@ -128,19 +128,25 @@
               "menu_timeout": "Menü-Timeout",
               "time_format": "Zeitformat",
               "screen_mode": "Kopfzeile und Seitenleiste ein-/ausblenden",
-              "cycle_views": "Ansichten durchlaufen"
+              "cycle_views": "Ansichten durchlaufen",
+              "navigation_transition": "Übergangsanimation bei Navigation",
+              "enable_view_transitions": "Ansichtsübergänge aktivieren",
+              "view_transition_time": "Dauer des Ansichtsübergangs (Sekunden)"
             },
             "data_description": {
-              "assist_prompt": "Der Assist-Benachrichtigungsstil für Weckworterkennung und Intent-Verarbeitung",
-              "font_style": "Die Standardschriftart für dieses Satellitengerät. Der Schriftname muss exakt übereinstimmen und verfügbar sein",
+              "assist_prompt": "Der Assist-Benachrichtigungs-Prompt-Stil, der für die Wake-Word-Erkennung und Intent-Verarbeitung verwendet werden soll",
+              "font_style": "Die Standard-Schriftart, die für dieses Satellitengerät verwendet werden soll. Der Name der Schriftart muss genau übereinstimmen und verfügbar sein",
               "status_icons_size": "Größe der Symbole in der Statussymbolanzeige",
-              "status_icons": "Erweiterte Option! Liste benutzerdefinierter Start-Symbole, die beim Start festgelegt werden. Ändern Sie dies nicht, wenn Sie nicht wissen, was Sie tun",
-              "menu_config": "Menüverhalten konfigurieren",
-              "menu_items": "Liste der Einträge, die im aktivierten Menü angezeigt werden",
-              "menu_timeout": "Zeit in Sekunden, bevor das Menü automatisch geschlossen wird (0 zum Deaktivieren)",
-              "time_format": "Legt das Zeitformat der Uhranzeige fest",
+              "status_icons": "Erweiterte Option! Liste der benutzerdefinierten Startsymbole, die beim Start festgelegt werden sollen. Ändern Sie dies nicht, wenn Sie nicht wissen, was Sie tun",
+              "menu_config": "Konfigurieren Sie das Menüverhalten",
+              "menu_items": "Liste der im Menü anzuzeigenden Einträge, wenn es aktiviert ist",
+              "menu_timeout": "Zeit in Sekunden, bevor das Menü automatisch geschlossen wird (0 zum Deaktivieren des Timeouts)",
+              "time_format": "Legt das Zeitanzeigeformat der Uhr fest",
               "screen_mode": "Kopfzeile und Seitenleiste anzeigen oder ausblenden",
-              "cycle_views": "Liste der Einträge, die im Zyklusmodus angezeigt werden"
+              "cycle_views": "Liste der Einträge, die im Zyklusmodus angezeigt werden",
+              "navigation_transition": "Bildschirm beim Navigieren zwischen Ansichten aus- und einblenden",
+              "enable_view_transitions": "Sanfte animierte Übergänge zwischen Dashboard-Ansichten aktivieren.",
+              "view_transition_time": "Dauer der Ansichtsübergangsanimation in Sekunden (Standard: 0.5s)."
             }
           }
         }

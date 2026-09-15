@@ -62,6 +62,9 @@ from .const import (
     CONF_MUSIC_MODE_TIMEOUT,
     CONF_MUSICPLAYER_DEVICE,
     CONF_NAVIGATION_TRANSITION,
+    CONF_ENABLE_VIEW_TRANSITIONS,
+    CONF_VIEW_TRANSITION_TIME,
+    DEFAULT_VIEW_TRANSITION_TIME,
     CONF_ORIENTATION_SENSOR,
     CONF_ROTATE_BACKGROUND_INTERVAL,
     CONF_ROTATE_BACKGROUND_LINKED_ENTITY,
@@ -298,6 +301,18 @@ async def get_dashboard_options_schema(
             )
         ),
         vol.Optional(CONF_NAVIGATION_TRANSITION): BooleanSelector(),
+        vol.Optional(CONF_ENABLE_VIEW_TRANSITIONS): BooleanSelector(),
+        vol.Optional(
+            CONF_VIEW_TRANSITION_TIME, default=DEFAULT_VIEW_TRANSITION_TIME
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=0.1,
+                max=3.0,
+                step=0.1,
+                mode=NumberSelectorMode.SLIDER,
+                unit_of_measurement="s",
+            )
+        ),
     }
 
     BACKGROUND_SETTINGS.update(background_extra)
