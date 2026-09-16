@@ -133,7 +133,13 @@ class BackgroundImageManager:
         """Rotate background images."""
         while True:
             # Logic to rotate images
-            await self._update_background_image()
+            try:
+                await self._update_background_image()
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception(
+                    "Error rotating background image for %s; will retry next interval",
+                    self.name,
+                )
             await asyncio.sleep(self.rotation_interval * 60)
 
     async def _update_background_image(self):
@@ -268,8 +274,10 @@ class ImageProvider:
             _LOGGER.debug("Downloading new background image from %s", url)
             try:
                 response = requests.get(url, timeout=15)
-            except TimeoutError:
-                _LOGGER.warning("Timeout trying to fetch random image from %s", url)
+            except requests.exceptions.RequestException as ex:
+                _LOGGER.warning(
+                    "Error trying to fetch background image from %s: %s", url, ex
+                )
             else:
                 if response.status_code == 200:
                     try:
