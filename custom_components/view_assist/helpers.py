@@ -1,6 +1,5 @@
 """Helper functions."""
 
-from dataclasses import asdict
 from functools import reduce
 import logging
 from pathlib import Path
@@ -20,9 +19,10 @@ from .const import (
     HASSMIC_DOMAIN,
     OVERLAY_FILE_NAME,
     REMOTE_ASSIST_DISPLAY_DOMAIN,
+    VAMODE_REVERTS,
     VAMode,
 )
-from .typed import DISPLAY_DEVICE_TYPES, VAConfigEntry, VADisplayType, VAType
+from .typed import VAConfigEntry, VADisplayType, VAType, DISPLAY_DEVICE_TYPES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ def ensure_list(value: str | list[str]):
         return value
     if isinstance(value, str):
         value = (value.replace("[", "").replace("]", "").replace('"', "")).split(",")
-        return value or []
+        return value if value else []
     return []
 
 
@@ -345,6 +345,13 @@ def get_display_type_from_browser_id(
     return "native"
 
 
+def get_revert_settings_for_mode(mode: VAMode) -> tuple:
+    """Get revert settings from VAMODE_REVERTS for mode."""
+    if mode in VAMODE_REVERTS:
+        return VAMODE_REVERTS[mode].get("revert"), VAMODE_REVERTS[mode].get("view")
+    return False, None
+
+
 def get_assist_satellite_entity_id_from_device_id(
     hass: HomeAssistant, device_id: str
 ) -> str | None:
@@ -373,17 +380,11 @@ def get_entities_by_attr_filter(
                     add_entity = False
                     if filter:
                         for attr, value in filter.items():
-                            if isinstance(value, list):
-                                if state.attributes.get(attr) in value:
-                                    add_entity = True
-                            elif state.attributes.get(attr) == value:
+                            if state.attributes.get(attr) == value:
                                 add_entity = True
                     if add_entity and exclude:
                         for attr, value in exclude.items():
-                            if isinstance(value, list):
-                                if state.attributes.get(attr) in value:
-                                    add_entity = False
-                            elif state.attributes.get(attr) == value:
+                            if state.attributes.get(attr) == value:
                                 add_entity = False
                     if add_entity:
                         matched_entities.append(entity.entity_id)
@@ -403,7 +404,7 @@ def get_key(
         else:
             dn_list = [dot_notation_path]
         return reduce(dict.get, dn_list, data)
-    except TypeError, KeyError:
+    except (TypeError, KeyError):
         return None
 
 
@@ -479,13 +480,3 @@ def get_available_overlays(hass: HomeAssistant) -> dict[str, str]:
     if overlays:
         return overlays
     return {}
-
-
-def normalize_name(name: str) -> str:
-    """Normalize name for comparison."""
-    return name.strip().casefold()
-
-
-def dataclass_to_dict(obj: Any) -> dict[str, Any]:
-    """Convert a dataclass instance into a dict, recursing into nested dataclasses."""
-    return asdict(obj)

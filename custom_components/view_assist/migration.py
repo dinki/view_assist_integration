@@ -17,7 +17,6 @@ from .const import (
     CONF_HIDE_SIDEBAR,
     CONF_MIC_TYPE,
     CONF_MIC_UNMUTE,
-    CONF_MUSIC_MODE_AUTO,
     CONF_ROTATE_BACKGROUND,
     CONF_ROTATE_BACKGROUND_INTERVAL,
     CONF_ROTATE_BACKGROUND_LINKED_ENTITY,
@@ -46,7 +45,7 @@ async def async_migrate_view_assist_config_entry(
         "Config Migration from v%s.%s - %s",
         entry.version,
         entry.minor_version,
-        entry.title,
+        entry.options,
     )
     new_options = {**entry.options}
     if entry.minor_version < 2 and entry.options:
@@ -130,18 +129,13 @@ async def async_migrate_view_assist_config_entry(
         # Fix for none migration of default options for dnd, announce and unmute mic
         for key in [CONF_DO_NOT_DISTURB, CONF_USE_ANNOUNCE, CONF_MIC_UNMUTE]:
             if new_options.get(key) is not None:
-                new_options[key] = "on" if new_options.get(key) else "off"
+                new_options[CONF_DO_NOT_DISTURB] = (
+                    "on" if new_options.get(key) else "off"
+                )
 
-    if entry.minor_version < 6:
-        # Migration of default option - auto music mode from boolean to selector
-        if new_options.get(CONF_MUSIC_MODE_AUTO) is not None:
-            new_options[CONF_MUSIC_MODE_AUTO] = (
-                "on" if new_options.get(CONF_MUSIC_MODE_AUTO) else "off"
-            )
-
-    if entry.minor_version < 6:
+    if new_options != entry.options:
         hass.config_entries.async_update_entry(
-            entry, options=new_options, minor_version=6, version=1
+            entry, options=new_options, minor_version=5, version=1
         )
 
         _LOGGER.debug(
