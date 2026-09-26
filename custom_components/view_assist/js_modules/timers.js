@@ -30,13 +30,27 @@ class TimerCards {
 
             let name = timer.name;
             if (!name && timer.timer_type == 'interval') {
-                name = timer.duration
+                name = timer.timer_info.normalised_sentence;
             }
 
-            let expiry_time = timer.expiry.time;
-            if (timer.expiry.day != "Today") {
-                expiry_time = `<div style="padding: 0; line-height: 4vw">${timer.expiry.time}</br><span style="padding: 0; font-size: 3vw; text-align: right">${timer.expiry.day}</span></div>`;
+            let expiry_time = timer.remaining_info.time;
+            if (timer.remaining_info.day != "Today") {
+                expiry_time = `<div style="padding: 0; line-height: 4vw">${timer.remaining_info.time}</br><span style="padding: 0; font-size: 3vw; text-align: right">${timer.remaining_info.day}</span></div>`;
             }
+
+            const timerIcon = () => {
+                switch (timer.timer_class) {
+                    case "alarm":
+                        return "mdi:bell-outline";
+                    case "reminder":
+                        return "mdi:calendar-clock-outline";
+                    case "command":
+                        return "mdi:camera-timer";
+                    default:
+                        return "mdi:timer-outline";
+                }
+            };
+
 
             const cancelButton = {
                 "type": "custom:button-card",
@@ -72,14 +86,9 @@ class TimerCards {
                 "show_name": false,
                 "tap_action": {
                     "action": "call-service",
-                    "service": "view_assist.broadcast_event",
+                    "service": "view_assist.cancel_timer",
                     "service_data": {
-                        "event_name": "viewassist",
-                        "event_data": {
-                            "command": "dismiss alarm",
-                            "entity_id": timer.entity_id,
-                            "timer_id": timer.id,
-                        }
+                        "timer_id": timer.id
                     }
                 },
                 "styles": {
@@ -104,14 +113,10 @@ class TimerCards {
                 "show_name": false,
                 "tap_action": {
                     "action": "call-service",
-                    "service": "view_assist.broadcast_event",
+                    "service": "view_assist.snooze_timer",
                     "service_data": {
-                        "event_name": "viewassist",
-                        "event_data": {
-                            "command": "snooze alarm",
-                            "entity_id": timer.entity_id,
-                            "timer_id": timer.id,
-                        }
+                        "timer_id": timer.id,
+                        "time": "5 minutes"
                     }
                 },
                 "styles": {
@@ -130,12 +135,13 @@ class TimerCards {
 
             const timerCard = {
                 "type": "custom:button-card",
-                    "name": name,
+                "name": name,
+                "icon": timerIcon(),
                 "styles": {
                     "grid": [
-                        { "grid-template-areas": (timer.status == "expired" ? "'n time snooze cancel'" : "'n time cancel'") },
+                        { "grid-template-areas": (timer.status == "expired" ? "'i n time snooze cancel'" : "'i n time cancel'") },
                         { "grid-template-rows": "1fr" },
-                        { "grid-template-columns": (timer.status == "expired" ? "40% 35% 14% 11%" : "45% 44% 11%") }
+                        { "grid-template-columns": (timer.status == "expired" ? "10% 30% 35% 14% 11%" : "10% 35% 44% 11%") }
                     ],
                     "card": [
                         { "background-color": "rgba(0, 0, 0, 0.7)" },
@@ -143,7 +149,13 @@ class TimerCards {
                         { "height": "20%" },
                         { "padding": "0" },
                         { "justify-self": "center" },
-                        { "width": "90vw"}
+                        { "width": "90vw" }
+                    ],
+                    "icon": [
+                        { "color": "white" },
+                        { "font-size": "5vw" },
+                        { "justify-self": "center" },
+                        { "padding-left": "2vw" }
                     ],
                     "name": [
                         { "color": "white" },
@@ -170,7 +182,7 @@ class TimerCards {
                     }
                 },
                 "custom_fields": {
-                    "time": (timer.timer_type == 'interval') ? `<viewassist-countdown expires='${timer.expires}'></viewassist-countdown>` : expiry_time,
+                    "time": (timer.timer_type == 'interval') ? `<viewassist-countdown expires='${timer.timer_info.expires_at}'></viewassist-countdown>` : timer.remaining_info.text,
                     ...(timer.status == 'expired') ? {
                         "snooze": { "card": snoozeButton },
                         "cancel": { "card": dismissButton }
@@ -203,9 +215,8 @@ class TimerCards {
 
         let name = timer.name;
         if (!name && timer.timer_type == 'interval') {
-            name = timer.duration
+            name = timer.timer_info.normalised_sentence;
         }
-
 
         function actionButton(action_name, width, background_colour, text_colour, tap_action, display) {
             return {
@@ -289,8 +300,8 @@ class TimerCards {
             },
             "custom_fields": {
                 "display_timer_name": name,
-                "time": (timer.timer_type == 'interval') ? `<viewassist-countdown expires='${timer.expires}'></viewassist-countdown>` : timer.expiry.time,
-                "day": (timer.timer_type == 'interval') ? '' : (timer.expiry.day != "Today") ? timer.expiry.day : '',
+                "time": (timer.timer_type == 'interval') ? `<viewassist-countdown expires='${timer.timer_info.expires_at}'></viewassist-countdown>` : timer.remaining_info.time,
+                "day": (timer.timer_type == 'interval') ? '' : (timer.remaining_info.day != "Today") ? timer.remaining_info.day : '',
                 "action_buttons": {
                     "card": {
                         "type": "custom:button-card",
@@ -336,14 +347,10 @@ class TimerCards {
                             "snooze": {
                                 "card": actionButton("Snooze", "35vw", "white", "black", {
                                     "action": "call-service",
-                                    "service": "view_assist.broadcast_event",
+                                    "service": "view_assist.snooze_timer",
                                     "service_data": {
-                                        "event_name": "viewassist",
-                                        "event_data": {
-                                            "command": "snooze alarm",
-                                            "entity_id": entity_id,
-                                            "timer_id": timer.id,
-                                        }
+                                        "timer_id": timer.id,
+                                        "time": "5 minutes"
                                     }
                                 },
                                     timer.status == 'expired'
@@ -352,14 +359,9 @@ class TimerCards {
                             "dismiss": {
                                 "card": actionButton("Dismiss", "35vw", "#2899f3", "white", {
                                     "action": "call-service",
-                                    "service": "view_assist.broadcast_event",
+                                    "service": "view_assist.cancel_timer",
                                     "service_data": {
-                                        "event_name": "viewassist",
-                                        "event_data": {
-                                            "command": "dismiss alarm",
-                                            "entity_id": entity_id,
-                                            "timer_id": timer.id,
-                                        }
+                                        "timer_id": timer.id
                                     }
                                 },
                                     timer.status == 'expired'

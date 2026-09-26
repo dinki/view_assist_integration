@@ -13,8 +13,8 @@
         "and": []
     },
     "meridiem": {
-        "am": ["a.m.", "morning", "in morning","in the morning"],
-        "pm": ["p.m.", "afternoon", "evening", "night", "tonight"]
+        "am": ["a.m", "a.m.", "morning", "in morning","in the morning"],
+        "pm": ["p.m", "p.m.", "afternoon", "evening", "night", "tonight"]
     },
     "fractions": {
         "oclock": ["o'clock"],

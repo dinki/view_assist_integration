@@ -3,8 +3,6 @@
 # TODO: Check icon ordering
 # TODO: Add ability to allow entity: etc icons in status icons
 
-from __future__ import annotations
-
 import asyncio
 import contextlib
 import json
@@ -23,6 +21,7 @@ from homeassistant.util import slugify
 from ..const import DEVICES, DOMAIN  # noqa: TID252
 from ..helpers import get_config_entry_by_entity_id  # noqa: TID252
 from ..typed import VAConfigEntry, VAEvent, VAEventType, VAMenuConfig  # noqa: TID252
+from .base import DeviceModule
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,8 +56,10 @@ REMOVE_ITEM_SERVICE_SCHEMA = vol.Schema(
 )
 
 
-class MenuManager:
+class MenuManager(DeviceModule):
     """Class to manage View Assist menus."""
+
+    _dependencies = ["StatusManager"]
 
     @classmethod
     def get(cls, hass: HomeAssistant, config: VAConfigEntry) -> MenuManager | None:
@@ -70,8 +71,7 @@ class MenuManager:
 
     def __init__(self, hass: HomeAssistant, config: VAConfigEntry) -> None:
         """Initialize menu manager."""
-        self.hass = hass
-        self.config = config
+        super().__init__(hass, config)
         self.name = config.runtime_data.core.name
 
         self._item_remove_timeouts: dict[int, asyncio.Task] = {}
@@ -92,31 +92,35 @@ class MenuManager:
     async def async_setup(self) -> bool:
         """Initialize menu manager for device."""
 
-        d = self.config.runtime_data.dashboard.display_settings
+        d = self._config.runtime_data.dashboard.display_settings
 
         # Restore runtime additions from extra_data (if present)
-        restored_runtime_status = self.config.runtime_data.extra_data.get("runtime_status_icons", [])
-        restored_runtime_menu = self.config.runtime_data.extra_data.get("runtime_menu_items", [])
+        restored_runtime_status = self._config.runtime_data.extra_data.get(
+            "runtime_status_icons", []
+        )
+        restored_runtime_menu = self._config.runtime_data.extra_data.get(
+            "runtime_menu_items", []
+        )
 
         if restored_runtime_status:
             self._runtime_status_icons = list(restored_runtime_status)
             _LOGGER.info(
                 "Restored %d runtime status icons for %s",
                 len(self._runtime_status_icons),
-                self.name
+                self.name,
             )
             # Clean up
-            self.config.runtime_data.extra_data.pop("runtime_status_icons", None)
+            self._config.runtime_data.extra_data.pop("runtime_status_icons", None)
 
         if restored_runtime_menu:
             self._runtime_menu_items = list(restored_runtime_menu)
             _LOGGER.info(
                 "Restored %d runtime menu items for %s",
                 len(self._runtime_menu_items),
-                self.name
+                self.name,
             )
             # Clean up
-            self.config.runtime_data.extra_data.pop("runtime_menu_items", None)
+            self._config.runtime_data.extra_data.pop("runtime_menu_items", None)
 
         # Build internal lists: config + runtime
         # Config icons first
@@ -131,7 +135,10 @@ class MenuManager:
         self._internal_menu_items = list(d.menu_items.copy())
 
         for item in self._runtime_menu_items:
-            if item not in self._internal_menu_items and item not in self._internal_status_icons:
+            if (
+                item not in self._internal_menu_items
+                and item not in self._internal_status_icons
+            ):
                 self._internal_menu_items.append(item)
 
         self._menu_timeout = d.menu_timeout
@@ -141,7 +148,7 @@ class MenuManager:
 
     async def async_setup_once(self) -> bool:
         """Set up menu manager services that should only be registered once."""
-        MenuManagerServices(self.hass).register()
+        MenuManagerServices(self._hass).register()
         return True
 
     async def async_unload(self) -> bool:
@@ -150,7 +157,7 @@ class MenuManager:
 
     async def async_unload_last(self):
         """Unload the last instance of MenuManager."""
-        MenuManagerServices(self.hass).unregister()
+        MenuManagerServices(self._hass).unregister()
         return True
 
     def add_items(
@@ -179,8 +186,8 @@ class MenuManager:
         # Handle item timeout for auto-remove
         if timeout:
             task_id = len(self._item_remove_timeouts) + 1
-            task = self.config.async_create_background_task(
-                self.hass,
+            task = self._config.async_create_background_task(
+                self._hass,
                 self._delayed_remove_items(task_id, items, menu, timeout),
                 name=f"delayed_remove_items-{self.name}-{task_id}",
             )
@@ -214,7 +221,7 @@ class MenuManager:
         """Toggle menu visibility for an entity."""
         # Check if menu is enabled
         if (
-            self.config.runtime_data.dashboard.display_settings.menu_config
+            self._config.runtime_data.dashboard.display_settings.menu_config
             == VAMenuConfig.DISABLED
         ):
             _LOGGER.warning("Menu is not enabled for %s", self.name)
@@ -237,8 +244,8 @@ class MenuManager:
 
         # Handle timeout for auto-close
         if self.active and timeout:
-            self._menu_timeout_task = self.config.async_create_background_task(
-                self.hass,
+            self._menu_timeout_task = self._config.async_create_background_task(
+                self._hass,
                 self._menu_display_timeout_task(timeout),
                 name=f"menu_timeout_{slugify(self.name)}",
             )
@@ -259,22 +266,27 @@ class MenuManager:
 
         # Save runtime tracking lists to extra_data for restoration
         # This allows runtime additions to persist through restarts
-        self.config.runtime_data.extra_data["runtime_status_icons"] = self._runtime_status_icons
-        self.config.runtime_data.extra_data["runtime_menu_items"] = self._runtime_menu_items
+        self._config.runtime_data.extra_data["runtime_status_icons"] = (
+            self._runtime_status_icons
+        )
+        self._config.runtime_data.extra_data["runtime_menu_items"] = (
+            self._runtime_menu_items
+        )
 
         if show_menu:
             self.toggle_menu(show_menu)
         else:
             # Update sensor attributes via dispatcher
             self._notify_update()
+
     def _notify_update(self) -> None:
         """Notify that an update has occurred."""
 
         async_dispatcher_send(
-            self.hass,
-            f"{DOMAIN}_{self.config.entry_id}_event",
+            self._hass,
+            f"{DOMAIN}_{self._config.entry_id}_event",
             VAEvent(
-                VAEventType.CONFIG_UPDATE,
+                VAEventType.ICONS_UPDATE,
                 {
                     "status_icons": self.status_icons,
                     "menu_items": self.menu_items,
@@ -293,7 +305,9 @@ class MenuManager:
             # Track as runtime addition (if not already tracked)
             if icon not in self._runtime_status_icons:
                 self._runtime_status_icons.append(icon)
-                _LOGGER.debug("Tracked %s as runtime status icon for %s", icon, self.name)
+                _LOGGER.debug(
+                    "Tracked %s as runtime status icon for %s", icon, self.name
+                )
         else:
             # Remove from internal list
             if icon in self._internal_status_icons:
@@ -303,7 +317,9 @@ class MenuManager:
             # Remove from runtime tracking
             if icon in self._runtime_status_icons:
                 self._runtime_status_icons.remove(icon)
-                _LOGGER.debug("Removed %s from runtime tracking for %s", icon, self.name)
+                _LOGGER.debug(
+                    "Removed %s from runtime tracking for %s", icon, self.name
+                )
 
     def _add_remove_menu_item(self, icon: str, add: bool) -> None:
         """Add or remove a menu item."""
@@ -325,7 +341,9 @@ class MenuManager:
             # Remove from runtime tracking
             if icon in self._runtime_menu_items:
                 self._runtime_menu_items.remove(icon)
-                _LOGGER.debug("Removed %s from runtime tracking for %s", icon, self.name)
+                _LOGGER.debug(
+                    "Removed %s from runtime tracking for %s", icon, self.name
+                )
 
     async def _delayed_remove_items(
         self, task_id: int, items: StatusOrMenuItemsType, menu: bool, delay: int
@@ -364,16 +382,16 @@ class MenuManager:
                     parsed = json.loads(raw_input)
                     if isinstance(parsed, list):
                         string_items = [str(item) for item in parsed if item]
-                        return string_items if string_items else None
+                        return string_items or None
                 except json.JSONDecodeError:
-                    return raw_input if raw_input else None
+                    return raw_input or None
                 else:
                     return None
-            return raw_input if raw_input else None
+            return raw_input or None
 
         if isinstance(raw_input, list):
             string_items = [str(item) for item in raw_input if item]
-            return string_items if string_items else None
+            return string_items or None
 
         if isinstance(raw_input, dict):
             if "id" in raw_input:
@@ -391,26 +409,26 @@ class MenuManagerServices:
 
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialize the menu manager services."""
-        self.hass = hass
+        self._hass = hass
         self.register()
 
     def register(self):
         """Register menu manager services."""
-        self.hass.services.async_register(
+        self._hass.services.async_register(
             DOMAIN,
             "toggle_menu",
             self._handle_toggle_menu,
             schema=TOGGLE_MENU_SERVICE_SCHEMA,
         )
 
-        self.hass.services.async_register(
+        self._hass.services.async_register(
             DOMAIN,
             "add_status_item",
             self._handle_add_status_item,
             schema=ADD_ITEM_SERVICE_SCHEMA,
         )
 
-        self.hass.services.async_register(
+        self._hass.services.async_register(
             DOMAIN,
             "remove_status_item",
             self._handle_remove_status_item,
@@ -419,9 +437,9 @@ class MenuManagerServices:
 
     def unregister(self):
         """Unregister menu manager services."""
-        self.hass.services.async_remove(DOMAIN, "toggle_menu")
-        self.hass.services.async_remove(DOMAIN, "add_status_item")
-        self.hass.services.async_remove(DOMAIN, "remove_status_item")
+        self._hass.services.async_remove(DOMAIN, "toggle_menu")
+        self._hass.services.async_remove(DOMAIN, "add_status_item")
+        self._hass.services.async_remove(DOMAIN, "remove_status_item")
 
     @callback
     def _handle_toggle_menu(self, call: ServiceCall):
@@ -431,7 +449,7 @@ class MenuManagerServices:
         timeout = call.data.get(ATTR_TIMEOUT)
 
         if menu_manager := MenuManager.get(
-            self.hass, get_config_entry_by_entity_id(self.hass, entity_id)
+            self._hass, get_config_entry_by_entity_id(self._hass, entity_id)
         ):
             menu_manager.toggle_menu(show, timeout=timeout)
 
@@ -444,7 +462,7 @@ class MenuManagerServices:
         timeout = call.data.get(ATTR_TIMEOUT)
 
         if menu_manager := MenuManager.get(
-            self.hass, get_config_entry_by_entity_id(self.hass, entity_id)
+            self._hass, get_config_entry_by_entity_id(self._hass, entity_id)
         ):
             status_items = menu_manager.normalize_items(raw_status_item)
             if not status_items:
@@ -459,7 +477,7 @@ class MenuManagerServices:
         menu = call.data.get(ATTR_MENU, False)
 
         if menu_manager := MenuManager.get(
-            self.hass, get_config_entry_by_entity_id(self.hass, entity_id)
+            self._hass, get_config_entry_by_entity_id(self._hass, entity_id)
         ):
             status_items = menu_manager.normalize_items(raw_status_item)
             if not status_items:

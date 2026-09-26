@@ -86,14 +86,16 @@
           "home": "Home screen",
           "music": "Music view",
           "intent": "Intent view",
-          "list_view": "List view"
+          "list_view": "List view",
+          "timers": "Timers view"
         },
         "data_description": {
           "dashboard": "The base dashboard for View Assist (do not include trailing slash)",
           "home": "The screen to return to after timeout",
           "music": "The view to return to when in music mode",
           "intent": "The view to display for default HA actions for displaying those entities",
-          "list_view": "The view to display when updating a list"
+          "list_view": "The view to display when updating a list",
+          "timers": "The view to display for timers"
         },
         "sections": {
           "background_settings": {
@@ -126,7 +128,8 @@
               "menu_timeout": "Menu timeout",
               "time_format": "Time format",
               "screen_mode": "Show/hide header and sidebar",
-              "cycle_views": "Cycle views"
+              "cycle_views": "Cycle views",
+              "navigation_transition": "Fade transition on navigation"
             },
             "data_description": {
               "assist_prompt": "The Assist notification prompt style to use for wake word detection and intent processing",
@@ -138,7 +141,8 @@
               "menu_timeout": "Time in seconds before menu automatically closes (0 to disable timeout)",
               "time_format": "Sets clock display time format",
               "screen_mode": "Show or hide the header and sidebar",
-              "cycle_views": "List of items to show when in cycle mode"
+              "cycle_views": "List of items to show when in cycle mode",
+              "navigation_transition": "Fade the screen out and back in when navigating between views"
             }
           }
         }

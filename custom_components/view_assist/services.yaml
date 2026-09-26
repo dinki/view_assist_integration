@@ -19,18 +19,6 @@ navigate:
       required: true
       selector:
         text:
-    revert_timeout:
-      name: Revert timeout
-      description: >
-        Optional timeout in seconds to revert to the previous view.  If not set, uses the default configured timeout.
-      example: 30
-      required: false
-      default: 20
-      selector:
-        number:
-          min: 0
-          max: 120
-          step: 1
 set_state:
   name: Set state or attributes
   description: >
@@ -176,16 +164,17 @@ snooze_timer:
           mode: box
 sound_alarm:
   name: "Sound alarm"
-  description: "Sound alarm on a media device with an attempt to restore any already playing media"
+  description: "Loop an alarm media file to a media player as a streamed announcement (via Music Assistant if available, otherwise media_player.play_media)"
   fields:
     entity_id:
       name: "Entity ID"
-      description: "The media player to play the alarm on"
+      description: "The View Assist entity whose associated media player will play the alarm"
       required: true
       selector:
         entity:
+          integration: view_assist
           domain:
-            - media_player
+            - sensor
     media_file:
       name: "Media file"
       description: "Media file to use for alarm"
@@ -204,12 +193,13 @@ cancel_sound_alarm:
   fields:
     entity_id:
       name: "Entity ID"
-      description: "The media player to cancel the alarm on"
+      description: "The View Assist entity whose alarm should be cancelled"
       required: false
       selector:
         entity:
+          integration: view_assist
           domain:
-            - media_player
+            - sensor
 broadcast_event:
   name: "Broadcast Event"
   description: "Send a custom event"

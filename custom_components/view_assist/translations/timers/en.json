@@ -53,8 +53,13 @@
         "basic_interval": [],
         "advanced_interval": [
             "{minutes} {fractions} minutes",
+            "{minutes} and {fractions} minutes",
+            "{minutes} and a {fractions} minutes",
             "{hours} {fractions} hours",
-            "{hours} and a {fractions} hours"
+            "{hours} and {fractions} hours",
+            "{hours} and {fractions} an hours",
+            "{hours} and a {fractions} hours",
+            "{hours} hours and a {fractions}"
         ]
     },
     "responses": {

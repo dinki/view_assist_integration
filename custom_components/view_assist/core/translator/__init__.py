@@ -1,7 +1,6 @@
 """Init file for translator module."""
 
-from __future__ import annotations
-
+from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components import conversation
@@ -9,7 +8,6 @@ from homeassistant.core import HomeAssistant
 
 from ...const import DOMAIN  # noqa: TID252
 from ...typed import VAConfigEntry  # noqa: TID252
-from .normaliser import Normaliser, TimerInfo
 from .translator import ConversationAgentTranslator, TimeSentenceTranslator
 
 __all__ = [
@@ -19,6 +17,33 @@ __all__ = [
     "TimeSentenceTranslator",
     "TimerInfo",
 ]
+
+
+@dataclass
+class TimerInterval:
+    """Class to hold timer interval data."""
+
+    sentence: str | None = None
+    translated: str | None = None
+    processed: str | None = None
+    class_reason: str | None = None
+    days: int = 0
+    hours: int = 0
+    minutes: int = 0
+    seconds: int = 0
+
+
+@dataclass
+class TimerTime:
+    """Class to hold timer time data."""
+
+    sentence: str | None = None
+    translated: str | None = None
+    processed: str | None = None
+    class_reason: str | None = None
+    day: str | None = None
+    meridiem: str | None = None
+    time: str | None = None
 
 
 class Translator:

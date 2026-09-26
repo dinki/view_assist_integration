@@ -1,7 +1,50 @@
-import { timerCards } from "./timers.js?v=1.0.28";
+import { timerCards } from "./timers.js?v=1.0.30";
 
-const version = "1.0.29-rc2"
+const version = "1.0.32-rc3"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
+
+const INITIAL_LOAD_OVERLAY_ID = "view-assist-initial-load-overlay";
+const INITIAL_LOAD_FADE_MS = 400;
+
+function show_initial_loading_screen() {
+  // Hide the unstyled/unhidden page immediately (no transition) and cover it
+  // with a plain black screen while View Assist connects and configures itself
+  // Only perform if registered device
+  if (self.localStorage.getItem("view_assist_status") !== "registered") return;
+  if (document.getElementById(INITIAL_LOAD_OVERLAY_ID)) return;
+
+  if (document.body) document.body.style.opacity = "0";
+
+  const el = document.createElement("div");
+  el.id = INITIAL_LOAD_OVERLAY_ID;
+  el.attachShadow({ mode: "open" });
+  el.shadowRoot.innerHTML = `
+    <style>
+      :host {
+        position: fixed;
+        inset: 0;
+        z-index: 999999;
+        background: black;
+        transition: opacity ${INITIAL_LOAD_FADE_MS}ms ease-in-out;
+      }
+    </style>
+  `;
+  document.documentElement.appendChild(el);
+}
+
+function hide_initial_loading_screen() {
+  if (document.body) {
+    document.body.style.transition = `opacity ${INITIAL_LOAD_FADE_MS}ms ease-in-out`;
+    document.body.style.opacity = "1";
+  }
+
+  const el = document.getElementById(INITIAL_LOAD_OVERLAY_ID);
+  if (!el) return;
+  el.style.opacity = "0";
+  setTimeout(() => el.remove(), INITIAL_LOAD_FADE_MS);
+}
+
+show_initial_loading_screen();
 
 export async function await_element(el, hard = false) {
   if (el.localName?.includes("-"))
@@ -75,54 +118,54 @@ function strftime(sFormat, date, locale) {
     nMonth = date.getMonth(),
     nYear = date.getFullYear(),
     nHour = date.getHours(),
-    aDay = new Intl.DateTimeFormat(locale, {weekday: "long"}).format(date),
-    aMonth = new Intl.DateTimeFormat(locale, {month: "long"}).format(date),
+    aDay = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date),
+    aMonth = new Intl.DateTimeFormat(locale, { month: "long" }).format(date),
     aDayCount = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
-    isLeapYear = function() {
-      if ((nYear&3)!==0) return false;
-      return nYear%100!==0 || nYear%400===0;
+    isLeapYear = function () {
+      if ((nYear & 3) !== 0) return false;
+      return nYear % 100 !== 0 || nYear % 400 === 0;
     },
-    getThursday = function() {
+    getThursday = function () {
       var target = new Date(date);
-      target.setDate(nDate - ((nDay+6)%7) + 3);
+      target.setDate(nDate - ((nDay + 6) % 7) + 3);
       return target;
     },
-    zeroPad = function(nNum, nPad) {
+    zeroPad = function (nNum, nPad) {
       return ('' + (Math.pow(10, nPad) + nNum)).slice(1);
     };
-  return sFormat.replace(/%[a-z]/gi, function(sMatch) {
+  return sFormat.replace(/%[a-z]/gi, function (sMatch) {
     return {
-      '%a': aDay.slice(0,3),
+      '%a': aDay.slice(0, 3),
       '%A': aDay,
-      '%b': aMonth.slice(0,3),
+      '%b': aMonth.slice(0, 3),
       '%B': aMonth,
       '%c': date.toUTCString(),
-      '%C': Math.floor(nYear/100),
+      '%C': Math.floor(nYear / 100),
       '%d': zeroPad(nDate, 2),
       '%e': nDate,
-      '%F': date.toISOString().slice(0,10),
+      '%F': date.toISOString().slice(0, 10),
       '%G': getThursday().getFullYear(),
       '%g': ('' + getThursday().getFullYear()).slice(2),
       '%H': zeroPad(nHour, 2),
-      '%I': zeroPad((nHour+11)%12 + 1, 2),
-      '%j': zeroPad(aDayCount[nMonth] + nDate + ((nMonth>1 && isLeapYear()) ? 1 : 0), 3),
+      '%I': zeroPad((nHour + 11) % 12 + 1, 2),
+      '%j': zeroPad(aDayCount[nMonth] + nDate + ((nMonth > 1 && isLeapYear()) ? 1 : 0), 3),
       '%k': '' + nHour,
-      '%l': (nHour+11)%12 + 1,
+      '%l': (nHour + 11) % 12 + 1,
       '%m': zeroPad(nMonth + 1, 2),
       '%M': zeroPad(date.getMinutes(), 2),
-      '%p': (nHour<12) ? 'AM' : 'PM',
-      '%P': (nHour<12) ? 'am' : 'pm',
-      '%s': Math.round(date.getTime()/1000),
+      '%p': (nHour < 12) ? 'AM' : 'PM',
+      '%P': (nHour < 12) ? 'am' : 'pm',
+      '%s': Math.round(date.getTime() / 1000),
       '%S': zeroPad(date.getSeconds(), 2),
       '%u': nDay || 7,
-      '%V': (function() {
-              var target = getThursday(),
-                n1stThu = target.valueOf();
-              target.setMonth(0, 1);
-              var nJan1 = target.getDay();
-              if (nJan1!==4) target.setMonth(0, 1 + ((4-nJan1)+7)%7);
-              return zeroPad(1 + Math.ceil((n1stThu-target)/604800000), 2);
-            })(),
+      '%V': (function () {
+        var target = getThursday(),
+          n1stThu = target.valueOf();
+        target.setMonth(0, 1);
+        var nJan1 = target.getDay();
+        if (nJan1 !== 4) target.setMonth(0, 1 + ((4 - nJan1) + 7) % 7);
+        return zeroPad(1 + Math.ceil((n1stThu - target) / 604800000), 2);
+      })(),
       '%w': '' + nDay,
       '%x': date.toLocaleDateString(locale),
       '%X': date.toLocaleTimeString(locale),
@@ -241,12 +284,12 @@ class CountdownTimer extends HTMLElement {
 
     // Time calculations for days, hours, minutes and seconds
     let days = Math.floor(disp_distance / (60 * 60 * 24));
-    let hours = String(Math.floor((disp_distance % (60 * 60 * 24)) / (60 * 60))).padStart(2,'0');
-    let minutes = String(Math.floor((disp_distance % (60 * 60)) / (60))).padStart(2,'0');
-    let seconds = String(Math.floor(disp_distance % (60))).padStart(2,'0');
+    let hours = String(Math.floor((disp_distance % (60 * 60 * 24)) / (60 * 60))).padStart(2, '0');
+    let minutes = String(Math.floor((disp_distance % (60 * 60)) / (60))).padStart(2, '0');
+    let seconds = String(Math.floor(disp_distance % (60))).padStart(2, '0');
 
     // Display the result in the element
-    let sign = Math.round(distance) < 0 ? '-':'';
+    let sign = Math.round(distance) < 0 ? '-' : '';
     if (days) {
       el.textContent = sign + days + "d " + hours + ":" + minutes + ":" + seconds;
     } else {
@@ -284,9 +327,6 @@ class VAData {
 }
 
 class ViewAssistHelpers {
-  constructor(hass) {
-    this.hass = hass;
-  }
 
   getTimer(timer_id) {
     if (!window.viewassist?.config?.timers) return null;
@@ -331,16 +371,42 @@ class ViewAssist {
     this.hide_sidebar_timeout = null;
     this.variables = new VAData();
     this.connected = false;
+    this.initial_load_revealed = false;
+
+    // Safety net so the loading screen never gets stuck if registration
+    // never completes (e.g. device isn't registered yet)
+    setTimeout(() => this.reveal_initial_load(), 8000);
 
     setTimeout(() => this.initialize(), 100);
   }
 
   async hide_sections() {
     // Hide header and sidebar
-    if (!this.variables.config?.mimic_device) {
+    if (!this.variables.config?.is_mimic) {
       await this.hide_header(this.variables.config?.hide_header);
       await this.hide_sidebar(this.variables.config?.hide_sidebar);
     }
+  }
+
+  async reveal_initial_load() {
+    // Only run once - triggered both once config is registered/applied and
+    // via a safety-net timeout in case registration never completes
+    if (this.initial_load_revealed) return;
+    this.initial_load_revealed = true;
+
+    await this.hide_sections();
+
+    const elContainer = await selectTree(
+      document.body,
+      "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root $ div hui-view-container",
+      false,
+      3000
+    );
+    if (elContainer) {
+      await this.wait_for_dom_settled(elContainer, 3000);
+    }
+
+    hide_initial_loading_screen();
   }
 
   async hide_header(enabled) {
@@ -376,9 +442,7 @@ class ViewAssist {
         "home-assistant $ home-assistant-main"
       )
 
-      enabled ? elMain?.style?.setProperty("--mdc-drawer-width", "0px") : elMain?.style?.removeProperty("--mdc-drawer-width");
-      //Fix for HA 2026.6 where they changed the sidebar width variable name
-      enabled ? elMain?.style?.setProperty("--ha-sidebar-width", "0px") : elMain?.style?.removeProperty("--ha-sidebar -width");
+      enabled ? elMain?.style?.setProperty("--ha-sidebar-width", "0px") : elMain?.style?.removeProperty("--ha-sidebar-width");
 
       await selectTree(
         elMain, "$ partial-panel-resolver"
@@ -409,7 +473,7 @@ class ViewAssist {
       });
     } catch (e) {
       clearTimeout(this.hide_sidebar_timeout);
-      this.hide_sidebar_timerout = setTimeout(() => {
+      this.hide_sidebar_timeout = setTimeout(() => {
         this.hide_sidebar(enabled);
       }, 200);
     }
@@ -496,7 +560,7 @@ class ViewAssist {
 
       // Connect to server websocket
       this._hass = await hass();
-      this.variables.helpers = new ViewAssistHelpers(this._hass);
+      this.variables.helpers = new ViewAssistHelpers();
 
       // Add custom elements
       customElements.define("viewassist-countdown", CountdownTimer)
@@ -519,15 +583,60 @@ class ViewAssist {
         });
 
         window.addEventListener("location-changed", () => {
-          setTimeout(() => {
+          setTimeout(async () => {
             this.hide_sections(false);
             this.display_browser_id();
+            await this.send_current_path();
           }, 100);
         });
+        await this.send_current_path();
       }
+
+      this.register_activity_listener();
 
     } catch (e) {
       console.log("Error on initialisation: ", e.message);
+    }
+  }
+
+  async send_current_path() {
+    await this._hass.callWS({
+      type: 'view_assist/set_current_path',
+      browser_id: this.variables.browser_id,
+      path: window.location.pathname
+    });
+  }
+
+  register_activity_listener() {
+    // Capture all screen touches/clicks to register activity without
+    // interfering with delivery to the underlying screen element
+    const ACTIVITY_THROTTLE_MS = 1000;
+    let last_sent = 0;
+
+    const on_activity = () => {
+      const now = Date.now();
+      if (now - last_sent < ACTIVITY_THROTTLE_MS) return;
+      last_sent = now;
+      this.send_activity();
+    };
+
+    for (const event_name of ["pointerdown", "touchstart"]) {
+      window.addEventListener(event_name, on_activity, {
+        capture: true,
+        passive: true,
+      });
+    }
+  }
+
+  async send_activity() {
+    if (!this.connected) return;
+    try {
+      await this._hass.callWS({
+        type: 'view_assist/register_activity',
+        browser_id: this.variables.browser_id,
+      });
+    } catch (e) {
+      console.log("View Assist - Error registering activity: ", e.message);
     }
   }
 
@@ -597,7 +706,7 @@ class ViewAssist {
     // Handle incomming messages from the server
     const event = msg["event"];
     const payload = msg["payload"];
-    const is_mimic = this.variables.config?.mimic_device;
+    const is_mimic = this.variables.config?.is_mimic;
 
     //console.log("Event: " + event + ", Payload: " + JSON.stringify(payload));
 
@@ -622,13 +731,10 @@ class ViewAssist {
         this.variables.config = {};
         this.variables.registered = false;
         await this.hide_sections(this.variables.registered);
-        setTimeout(() => this. display_browser_id(), 2000);
+        setTimeout(() => this.display_browser_id(), 2000);
         break;
-      case "config_update":
+      case "status_change":
         this.process_config(event, payload);
-        break;
-      case "timer_update":
-        this.variables.config.timers = payload
         break;
       case "navigate":
         if (!is_mimic) {
@@ -638,7 +744,7 @@ class ViewAssist {
           this.browser_navigate(payload["path"]);
         }
         break;
-      case "listening":
+      case "assist_state_change":
         if (!is_mimic) {
           this.show_assist_listening_overlay(payload["state"], payload["style"])
         }
@@ -650,7 +756,6 @@ class ViewAssist {
 
   process_config(event, payload) {
     let reload = false;
-    const old_config = this.variables?.config
 
     if (event == "registered") {
       reload = true;
@@ -669,8 +774,13 @@ class ViewAssist {
     if (!payload.mimic_device) {
       // On register, go to default page
       if (reload) {
+        this.hide_sections();
         this.browser_navigate(payload.home);
       }
+    }
+
+    if (event == "registered") {
+      this.reveal_initial_load();
     }
   }
 
@@ -688,8 +798,76 @@ class ViewAssist {
   browser_navigate(path) {
     // Navigate the browser window
     if (!path) return;
+    if (this.is_current_path(path)) return;
+    if (this.variables.config?.config?.dashboard?.display_settings?.navigation_transition) {
+      this.fade_navigate(path);
+      return;
+    }
     history.pushState(null, "", path);
     window.dispatchEvent(new CustomEvent("location-changed"));
+  }
+
+  is_current_path(path) {
+    // Compare only the pathname, ignoring any query string/hash
+    const targetPath = path.split(/[?#]/)[0];
+    return targetPath === window.location.pathname;
+  }
+
+  async fade_navigate(path) {
+    // Fade out, navigate, wait for the new page to render, then fade back in
+    const FADE_DURATION_MS = 800;
+    const elContainer = await selectTree(
+      document.body,
+      "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root $ div hui-view-container",
+      false,
+      2000
+    );
+
+    const container = elContainer ? elContainer : document.body;
+    container.style.transition = `filter ${FADE_DURATION_MS}ms ease-in-out`;
+    container.style.filter = "brightness(0)";
+
+    await new Promise((r) => setTimeout(r, FADE_DURATION_MS));
+
+    history.pushState(null, "", path);
+    window.dispatchEvent(new CustomEvent("location-changed"));
+
+    // hui-view-container can keep several hui-view instances mounted at once
+    // (toggling visibility), so instead of inspecting a single view element,
+    // wait until the container's DOM stops mutating - that reliably spans
+    // the view swap regardless of which child ends up active.
+
+    if (elContainer) {
+      await this.wait_for_dom_settled(elContainer, 1000);
+    } else {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    container.style.filter = "brightness(1)";
+  }
+
+  wait_for_dom_settled(el, timeout = 2000, quiet_period = 150) {
+    // Resolve once no DOM mutations have occurred on el for quiet_period ms,
+    // or after timeout ms, whichever comes first
+    return new Promise((resolve) => {
+      let quietTimer = null;
+
+      const finish = () => {
+        observer.disconnect();
+        clearTimeout(quietTimer);
+        clearTimeout(maxTimer);
+        resolve();
+      };
+
+      const observer = new MutationObserver(() => {
+        clearTimeout(quietTimer);
+        quietTimer = setTimeout(finish, quiet_period);
+      });
+      observer.observe(el, { childList: true, subtree: true, attributes: true });
+
+      quietTimer = setTimeout(finish, quiet_period);
+      const maxTimer = setTimeout(finish, timeout);
+    });
   }
 
   async inject_assist_listening_overlay() {
@@ -775,6 +953,11 @@ class ViewAssist {
         }
       });
 
+      // Get style from config if not provided
+      if (!style) {
+        style = this.variables.config.config.dashboard.display_settings.assist_prompt
+      }
+
 
       const styleDiv = overlays.querySelector(`[id=${style}]`);
       const listeningDiv = styleDiv.querySelector(`[id="listening"]`);
@@ -820,8 +1003,8 @@ Promise.all([
     `%cVIEW ASSIST ${version} IS INSTALLED
       %cView Assist Entity: ${localStorage.getItem("view_assist_sensor")}
       Is Mimic Device: ${localStorage.getItem("view_assist_mimic_device")}`,
-      "color: green; font-weight: bold",
-      ""
+    "color: green; font-weight: bold",
+    ""
   );
   window.viewassist = new ViewAssist().variables;
 });

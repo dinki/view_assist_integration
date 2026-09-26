@@ -3,7 +3,7 @@
   "name": "View Assist",
   "codeowners": ["@dinki"],
   "config_flow": true,
-  "dependencies": ["http","lovelace","blueprint", "google_assistant", "esphome"],
+  "dependencies": ["http","lovelace","blueprint", "google_assistant", "esphome", "ffmpeg"],
   "documentation": "https://github.com/dinki/view_assist_integration",
   "integration_type": "device",
   "iot_class": "calculated",

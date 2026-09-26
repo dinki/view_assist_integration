@@ -5,8 +5,6 @@ To add a new module, create a new file in the devices folder and add the module 
 to the ALL_DEVICE_MODULES or VIEW_DEVICE_MODULES list.
 """
 
-from __future__ import annotations
-
 import asyncio
 import contextlib
 import logging
@@ -25,22 +23,28 @@ from ..typed import (  # noqa: TID252
     VAEventType,
 )
 from .background import BackgroundImageManager
+from .display import DisplayManager
 from .entity_listeners import EntityListeners
+from .intents import DeviceIntentsHandler
 from .menu import MenuManager
 from .navigation import NavigationManager
+from .status import StatusManager
 
 _LOGGER = logging.getLogger(__name__)
 
 DEVICE_MANAGER = "device_manager"
 
 ALL_DEVICE_MODULES = [
+    StatusManager,
     EntityListeners,
+    NavigationManager,  # Added here to prevent error when navigation is called from non-display devices (e.g. mic) without error see issue #414 on View-Assist repo
+    DeviceIntentsHandler,
 ]
 
 VIEW_DEVICE_MODULES = [
     MenuManager,
-    NavigationManager,
     BackgroundImageManager,
+    DisplayManager,
 ]
 
 
@@ -53,26 +57,53 @@ class DeviceManager:
         self.config = config
         self.name = config.runtime_data.core.name
 
-    async def _async_wait_for_core_startup(self) -> None:
+    async def _async_wait_for_core_startup(self) -> bool:
         """Wait for core to finish starting up."""
         master_entry = get_master_config_entry(self.hass)
-        while master_entry.state != ConfigEntryState.LOADED:
-            _LOGGER.debug("Waiting for master config to be available for %s", self.name)
-            await asyncio.sleep(1)
+        iteration = 1
+        try:
+            async with asyncio.timeout(10):
+                while master_entry.state != ConfigEntryState.LOADED:
+                    # Log message every 2s
+                    if iteration % 10 == 0:  # Log message every 2 seconds (0.2 * 10)
+                        _LOGGER.debug(
+                            "Waiting for master config to be available for %s",
+                            self.name,
+                        )
+                    iteration += 1
+                    await asyncio.sleep(0.2)
+        except TimeoutError:
+            _LOGGER.error(
+                "Timeout waiting for master config to be available for %s",
+                self.name,
+            )
+            return False
+        return True
 
     async def async_setup(self) -> bool:
         """Set up the modules for a device."""
+        is_first_entry = False
+
+        result = await self._async_wait_for_core_startup()
+
+        if not result:
+            _LOGGER.error("Core startup failed for %s", self.name)
+            return False
+
         _LOGGER.debug("Loading %s", self.name)
 
-        await self._async_wait_for_core_startup()
+        # Add the device to the hass data structure
+        if DEVICES not in self.hass.data[DOMAIN]:
+            self.hass.data[DOMAIN][DEVICES] = {}
+            is_first_entry = True
+
+        if self.config.entry_id not in self.hass.data[DOMAIN][DEVICES]:
+            self.hass.data[DOMAIN][DEVICES][self.config.entry_id] = {}
 
         # Request platform setups
         await self.hass.config_entries.async_forward_entry_setups(
             self.config, PLATFORMS
         )
-
-        # Check if this is the first entry being loaded
-        is_first_entry = len(self.hass.data[DOMAIN].get(DEVICES, {})) == 0
 
         # Define modules to load
         modules = []
@@ -110,19 +141,15 @@ class DeviceManager:
         self, module: Any, is_first_entry: bool = False
     ) -> bool:
         """Load a module asynchronously."""
-        _LOGGER.debug("Loading %s for %s", module.__name__, self.name)
         instance = module(self.hass, self.config)
-        if hasattr(module, "async_setup_once") and is_first_entry:
-            await instance.async_setup_once()
 
-        if hasattr(module, "async_setup"):
+        if hasattr(module, "wait_for_dependencies_and_setup"):
+            await instance.wait_for_dependencies_and_setup()
+        elif hasattr(module, "async_setup"):
             await instance.async_setup()
 
-        if DEVICES not in self.hass.data[DOMAIN]:
-            self.hass.data[DOMAIN][DEVICES] = {}
-
-        if self.config.entry_id not in self.hass.data[DOMAIN][DEVICES]:
-            self.hass.data[DOMAIN][DEVICES][self.config.entry_id] = {}
+        if hasattr(module, "async_setup_once") and is_first_entry:
+            await instance.async_setup_once()
 
         self.hass.data[DOMAIN][DEVICES][self.config.entry_id][module.__name__] = (
             instance

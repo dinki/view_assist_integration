@@ -86,14 +86,16 @@
           "home": "Startbildschirm",
           "music": "Musikansicht",
           "intent": "Intent-Ansicht",
-          "list_view": "Listenansicht"
+          "list_view": "Listenansicht",
+          "timers": "Timeransicht"
         },
         "data_description": {
           "dashboard": "Das Basis-Dashboard für View Assist (ohne abschließenden Schrägstrich)",
           "home": "Der Bildschirm, zu dem nach Timeout zurückgekehrt wird",
           "music": "Die Ansicht, zu der im Musikmodus zurückgekehrt wird",
           "intent": "Die Ansicht, die für Standard-HA-Aktionen zur Anzeige dieser Entitäten verwendet wird",
-          "list_view": "Die Ansicht, die beim Aktualisieren einer Liste angezeigt wird"
+          "list_view": "Die Ansicht, die beim Aktualisieren einer Liste angezeigt wird",
+          "timers": "Die Ansicht, die für Timer angezeigt wird"
         },
         "sections": {
           "background_settings": {

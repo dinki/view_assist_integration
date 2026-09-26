@@ -1,7 +1,5 @@
 """Types for View Assist."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -113,7 +111,7 @@ class DeviceCoreConfig:
 
 @dataclass
 class BackgroundConfig:
-    "Background settings class."
+    """Background settings class."""
 
     background_mode: str | None = None
     background: str | None = None
@@ -136,6 +134,7 @@ class DisplayConfig:
     time_format: VATimeFormat | None = None
     screen_mode: VAScreenMode | None = None
     cycle_views: list[str] = field(default_factory=list)
+    navigation_transition: bool = False
 
 
 @dataclass
@@ -144,6 +143,7 @@ class DashboardConfig:
 
     dashboard: str | None = None
     home: str | None = None
+    timers: str | None = None
     music: str | None = None
     intent: str | None = None
     list_view: str | None = None
@@ -212,12 +212,23 @@ class DeviceRuntimeData:
 class VAEventType(StrEnum):
     """View Assist event types."""
 
+    MODE_CHANGE = "mode_change"
+    ASSIST_STATE_CHANGE = "assist_state_change"
+    MUSIC_PLAYER_STATE_CHANGE = "music_player_state_change"
+    MICROPHONE_STATE_CHANGE = "microphone_state_change"
     BACKGROUND_CHANGE = "background_change"
     MENU_UPDATE = "menu_update"
+    VIEW_UPDATE = "view_update"
+    SCREEN_ACTIVITY = "screen_activity"
+    ALARM_SOUNDING = "alarm_sounding"
+
+    INTENT_UPDATE = "intent_update"
     NAVIGATION = "navigate"
+    ICONS_UPDATE = "icons_update"
     TIMER_EXPIRED = "timer_expired"
     CONFIG_UPDATE = "config_update"
-    ASSIST_LISTENING = "listening"
+    SENSOR_UPDATE = "sensor_update"
+    STATUS_CHANGE = "status_change"
     BROWSER_REGISTERED = "registered"
     BROWSER_UNREGISTERED = "unregistered"
     TIMER_UPDATE = "timer_update"

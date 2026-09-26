@@ -17,9 +17,11 @@ from ..assets import AssetsManager  # noqa: TID252
 from ..const import DOMAIN  # noqa: TID252
 from ..helpers import get_integration_entries  # noqa: TID252
 from ..typed import VAConfigEntry  # noqa: TID252
-from .alarm_repeater import AlarmRepeater
+from .alarm_streamer import AlarmStreamer
 from .http import HTTPManager
+from .intents import IntentsManager
 from .javascript import JSModuleRegistration
+from .llm import LLMManager
 from .services import Services
 from .templates import TemplatesManager
 from .timers import TimerManager
@@ -36,8 +38,10 @@ LOAD_MODULES = [
     Translator,
     Services,
     TimerManager,
-    AlarmRepeater,
+    AlarmStreamer,
     WebsocketManager,
+    IntentsManager,
+    LLMManager,
 ]
 
 

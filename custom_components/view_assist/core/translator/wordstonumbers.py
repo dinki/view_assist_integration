@@ -51,6 +51,10 @@ class WordsToDigits:
 
         units = "one|two|three|four|five|six|seven|eight|nine"
 
+        # Convert hyphenated compounds (e.g. "forty-five") to space-separated.
+        # PR261
+        s = re.sub(rf"\b({tens})-?({units})\b", r"\1 \2", s)
+
         word_pattern = rf"(?:^|\s)({tens}) ({units})(?:$|\s)"
         if matches := re.findall(word_pattern, s):
             for m in matches:

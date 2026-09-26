@@ -2,7 +2,15 @@
 
 from enum import StrEnum
 
+from homeassistant.components.media_player.intent import (
+    INTENT_MEDIA_NEXT,
+    INTENT_MEDIA_PAUSE,
+    INTENT_MEDIA_PREVIOUS,
+    INTENT_MEDIA_SEARCH_AND_PLAY,
+    INTENT_MEDIA_UNPAUSE,
+)
 from homeassistant.const import CONF_MODE, Platform
+from homeassistant.helpers import intent
 
 from .typed import (
     VABackgroundMode,
@@ -11,6 +19,15 @@ from .typed import (
     VAScreenMode,
     VATimeFormat,
 )
+
+# LABS FUNCTIONS
+# -------------------------------------------------------------------------------------------------
+# These are here to enable experimental features that are not yet ready for general use.
+# They will be removed from here when they are ready for general use.
+ENABLE_INTENT_OVERRIDES = True
+INSTALL_CUSTOM_SENTENCES = True
+USE_LLM_FOR_TIMER_ENHANCEMENT = True
+# -------------------------------------------------------------------------------------------------
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
@@ -39,6 +56,7 @@ HASSMIC_DOMAIN = "hassmic"
 VACA_DOMAIN = "vaca"
 USE_VA_NAVIGATION_FOR_BROWSERMOD = True
 
+
 IMAGE_PATH = "images"
 AUDIO_PATH = "audio"
 VA_SUB_DIRS = [AUDIO_PATH, IMAGE_PATH]
@@ -48,7 +66,7 @@ JSMODULES = [
     {
         "name": "View Assist Helper",
         "filename": "view_assist.js",
-        "version": "1.0.29",
+        "version": "1.0.32-rc3",
     },
 ]
 # mins between checks for updated versions of dashboard and views
@@ -67,14 +85,19 @@ class VAMode(StrEnum):
     GAME = "game"
 
 
-VAMODE_REVERTS = {
-    VAMode.NORMAL: {"revert": True, "view": "home"},
-    VAMode.MUSIC: {"revert": True, "view": "music"},
-    VAMode.CYCLE: {"revert": False},
-    VAMode.HOLD: {"revert": False},
-    VAMode.NIGHT: {"revert": True, "view": "home"},
-}
-
+MUSIC_MEDIA_TYPES = (
+    "music",
+    "podcast",
+    "episode",
+    "track",
+    "album",
+    "playlist",
+    "artist",
+    "composer",
+    "contributing_artist",
+    "channel",
+    "channels",
+)
 
 # Config keys
 DATA = "data"
@@ -90,9 +113,13 @@ CONF_ORIENTATION_SENSOR = "orientation_sensor"
 
 CONF_DASHBOARD = "dashboard"
 CONF_HOME = "home"
+CONF_TIMERS = "timers"
 CONF_INTENT = "intent"
 CONF_LIST = "list_view"
 CONF_MUSIC = "music"
+CONF_CLIMATE = "thermostat"
+CONF_CAMERA = "camera"
+CONF_WEATHER = "weather"
 CONF_BACKGROUND_SETTINGS = "background_settings"
 CONF_BACKGROUND_MODE = "background_mode"
 CONF_BACKGROUND = "background"
@@ -111,6 +138,7 @@ CONF_MENU_TIMEOUT = "menu_timeout"
 CONF_TIME_FORMAT = "time_format"
 CONF_SCREEN_MODE = "screen_mode"
 CONF_CYCLE_VIEWS = "cycle_views"
+CONF_NAVIGATION_TRANSITION = "navigation_transition"
 
 CONF_WEATHER_ENTITY = "weather_entity"
 CONF_VIEW_TIMEOUT = "view_timeout"
@@ -141,6 +169,7 @@ DEFAULT_VALUES = {
     # Dashboard options
     CONF_DASHBOARD: "/view-assist",
     CONF_HOME: "/view-assist/clock",
+    CONF_TIMERS: "/view-assist/alarm",
     CONF_MUSIC: "/view-assist/music",
     CONF_INTENT: "/view-assist/intent",
     CONF_LIST: "/view-assist/list",
@@ -162,6 +191,7 @@ DEFAULT_VALUES = {
         CONF_TIME_FORMAT: VATimeFormat.HOUR_12,
         CONF_SCREEN_MODE: VAScreenMode.HIDE_HEADER_SIDEBAR,
         CONF_CYCLE_VIEWS: CYCLE_VIEWS,
+        CONF_NAVIGATION_TRANSITION: False,
     },
     # Default options
     CONF_WEATHER_ENTITY: "weather.home",
@@ -171,7 +201,7 @@ DEFAULT_VALUES = {
     CONF_USE_ANNOUNCE: "off",
     CONF_MIC_UNMUTE: "off",
     CONF_DUCKING_VOLUME: 70,
-    CONF_MUSIC_MODE_AUTO: False,
+    CONF_MUSIC_MODE_AUTO: "on",
     CONF_MUSIC_MODE_TIMEOUT: 300,
     # Default integration options
     CONF_ENABLE_UPDATES: True,
@@ -201,11 +231,24 @@ ATTR_INCLUDE_EXPIRED = "include_expired"
 ATTR_MEDIA_FILE = "media_file"
 ATTR_RESUME_MEDIA = "resume_media"
 ATTR_MAX_REPEATS = "max_repeats"
+ATTR_STREAM_URL = "url"
 ATTR_ASSET_CLASS = "asset_class"
 ATTR_BACKUP_CURRENT_ASSET = "backup_current_asset"
 ATTR_DOWNLOAD_FROM_REPO = "download_from_repo"
 ATTR_DOWNLOAD_FROM_DEV_BRANCH = "download_from_dev_branch"
 ATTR_DISCARD_DASHBOARD_USER_CHANGES = "discard_dashboard_user_changes"
+
+# Alarm streaming events - fired on the event bus so any device/automation
+# can react to an alarm starting or being cancelled.  VACA devices play
+# their own alarm sound natively rather than being streamed to, so they are
+# simply told to start via EVENT_ALARM_SOUND and are expected to fire
+# EVENT_ALARM_STOP themselves once that alarm is dismissed.
+EVENT_ALARM_SOUND = "va_alarm_sound"
+EVENT_ALARM_STOP = "va_alarm_stop"
+
+# Default sound played for an expired timer/alarm on devices that are
+# streamed to via the alarm streamer (i.e. non-VACA devices).
+DEFAULT_ALARM_SOUND_FILE = "/local/sounds/alarm.mp3"
 
 
 VA_ATTRIBUTE_UPDATE_EVENT = "va_attr_update_event_{}"
@@ -228,3 +271,37 @@ OPTION_KEY_MIGRATIONS = {
 
 OVERLAY_FILE_NAME = "overlay"
 MIN_DASHBOARD_FOR_OVERLAYS = "1.1.0"
+
+# Intent to view mapping used to navigate to the correct view when an intent is invoked.
+# The key is the config parameter to get the view name and the value is a list of intents that should navigate to that view.
+INTENT_TO_VIEW_MAPPING = {
+    CONF_HOME: [intent.INTENT_GET_CURRENT_DATE, intent.INTENT_GET_CURRENT_TIME],
+    CONF_TIMERS: [
+        intent.INTENT_START_TIMER,
+        intent.INTENT_CANCEL_TIMER,
+        intent.INTENT_CANCEL_ALL_TIMERS,
+        intent.INTENT_TIMER_STATUS,
+        intent.INTENT_INCREASE_TIMER,
+        intent.INTENT_DECREASE_TIMER,
+        intent.INTENT_PAUSE_TIMER,
+        intent.INTENT_UNPAUSE_TIMER,
+    ],
+    CONF_MUSIC: [
+        INTENT_MEDIA_NEXT,
+        INTENT_MEDIA_PREVIOUS,
+        INTENT_MEDIA_PAUSE,
+        INTENT_MEDIA_SEARCH_AND_PLAY,
+        INTENT_MEDIA_UNPAUSE,
+    ],
+    CONF_CLIMATE: [intent.INTENT_GET_TEMPERATURE],
+    CONF_WEATHER: ["HassGetWeather"],
+    "list": [
+        "todo__get_items",
+        "HassShoppingListAddItem",
+        "HassShoppingListCompleteItem",
+        "HassListAddItem",
+        "HassListCompleteItem",
+        "HassListRemoveItem",
+    ],
+    "info": ["info", "HassBroadcast"],
+}

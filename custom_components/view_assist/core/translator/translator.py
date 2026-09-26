@@ -51,8 +51,8 @@ class ConversationAgentTranslator:
     """
 
     INSTRUCTIONS = """Translate the text in quotation marks from {}.  All numbers should be digits and not words.
-    If the output is a time, provide it in the format %A %H:%M if it has a day or %H:%M otherwise.
-    If the output is an interval, provide it in days, hours, minutes, seconds.  The text is '{}'"""
+    If the output is a time or datetime, provide only the datetime in iso format with current timezone.
+    If the output is an interval, provide as days, hours, minutes, seconds.  The text is '{}'"""
 
     RESPONSE = """Translate the text in quotation marks into a time or interval sentence in a spoken style in the language of locale {}.  The text is '{}'."""
 
@@ -247,7 +247,7 @@ class TimeSentenceTranslator:
 
         def get_params(fragment: str) -> list[str]:
             params = re.findall(r"\{(.*?)\}", fragment)
-            return params if params else []
+            return params or []
 
         compounds: dict[str, str] | None = self.lang.get(LangPackKeys.COMPOUND_WORDS)
         if not compounds:

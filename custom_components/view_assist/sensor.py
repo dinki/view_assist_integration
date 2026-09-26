@@ -1,23 +1,23 @@
 """VA Sensors."""
 
-import asyncio
 from collections.abc import Callable
+from dataclasses import asdict
 from datetime import datetime as dt
 import logging
 from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import RestoreSensor
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.config_validation import make_entity_service_schema
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, OPTION_KEY_MIGRATIONS
-from .core import TimerManager
-from .devices import MenuManager, NavigationManager
+from .const import DOMAIN
+from .devices.status import StatusManager
 from .helpers import get_device_id_from_entity_id, get_mute_switch_entity_id
 from .typed import (
     DISPLAY_DEVICE_TYPES,
@@ -46,7 +46,7 @@ async def async_setup_entry(
     async_add_entities(sensors)
 
 
-class ViewAssistSensor(RestoreSensor):
+class ViewAssistSensor(SensorEntity):
     """Representation of a View Assist Sensor."""
 
     _attr_should_poll = False
@@ -67,75 +67,10 @@ class ViewAssistSensor(RestoreSensor):
         self._attr_native_value = ""
         self._attr_icon = "mdi:glasses"
         self._attribute_listeners: dict[str, Callable] = {}
-        self._last_update: dt = dt.now()
+        self._last_update: dt = dt_util.now()
 
     async def async_added_to_hass(self) -> None:
         """Run when entity is about to be added to hass."""
-
-        # Restore previous sensor data if available
-        last_sensor_data = await self.async_get_last_sensor_data()
-
-        if last_sensor_data:
-            # Get the last state to access attributes
-            last_state = await self.async_get_last_state()
-
-            if last_state and last_state.attributes:
-                # Restore extra_data attributes
-                # extra_data is used to store dynamic attributes set via view_assist.set_state
-                restored_extra_data = {}
-
-                # Define attributes that are system-managed and should NOT be restored
-                # These are rebuilt fresh on startup by their respective managers
-                system_managed_attrs = {
-                    # Core entity properties (from config/runtime_data)
-                    "name", "type", "mic_device", "mic_device_id", "mute_switch",
-                    "display_device", "intent_device", "orientation_sensor",
-                    "mediaplayer_device", "musicplayer_device", "voice_device_id",
-
-                    # Managed by MenuManager
-                    "status_icons", "menu_items", "menu_active",
-
-                    # Managed by TimerManager (has its own storage)
-                    "timers",
-
-                    # From configuration/runtime_data
-                    "status_icons_size", "menu_config", "font_style", 
-                    "use_24_hour_time", "background", "mode", "view_timeout", 
-                    "weather_entity", "screen_mode", "do_not_disturb", 
-                    "use_announce",
-
-                    # Generated/ephemeral
-                    "last_updated", "active_overrides",
-
-                    # Standard entity attributes
-                    "friendly_name", "icon", "device_class", 
-                    "unit_of_measurement", "state_class"
-                }
-
-                # Restore user/automation-set attributes
-                # These include: alert_data, title, message, image, message_font_size, etc.
-                for attr_name, attr_value in last_state.attributes.items():
-                    if attr_name not in system_managed_attrs:
-                        restored_extra_data[attr_name] = attr_value
-
-                # Update extra_data with restored values
-                if restored_extra_data:
-                    self.config.runtime_data.extra_data.update(restored_extra_data)
-                    _LOGGER.info(
-                        "Restored %d custom attributes for %s: %s",
-                        len(restored_extra_data),
-                        self.entity_id,
-                        list(restored_extra_data.keys())
-                    )
-
-        # Add internal event listeners
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass,
-                f"{DOMAIN}_event",
-                self._event_handler,
-            )
-        )
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -144,70 +79,22 @@ class ViewAssistSensor(RestoreSensor):
             )
         )
 
-        # Add listener to timer changes
-        # if timers := TimerManager.get(self.hass):
-        #    timers.store.add_listener(self.entity_id, self._event_handler)
-
     async def _event_handler(self, event: VAEvent):
         """Handle internal events."""
-        if isinstance(event, VAEvent):
-            # Add small delay before updating sensor entity to force card
-            # to refresh after viewassist object created on browser window
-            if event.event_name == VAEventType.BROWSER_REGISTERED:
-                await asyncio.sleep(0.5)
+        if event.event_name != VAEventType.STATUS_CHANGE:
+            return
 
-            _LOGGER.debug(
-                "Handling event %s received for %s", event.event_name, self.entity_id
-            )
+        _LOGGER.debug(
+            "Handling sensor update event for %s",
+            self.entity_id,
+        )
+        self.schedule_update_ha_state(True)
 
-            if event.event_name in [
-                VAEventType.BACKGROUND_CHANGE,
-                VAEventType.TIMER_UPDATE,
-                VAEventType.BROWSER_REGISTERED,
-                VAEventType.CONFIG_UPDATE,
-            ]:
-                self.schedule_update_ha_state(True)
-
-    @callback
-    def handle_set_entity_state(self, **kwargs):
+    async def handle_set_entity_state(self, **kwargs):
         """Set the state of the entity."""
-        update_ha = False
-        for k, v in kwargs.items():
-            _LOGGER.debug("Setting %s to %s for %s", k, v, self.entity_id)
-            if k == "entity_id":
-                continue
-            if k == "allow_create":
-                continue
-            if k == "state":
-                self._attr_native_value = v
-                continue
-
-            # Specific overrides
-            if hasattr(self.config.runtime_data.runtime_config_overrides, k):
-                if getattr(self.config.runtime_data.runtime_config_overrides, k) != v:
-                    setattr(self.config.runtime_data.runtime_config_overrides, k, v)
-                    update_ha = True
-                continue
-
-            # Set the value of named vartiables or add/update to extra_data dict
-            if hasattr(self.config.runtime_data.default, k):
-                if getattr(self.config.runtime_data.default, k) != v:
-                    setattr(self.config.runtime_data.default, k, v)
-                    update_ha = True
-            elif self.config.runtime_data.extra_data.get(k) != v:
-                self.config.runtime_data.extra_data[k] = v
-                update_ha = True
-
-        if update_ha:
-            self.schedule_update_ha_state(True)
-
-    # TODO: Remove this when BPs/Views migrated
-    def get_option_key_migration_value(self, value: str) -> str:
-        """Get the original option key for a given new option key."""
-        for key, key_value in OPTION_KEY_MIGRATIONS.items():
-            if key_value == value:
-                return key
-        return value
+        sm = StatusManager.get(self.hass, self.config)
+        if sm:
+            await sm.handle_set_state_action_call(kwargs)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -226,69 +113,84 @@ class ViewAssistSensor(RestoreSensor):
         attrs["active_overrides"] = self._get_active_overrides_attributes()
 
         # Add extra_data attributes from runtime data
-        attrs.update(self.config.runtime_data.extra_data)
+        # TODO: Reinstate this but remove current_path
+        # attrs.update(self.config.runtime_data.extra_data)
 
         return attrs
 
     def _get_core_attributes(self) -> dict[str, Any]:
         """Build core attributes dictionary."""
-        d = self.config.runtime_data.core
-        return {
-            "name": d.name,
-            "type": d.type,
-            "mic_device": d.mic_device,
-            "mic_device_id": get_device_id_from_entity_id(self.hass, d.mic_device),
-            "mute_switch": get_mute_switch_entity_id(self.hass, d.mic_device),
-            "display_device": d.display_device,
-            "intent_device": d.intent_device,
-            "orientation_sensor": d.orientation_sensor,
-            "mediaplayer_device": d.mediaplayer_device,
-            "musicplayer_device": d.musicplayer_device,
-            "voice_device_id": get_device_id_from_entity_id(self.hass, d.mic_device),
-        }
+        attrs = {}
+        if sm := StatusManager.get(self.hass, self.config):
+            attrs = asdict(sm.config.core)
+            mic = sm.config.core.mic_device
+            attrs["voice_device_id"] = get_device_id_from_entity_id(self.hass, mic)
+
+        return attrs
 
     def _get_all_device_status_attributes(self) -> dict[str, Any]:
         """Build core status attributes dictionary."""
-        d = self.config.runtime_data.default
-
-        tm = TimerManager.get(self.hass)
-        timers = tm.get_timers(entity_id=self.entity_id)
-        return {
-            "last_updated": dt.now().isoformat(),
-            "do_not_disturb": d.do_not_disturb,
-            "use_announce": d.use_announce,
-            "timers": timers,
-        }
+        attrs = {}
+        if sm := StatusManager.get(self.hass, self.config):
+            attrs["assist_state"] = sm.assist_state
+            attrs["do_not_disturb"] = sm.do_not_disturb
+            attrs["extra_data"] = sm.extra_data
+            attrs["is_music_playing"] = sm.is_music_playing
+            attrs["last_updated"] = dt_util.now().isoformat()
+            attrs["media_album"] = sm.media_album
+            attrs["media_artist"] = sm.media_artist
+            attrs["media_content_type"] = sm.media_content_type
+            attrs["media_track"] = sm.media_track
+            attrs["muted"] = sm.muted
+            attrs["use_announce"] = sm.config.default.use_announce
+            attrs["mute_switch"] = (
+                get_mute_switch_entity_id(self.hass, sm.config.core.mic_device),
+            )
+        return attrs
 
     def _get_display_device_status_attributes(self) -> dict[str, Any]:
         """Build display device status attributes dictionary."""
-        d = self.config.runtime_data
-        mm = MenuManager.get(self.hass, self.config)
+        # d = self.config.runtime_data
+        attrs = {}
+        if sm := StatusManager.get(self.hass, self.config):
+            attrs["background"] = sm.background
+            attrs["browser_connected"] = sm.browser_connected
+            attrs["changed_entities"] = sm.changed_entities
+            attrs["current_path"] = sm.current_path
+            attrs["font_style"] = sm.config.dashboard.display_settings.font_style
+            attrs["hold"] = sm.hold
+            attrs["hold_view"] = sm.hold_view
+            attrs["home"] = sm.config.dashboard.home
+            attrs["last_command"] = sm.last_command
+            attrs["last_intent"] = sm.last_intent
+            attrs["last_response"] = sm.last_response
+            attrs["menu_active"] = sm.menu_active
+            attrs["menu_config"] = sm.config.dashboard.display_settings.menu_config
+            attrs["menu_items"] = sm.menu_items.copy()
+            attrs["mode"] = sm.mode
+            attrs["screen_mode"] = sm.config.dashboard.display_settings.screen_mode
+            attrs["status_icons"] = sm.status_icons.copy()
+            attrs["status_icons_size"] = (
+                sm.config.dashboard.display_settings.status_icons_size
+            )
+            attrs["use_24_hour_time"] = (
+                sm.config.dashboard.display_settings.time_format == VATimeFormat.HOUR_24
+            )
+            attrs["view_timeout"] = sm.config.default.view_timeout
+            attrs["weather_entity"] = sm.config.default.weather_entity
+            if sm.view_data:
+                attrs["view_data"] = sm.view_data
+                attrs["title"] = sm.view_data.get("title")
+                attrs["message"] = sm.view_data.get("message")
+                attrs["message_font_size"] = sm.view_data.get("message_font_size")
 
-        return {
-            "status_icons": mm.status_icons.copy() if mm else [],
-            "status_icons_size": d.dashboard.display_settings.status_icons_size,
-            "menu_config": d.dashboard.display_settings.menu_config,
-            "menu_items": mm.menu_items.copy() if mm else [],
-            "menu_active": mm.active if mm else False,
-            "font_style": d.dashboard.display_settings.font_style,
-            "use_24_hour_time": d.dashboard.display_settings.time_format
-            == VATimeFormat.HOUR_24,
-            "background": d.dashboard.background_settings.background,
-            "mode": d.default.mode,
-            "view_timeout": d.default.view_timeout,
-            "weather_entity": d.default.weather_entity,
-            "screen_mode": d.dashboard.display_settings.screen_mode,
-            "home_screen": d.runtime_config_overrides.home if
-            d.runtime_config_overrides.home else d.dashboard.home,
-        }
+        return attrs
 
     def _get_active_overrides_attributes(self) -> dict[str, Any]:
         """Build active runtime override attributes dictionary."""
-        d = self.config.runtime_data.runtime_config_overrides
         attrs = {}
-        if d.home is not None and d.home != "":
-            attrs["home"] = d.home
-        if d.assist_prompt is not None and d.assist_prompt != "":
-            attrs["assist_prompt"] = d.assist_prompt
+        if sm := StatusManager.get(self.hass, self.config):
+            if sm.extra_data:
+                for attr in sm.extra_data:
+                    attrs[attr] = sm.extra_data[attr]
         return attrs

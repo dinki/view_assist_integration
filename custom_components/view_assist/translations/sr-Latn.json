@@ -86,14 +86,16 @@
           "home": "Početni ekran",
           "music": "Muzički prikaz",
           "intent": "Intent prikaz",
-          "list_view": "Prikaz liste"
+          "list_view": "Prikaz liste",
+          "timers": "Prikaz tajmera"
         },
         "data_description": {
           "dashboard": "Osnovna kontrolna tabla za View Assist (ne uključivati završnu kosu crtu)",
           "home": "Ekran na koji se vraća nakon isteka vremena",
           "music": "Prikaz na koji se vraća u muzičkom režimu",
           "intent": "Prikaz koji se koristi za podrazumevane HA akcije za prikaz tih entiteta",
-          "list_view": "Prikaz koji se prikazuje prilikom ažuriranja liste"
+          "list_view": "Prikaz koji se prikazuje prilikom ažuriranja liste",
+          "timers": "Prikaz koji se prikazuje za tajmere"
         },
         "sections": {
           "background_settings": {

@@ -1,7 +1,5 @@
 """Helper to manage background images and rotation task."""
 
-from __future__ import annotations
-
 import asyncio
 from datetime import datetime as dt
 import logging
@@ -10,6 +8,7 @@ import random
 
 import requests
 
+from homeassistant.components.media_source import helper as media_source_helpers
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import (
     async_dispatcher_connect,
@@ -29,12 +28,15 @@ from ..typed import (  # noqa: TID252
     VAEvent,
     VAEventType,
 )
+from .base import DeviceModule
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class BackgroundImageManager:
+class BackgroundImageManager(DeviceModule):
     """Class to manage background images and rotation tasks."""
+
+    _dependencies = ["StatusManager"]
 
     @classmethod
     def get(
@@ -48,10 +50,9 @@ class BackgroundImageManager:
 
     def __init__(self, hass: HomeAssistant, config: VAConfigEntry) -> None:
         """Initialize the device module."""
-        self.hass = hass
-        self.config = config
-        self.name = config.runtime_data.core.name
+        super().__init__(hass, config)
 
+        self.name = config.runtime_data.core.name
         self.mode = VABackgroundMode.DEFAULT_BACKGROUND
         self.rotation_interval = 10  # Default to 10 minutes
         self.current_image_path: Path | None = None
@@ -60,40 +61,42 @@ class BackgroundImageManager:
     async def async_setup(self) -> bool:
         """Load the device module."""
 
+        # await ImageProvider.get_media_image(self._hass)  # Preload media images
+
         self.mode = (
-            self.config.runtime_data.dashboard.background_settings.background_mode
+            self._config.runtime_data.dashboard.background_settings.background_mode
         )
         self.rotation_interval = (
-            self.config.runtime_data.dashboard.background_settings.rotate_background_interval
+            self._config.runtime_data.dashboard.background_settings.rotate_background_interval
             or 10
         )
 
         if self.mode == VABackgroundMode.DEFAULT_BACKGROUND:
             image_path = Path(
-                self.hass.config.config_dir,
-                self.config.runtime_data.dashboard.background_settings.background,
+                self._hass.config.config_dir,
+                self._config.runtime_data.dashboard.background_settings.background,
             )
             await self._set_background_image(self._make_url_from_path(image_path))
         elif self.mode == VABackgroundMode.LINKED:
-            listener_entity_id = self.config.runtime_data.dashboard.background_settings.rotate_background_linked_entity
+            listener_entity_id = self._config.runtime_data.dashboard.background_settings.rotate_background_linked_entity
             listener_config_entry: VAConfigEntry = get_config_entry_by_entity_id(
-                self.hass, listener_entity_id
+                self._hass, listener_entity_id
             )
             if (
                 listener_config_entry
-                and listener_config_entry.entry_id != self.config.entry_id
+                and listener_config_entry.entry_id != self._config.entry_id
             ):
                 # Get initial image from linked entity
                 background = get_entity_attribute(
-                    self.hass, listener_entity_id, "background"
+                    self._hass, listener_entity_id, "background"
                 )
                 if background:
                     await self._set_background_image(background)
 
                 # Listen for changes to linked entity
-                self.config.async_on_unload(
+                self._config.async_on_unload(
                     async_dispatcher_connect(
-                        self.hass,
+                        self._hass,
                         f"{DOMAIN}_{listener_config_entry.entry_id}_event",
                         self._handle_linked_image_change_event,
                     )
@@ -123,10 +126,10 @@ class BackgroundImageManager:
     async def _start_background_task(self):
         """Start the background task for rotating images."""
         if self._task is None:
-            self._task = self.config.async_create_background_task(
-                self.hass,
+            self._task = self._config.async_create_background_task(
+                self._hass,
                 self._async_background_image_rotation_task(),
-                f"{self.config.runtime_data.core.name} rotate image task",
+                f"{self._config.runtime_data.core.name} rotate image task",
             )
 
     async def _async_background_image_rotation_task(self):
@@ -139,7 +142,7 @@ class BackgroundImageManager:
     async def _update_background_image(self):
         """Update the background image based on the current mode."""
         image_path = None
-        source_path = self.config.runtime_data.dashboard.background_settings.rotate_background_path
+        source_path = self._config.runtime_data.dashboard.background_settings.rotate_background_path
 
         if self.mode != VABackgroundMode.DEFAULT_BACKGROUND:
             # Get next image for mode
@@ -157,8 +160,8 @@ class BackgroundImageManager:
         if image_path is None:
             # If error getting image, revert to default
             image_path = Path(
-                self.hass.config.config_dir,
-                self.config.runtime_data.dashboard.background_settings.background,
+                self._hass.config.config_dir,
+                self._config.runtime_data.dashboard.background_settings.background,
             )
 
         await self._set_background_image(self._make_url_from_path(image_path))
@@ -167,9 +170,9 @@ class BackgroundImageManager:
         self, load_from_path: str, randomise: bool = False
     ) -> Path | None:
         """Get the next image file path based on the current mode."""
-        image = await self.hass.async_add_executor_job(
+        image = await self._hass.async_add_executor_job(
             ImageProvider.get_next_image_from_path,
-            self.hass,
+            self._hass,
             load_from_path,
             self.current_image_path,
             randomise,
@@ -181,10 +184,10 @@ class BackgroundImageManager:
 
     async def _get_download_image_path(self, url: str) -> Path | None:
         """Download an image from a URL and return the file path."""
-        return await self.hass.async_add_executor_job(
+        return await self._hass.async_add_executor_job(
             ImageProvider.get_download_image,
-            self.hass,
-            self.config,
+            self._hass,
+            self._config,
             url,
         )
 
@@ -201,7 +204,7 @@ class BackgroundImageManager:
             image_url = (
                 path.as_uri()
                 .replace("file://", "")
-                .replace(self.hass.config.config_dir, "")
+                .replace(self._hass.config.config_dir, "")
             )
             # Add parameter to override cache
             return f"{image_url}?v={dt.now().strftime('%Y%m%d%H%M%S')}"
@@ -211,15 +214,12 @@ class BackgroundImageManager:
     async def _set_background_image(self, image_url: str) -> None:
         """Set the background image for the entity."""
         # Get sensor entity for this instance
-        entity_id = get_sensor_entity_from_instance(self.hass, self.config.entry_id)
+        entity_id = get_sensor_entity_from_instance(self._hass, self._config.entry_id)
 
         _LOGGER.debug("Setting background image for %s to %s", entity_id, image_url)
-
-        self.config.runtime_data.dashboard.background_settings.background = image_url
-
         async_dispatcher_send(
-            self.hass,
-            f"{DOMAIN}_{self.config.entry_id}_event",
+            self._hass,
+            f"{DOMAIN}_{self._config.entry_id}_event",
             VAEvent(VAEventType.BACKGROUND_CHANGE, {"background": image_url}),
         )
 
@@ -335,3 +335,14 @@ class ImageProvider:
             return Path(image_list[next_index])
         except Exception as ex:  # noqa: BLE001
             _LOGGER.error("Error accessing path %s: %s", path, ex)
+
+    @staticmethod
+    async def get_media_image(
+        hass: HomeAssistant, save_path: str = IMAGE_PATH
+    ) -> Path | None:
+        """Get image from media."""
+        # results = media_source_helpers.async_search_media(hass, query=query)
+        media = await media_source_helpers.async_browse_media(
+            hass, "media-source://image"
+        )
+        _LOGGER.debug("Media search results: %s", media.as_dict())

@@ -1,0 +1,16 @@
+language: "en"
+intents:
+  HassBroadcast:
+    data:
+      - sentences:
+          - "(broadcast|announce) (in|to) [the] {area} [that] {message}"
+          - "(broadcast|announce) [that] {message} (in|to) [the] {area}"
+responses:
+  intents:
+    HassBroadcast:
+      default: >
+        {% set area = slots.area if slots.area is defined else none %}
+        {% set message = slots.message if slots.message is defined else none %}
+        {% set area_text = "to the " ~ area if area is not none else "all areas" %}
+
+        "I have announced {{message}} {{area_text}}."
