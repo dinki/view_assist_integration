@@ -1,0 +1,271 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Enheten är redan konfigurerad",
+      "reconfigure_successful": "Omkonfigurering lyckades",
+      "already_in_progress": "En konfiguration pågår redan för den här integrationen"
+    },
+    "error": {
+      "cannot_connect": "Kunde inte ansluta",
+      "invalid_auth": "Ogiltig autentisering",
+      "invalid_settings": "Ogiltiga inställningar",
+      "unknown": "Oväntat fel"
+    },
+    "step": {
+      "master_config": {
+        "title": "Huvudkonfiguration",
+        "description": "Det här lägger till en huvudinstans av View Assist\n\nDen måste läggas till innan du kan konfigurera några View Assist-enheter vid nyinstallation, eller fler enheter vid befintlig installation\n\nDu kan behöva uppdatera befintliga View Assist-enheter för att aktivera full funktionalitet"
+      },
+      "options": {
+        "title": "Konfigurera en View Assist-enhet",
+        "data": {
+          "name": "Satellitnamn",
+          "mic_device": "Mikrofonenhet",
+          "mediaplayer_device": "Mediaspelarenhet",
+          "musicplayer_device": "Musikspelarenhet",
+          "display_device": "Skärmenhet",
+          "intent_device": "Intent-enhet (valfritt)",
+          "orientation_sensor": "Orienteringssensor (valfritt)",
+          "dev_mimic": "Mimic för vyutveckling"
+        },
+        "data_description": {
+          "name": "Namnet på View Assist-satelliten",
+          "mic_device": "Mikrofonen för den här satelliten",
+          "mediaplayer_device": "Mediaspelaren för den här satelliten",
+          "musicplayer_device": "Musikspelaren för den här satelliten",
+          "display_device": "Skärmenheten för den här satelliten",
+          "intent_device": "Enheten som tillhandahåller intent-data för den här satelliten",
+          "orientation_sensor": "Sensor som rapporterar enhetens orientering (stående/liggande)",
+          "dev_mimic": "Använd den här enheten för vyutveckling på en annan maskin"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Konfiguration",
+        "description": "Välj vilka alternativ du vill ändra",
+        "menu_options": {
+          "integration_options": "Integrationsalternativ",
+          "main_config": "Grundläggande enhetskonfiguration",
+          "dashboard_options": "Instrumentpanelsalternativ",
+          "default_options": "Standardalternativ",
+          "developer_options": "Utvecklaralternativ"
+        }
+      },
+      "main_config": {
+        "title": "{name} Grundläggande enhetskonfiguration",
+        "description": "",
+        "data": {
+          "name": "Satellitnamn",
+          "mic_device": "Mikrofonenhet",
+          "mediaplayer_device": "Mediaspelarenhet",
+          "musicplayer_device": "Musikspelarenhet",
+          "display_device": "Skärmenhet",
+          "intent_device": "Intent-enhet (valfritt)",
+          "orientation_sensor": "Orienteringssensor (valfritt)",
+          "dev_mimic": "Mimic för vyutveckling"
+        },
+        "data_description": {
+          "name": "Namnet på View Assist-satelliten",
+          "mic_device": "Mikrofonen för den här satelliten",
+          "mediaplayer_device": "Mediaspelaren för den här satelliten",
+          "musicplayer_device": "Musikspelaren för den här satelliten",
+          "intent_device": "Enheten som tillhandahåller intent-data för den här satelliten",
+          "orientation_sensor": "Sensor som rapporterar enhetens orientering (stående/liggande)",
+          "display_device": "Skärmenheten för den här satelliten",
+          "dev_mimic": "Använd den här enheten för vyutveckling på en annan maskin"
+        }
+      },
+      "dashboard_options": {
+        "title": "{name} Instrumentpanelsalternativ",
+        "description": "{description}",
+        "data": {
+          "dashboard": "Instrumentpanel",
+          "home": "Startskärm",
+          "music": "Musikvy",
+          "intent": "Intent-vy",
+          "list_view": "Listvy"
+        },
+        "data_description": {
+          "dashboard": "Basinstrumentpanelen för View Assist (inkludera inte avslutande snedstreck)",
+          "home": "Skärmen återvänder till efter timeout",
+          "music": "Vyn att återvända till i musikläge",
+          "intent": "Vyn som visas för standard-HA-åtgärder",
+          "list_view": "Vyn som visas när en lista uppdateras"
+        },
+        "sections": {
+          "background_settings": {
+            "name": "Bakgrundsinställningar",
+            "description": "Alternativ för bakgrundsbilden",
+            "data": {
+              "background_mode": "Källa för bakgrundsbild",
+              "background": "Standardbakgrund",
+              "rotate_background_path": "Bildsökväg eller URL",
+              "rotate_background_linked_entity": "Länkad entitet",
+              "rotate_background_interval": "Rotationsintervall"
+            },
+            "data_description": {
+              "background": "URL till standardbakgrundsbilden",
+              "rotate_background_path": "En sökväg under config/view_assist för lokala bilder, eller en URL i URL-läge",
+              "rotate_background_linked_entity": "View Assist-entitet att länka bakgrunden till",
+              "rotate_background_interval": "Intervall i minuter för att rotera bakgrunden"
+            }
+          },
+          "display_settings": {
+            "name": "Visningsinställningar",
+            "description": "Alternativ för skärmenheten",
+            "data": {
+              "assist_prompt": "Assist-prompt",
+              "font_style": "Typsnittsstil",
+              "status_icons_size": "Storlek på statusikon",
+              "status_icons": "Startikoner",
+              "menu_config": "Menykonfiguration",
+              "menu_items": "Menyobjekt",
+              "menu_timeout": "Menytimeout",
+              "time_format": "Tidsformat",
+              "screen_mode": "Visa/dölj sidhuvud och sidopanel",
+              "cycle_views": "Cykelvyer"
+            },
+            "data_description": {
+              "assist_prompt": "Stilen på Assist-prompten för detektering av aktiveringsord och intentbearbetning",
+              "font_style": "Standardtypsnitt för den här satellitenheten. Typsnittsnamnet måste stämma exakt och vara tillgängligt",
+              "status_icons_size": "Storleken på ikonerna i statusikonvisningen",
+              "status_icons": "Avancerat alternativ! Lista med anpassade startikoner. Ändra inte detta om du inte vet vad du gör",
+              "menu_config": "Konfigurera menybeteendet",
+              "menu_items": "Lista med objekt som visas i menyn när den aktiveras",
+              "menu_timeout": "Tid i sekunder innan menyn stängs automatiskt (0 för att inaktivera timeout)",
+              "time_format": "Ställer in tidsformat för klockvisningen",
+              "screen_mode": "Visa eller dölj sidhuvud och sidopanel",
+              "cycle_views": "Lista med objekt som visas i cykelläge"
+            }
+          }
+        }
+      },
+      "default_options": {
+        "title": "{name} Standardalternativ",
+        "description": "{description}",
+        "data": {
+          "weather_entity": "Väderentitet för visning av väderförhållanden",
+          "mic_type": "Integrationen som hanterar mikrofoninput",
+          "mode": "Standardläge",
+          "view_timeout": "Vytimeout",
+          "do_not_disturb": "Aktivera stör ej vid uppstart",
+          "use_announce": "Inaktivera announce på den här enheten",
+          "micunmute": "Slå på mikrofon vid HA-start/omstart",
+          "ducking_volume": "Volymsänkning vid Assist (procent)",
+          "music_mode_auto": "Automatiskt musikläge",
+          "music_mode_timeout": "Timeout för musikläge"
+        },
+        "data_description": {
+          "mode": "Standardläget för den här satellitenheten",
+          "view_timeout": "Standardtimeout i sekunder innan enheten återgår till standardvyn",
+          "do_not_disturb": "Standardtillstånd för stör ej-läge vid HA-omstart",
+          "use_announce": "Vissa mediaspelare, som BrowserMod, kan inte använda Home Assistants announce-funktion under uppspelning. Det här alternativet låter dig stänga av announce-meddelanden om problem uppstår. Standard är på.",
+          "micunmute": "Praktiskt för Stream Assist-enheter",
+          "ducking_volume": "Sänk medievolymen med denna procentsats när Assist är aktiv",
+          "music_mode_auto": "Gå automatiskt in i musikläge när musikspelaren börjar spela",
+          "music_mode_timeout": "Tid i sekunder innan musikläget avslutas automatiskt efter att musiken stannar (0 = inaktiverat)"
+        }
+      },
+      "integration_options": {
+        "title": "{name} Integrationsalternativ",
+        "data": {
+          "enable_updates": "Aktivera uppdateringsnotiser",
+          "translation_engine": "Översättningsmotor"
+        },
+        "data_description": {
+          "enable_updates": "Aktivera eller inaktivera uppdateringsnotiser för instrumentpanel och blueprints",
+          "translation_engine": "Översättningsmotorn som används för timers (experimentell)"
+        }
+      },
+      "developer_options": {
+        "title": "{name} Utvecklaralternativ",
+        "data": {
+          "developer_device": "Utvecklarenhet",
+          "developer_mimic_device": "Mimic-enhet"
+        },
+        "data_description": {
+          "developer_device": "Webb-ID för den enhet du vill använda för utveckling",
+          "developer_mimic_device": "Enheten som ska imiteras för utveckling"
+        }
+      }
+    }
+  },
+  "selector": {
+    "type_selector": {
+      "options": {
+        "vaca": "View Assist Companion App enhet",
+        "view_audio": "View Assist-enhet med skärm",
+        "audio_only": "View Assist-enhet utan skärm"
+      }
+    },
+    "assist_prompt_selector": {
+      "options": {
+        "blur_pop_up": "Suddig skärm med popup",
+        "flashing_bar": "Blinkande stapel längst ned",
+        "kitt_bar": "Stapel i KITT-stil längst ned"
+      }
+    },
+    "status_icons_size_selector": {
+      "options": {
+        "6vw": "Liten",
+        "7vw": "Medium",
+        "8vw": "Stor"
+      }
+    },
+    "menu_config_selector": {
+      "options": {
+        "menu_disabled": "Meny inaktiverad",
+        "menu_enabled_button_visible": "Meny aktiverad; knapp synlig",
+        "menu_enabled_button_hidden": "Meny aktiverad; knapp dold"
+      }
+    },
+    "mic_type_selector": {
+      "options": {
+        "home_assistant_voice_satellite": "Home Assistant Voice Satellite",
+        "hassmic": "HassMic",
+        "stream_assist": "Stream Assist"
+      }
+    },
+    "display_type_selector": {
+      "options": {
+        "browser_mod": "BrowserMod",
+        "remote_assist_display": "Remote Assist Display",
+        "stream_assist": "Stream Assist"
+      }
+    },
+    "rotate_backgound_source_selector": {
+      "options": {
+        "default_background": "Standardbakgrund",
+        "local_sequence": "Sekventiell bild från lokal filsökväg",
+        "local_random": "Slumpmässig bild från lokal filsökväg",
+        "download": "Slumpmässig bild från unsplash.com",
+        "custom_url": "Bild från anpassad URL",
+        "link_to_entity": "Spegla en annan View Assist-enhet"
+      }
+    },
+    "menu_icons_selector": {
+      "options": {}
+    },
+    "lookup_selector": {
+      "options": {
+        "hour_12": "12-timmarsformat",
+        "hour_24": "24-timmarsformat",
+        "on": "På",
+        "off": "Av",
+        "hide_header_sidebar": "Dölj sidhuvud och sidopanel",
+        "hide_header": "Dölj sidhuvud",
+        "hide_sidebar": "Dölj sidopanel",
+        "no_hide": "Dölj inga element"
+      }
+    }
+  },
+  "issues": {
+    "no_resource_version": {
+      "title": "Åtgärda View Assist-resursversionsproblem",
+      "description": "View Assist resurs-plugin saknar versionsidentifierare. Det kan leda till att den senaste versionen inte används. Ta bort resursen och starta om Home Assistant för att åtgärda det."
+    }
+  }
+}
