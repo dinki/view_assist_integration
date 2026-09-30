@@ -1,0 +1,35 @@
+language: "en"
+intents:
+  HassGetWeather:
+    data:
+      - sentences:
+          - "how's the weather"
+          - "how is the weather"
+          - "what's the weather like"
+          - "what is the weather"
+responses:
+  intents:
+    HassGetWeather:
+      default: >-
+        {% set weather_states = {
+          'sunny': 'sunny',
+          'clear-night': 'a clear night',
+          'cloudy': 'cloudy',
+          'partlycloudy': 'partly cloudy',
+          'rainy': 'rainy',
+          'pouring': 'pouring rain',
+          'lightning': 'thunderstorms',
+          'lightning-rainy': 'thunderstorms with rain',
+          'snowy': 'snowy',
+          'snowy-rainy': 'sleet',
+          'windy': 'windy',
+          'fog': 'foggy'
+        } %}
+        {% set condition = slots.condition if slots.condition is defined else none %}
+        {% set temperature = slots.temperature if slots.temperature is defined else none %}
+        {% set translated = weather_states.get(condition, condition) if condition else 'unknown' %}
+        {% if temperature is not none %}
+          "It's {{temperature}} degrees and {{translated}}."
+        {% else %}
+          "It's currently {{translated}}."
+        {% endif %}

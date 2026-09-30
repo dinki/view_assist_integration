@@ -1,0 +1,40 @@
+language: "ro"
+intents:
+  HassGetWeather:
+    data:
+      - sentences:
+          - "cum e vremea"
+          - "cum este vremea"
+          - "care e vremea"
+          - "care este vremea"
+responses:
+  intents:
+    HassGetWeather:
+      default: >-
+        {% set weather_states = {
+          'sunny': 'este însorit',
+          'clear-night': 'este noapte senină',
+          'cloudy': 'este noros',
+          'partlycloudy': 'este parțial noros',
+          'rainy': 'plouă',
+          'pouring': 'plouă torențial',
+          'lightning': 'este furtună cu descărcări electrice',
+          'lightning-rainy': 'este furtună cu ploaie',
+          'snowy': 'ninge',
+          'snowy-rainy': 'este lapoviță',
+          'windy': 'este vânt',
+          'fog': 'este ceață'
+        } %}
+        {% set condition = slots.condition if slots.condition is defined else none %}
+        {% set temperature = slots.temperature if slots.temperature is defined else none %}
+        {% set translated = weather_states.get(condition, condition) if condition else 'necunoscut' %}
+        {% if temperature is not none %}
+          {% if temperature is number and temperature | int == temperature %}
+            {% set temp_text = temperature | int | string %}
+          {% else %}
+            {% set temp_text = (temperature | string).replace('.', ' virgulă ').replace(',', ' virgulă ').replace('-', 'minus ') %}
+          {% endif %}
+          "Sunt {{temp_text}} grade și {{translated}}."
+        {% else %}
+          "{{translated}}."
+        {% endif %}
