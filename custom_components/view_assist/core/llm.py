@@ -6,6 +6,7 @@ from random import choice
 
 import slugify as unicode_slug
 
+from homeassistant.components.intent import async_device_supports_timers
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import intent, llm
 from homeassistant.util import dt as dt_util
@@ -107,11 +108,23 @@ class VAAssistAPI(llm.API):
         prompt = []
 
         if llm_context.device_id:
-            device_info = DeviceInfoData(self.hass, llm_context.device_id)
+            entity_id = get_entity_id_from_conversation_device_id(
+                self.hass, llm_context.device_id
+            )
+            entity_name = (
+                get_entity_attribute(self.hass, entity_id, "friendly_name")
+                if entity_id
+                else None
+            )
+            media_player = (
+                get_entity_attribute(self.hass, entity_id, "musicplayer_device")
+                if entity_id
+                else None
+            )
             prompt.append(
                 f"This device_id is {llm_context.device_id}. "
-                f"The friendly name for this device is {device_info.entity_name}. "
-                f"The media player entity id for this device is {device_info.media_player} and should be used for any media playback commands. "
+                f"The friendly name for this device is {entity_name}. "
+                f"The media player entity id for this device is {media_player} and should be used for any media playback commands. "
             )
 
         # Base info
@@ -119,7 +132,7 @@ class VAAssistAPI(llm.API):
             "If you need information about this device use the VADeviceInfo tool. "
         )
 
-        if not llm_context.device_id or not llm.async_device_supports_timers(
+        if not llm_context.device_id or not async_device_supports_timers(
             self.hass, llm_context.device_id
         ):
             prompt.append("This device is not able to start timers.")
