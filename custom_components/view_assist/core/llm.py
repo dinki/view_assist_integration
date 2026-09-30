@@ -145,6 +145,25 @@ class VAAssistAPI(llm.API):
         tools.append(VADeviceInfoTool())
         # tools.append(VAAlarmTimerReminderIntentHandler())
 
+        # The stock AssistAPI always ignores HassGetWeather, so it never
+        # becomes an LLM tool there. Expose it here instead, wrapping the
+        # already-registered handler (including any dev-intent override).
+        weather_handler = next(
+            (
+                handler
+                for handler in intent.async_get(self.hass)
+                if handler.intent_type == "HassGetWeather"
+            ),
+            None,
+        )
+        if weather_handler is not None:
+            tools.append(
+                llm.IntentTool(
+                    self.cached_slugify(weather_handler.intent_type),
+                    weather_handler,
+                )
+            )
+
         return tools
 
 
