@@ -174,7 +174,6 @@ class EntityStateChangeHandler:
         else:
             payload = {"state": new_state.state, "attributes": new_state.attributes}
 
-        _LOGGER.debug("State changed for %s: %s", self.entity_id, new_state.state)
         async_dispatcher_send(
             self._hass,
             f"{DOMAIN}_{self._config.entry_id}_event",

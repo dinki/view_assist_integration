@@ -14,6 +14,7 @@ from homeassistant.helpers.intent import (
 
 from ...helpers import (  # noqa: TID252
     get_config_entry_by_conversation_device_id,
+    get_config_entry_by_entity_id,
     get_entity_attribute,
     get_entity_id_from_conversation_device_id,
 )
@@ -135,9 +136,6 @@ class IntentDeviceInfo:
         """Initialize the DeviceInfo class."""
         self.hass = intent_obj.hass
         self.conversation_device_id = intent_obj.device_id
-        self._entry = get_config_entry_by_conversation_device_id(
-            self.hass, self.conversation_device_id
-        )
 
     @property
     def entity_id(self) -> str | None:
@@ -149,12 +147,12 @@ class IntentDeviceInfo:
     @property
     def entry(self) -> str | None:
         """Get the config entry for the device."""
-        return self._entry
+        return get_config_entry_by_entity_id(self.hass, self.entity_id)
 
     @property
     def entry_id(self) -> str | None:
         """Get the entry id for the device."""
-        if entry := self._entry:
+        if entry := self.entry:
             return entry.entry_id
         return None
 

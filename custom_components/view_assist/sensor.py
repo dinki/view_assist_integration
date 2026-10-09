@@ -136,6 +136,9 @@ class ViewAssistSensor(SensorEntity):
             attrs["do_not_disturb"] = sm.do_not_disturb
             attrs["extra_data"] = sm.extra_data
             attrs["is_music_playing"] = sm.is_music_playing
+            attrs["last_command"] = sm.last_command
+            attrs["last_intent"] = sm.last_intent
+            attrs["last_response"] = sm.last_response
             attrs["last_updated"] = dt_util.now().isoformat()
             attrs["media_album"] = sm.media_album
             attrs["media_artist"] = sm.media_artist
@@ -147,6 +150,7 @@ class ViewAssistSensor(SensorEntity):
                 get_mute_switch_entity_id(self.hass, sm.config.core.mic_device),
             )
             attrs["alarm_sounding"] = sm.alarm_sounding
+            attrs["changed_entities"] = sm.changed_entities
         return attrs
 
     def _get_display_device_status_attributes(self) -> dict[str, Any]:
@@ -156,15 +160,11 @@ class ViewAssistSensor(SensorEntity):
         if sm := StatusManager.get(self.hass, self.config):
             attrs["background"] = sm.background
             attrs["browser_connected"] = sm.browser_connected
-            attrs["changed_entities"] = sm.changed_entities
             attrs["current_path"] = sm.current_path
             attrs["font_style"] = sm.config.dashboard.display_settings.font_style
             attrs["hold"] = sm.hold
             attrs["hold_view"] = sm.hold_view
             attrs["home"] = sm.config.dashboard.home
-            attrs["last_command"] = sm.last_command
-            attrs["last_intent"] = sm.last_intent
-            attrs["last_response"] = sm.last_response
             attrs["menu_active"] = sm.menu_active
             attrs["menu_config"] = sm.config.dashboard.display_settings.menu_config
             attrs["menu_items"] = sm.menu_items.copy()

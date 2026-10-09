@@ -8,7 +8,7 @@ Setting the hold value when mode is set to hold instead of setting mode to hold 
 
 """
 
-import contextlib
+import contextlib  # noqa: I001
 from dataclasses import dataclass
 from datetime import datetime
 import logging
@@ -32,6 +32,7 @@ from ..helpers import (  # noqa: TID252
     get_device_id_from_entity_id,
     get_sensor_entity_from_instance,
 )
+from ..core.conversation_monitor import ConversationMonitor  # noqa: TID252
 from ..typed import (  # noqa: TID252
     DashboardConfig,
     DefaultConfig,
@@ -49,7 +50,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Time to wait for further attribute changes before sending a status update,
 # to batch rapid successive changes into a single notification.
-NOTIFY_DEBOUNCE_SECONDS = 0.1
+NOTIFY_DEBOUNCE_SECONDS = 0.2
 
 PERSISTED_ATTRIBUTES = [
     "muted",
@@ -317,6 +318,10 @@ class StatusManager(DeviceModule, Status):
             # Register activity first to prevent immediate timeout
             self.register_activity()
             self.assist_state = event.payload.get("state", AssistSatelliteState.IDLE)
+
+            # Register state with chat log monitor to support last conversation statuses
+            if clm := ConversationMonitor.get(self._hass):
+                clm.register_assist_status(self._config.entry_id, self.assist_state)
 
         # Handle background image change events
         elif event_type == VAEventType.BACKGROUND_CHANGE:

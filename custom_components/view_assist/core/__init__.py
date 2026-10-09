@@ -18,6 +18,7 @@ from ..const import DOMAIN  # noqa: TID252
 from ..helpers import get_integration_entries  # noqa: TID252
 from ..typed import VAConfigEntry  # noqa: TID252
 from .alarm_streamer import AlarmStreamer
+from .conversation_monitor import ConversationMonitor
 from .http import HTTPManager
 from .intents import IntentsManager
 from .javascript import JSModuleRegistration
@@ -42,6 +43,7 @@ LOAD_MODULES = [
     WebsocketManager,
     IntentsManager,
     LLMManager,
+    ConversationMonitor,
 ]
 
 
