@@ -63,6 +63,16 @@ def discover_sentence_files(path: Path) -> list[Path]:
     return list(path.glob("*.yaml")) if path.is_dir() else []
 
 
+def remove_orphaned_sentence_files(path: Path) -> None:
+    """Remove orphaned sentence files in the given path."""
+    if not path.is_dir():
+        return
+    for file_path in path.glob("*.yaml"):
+        # If it is symlinked to ./custom_sentences but no longer exists in that directory, remove the symlink
+        if file_path.is_symlink() and not file_path.exists():
+            file_path.unlink()
+
+
 def intent_to_dict(intent_obj: Intent) -> dict[str, Any]:
     """Convert the intent object to a dictionary."""
     return {
@@ -231,6 +241,11 @@ class IntentsManager:
             dest = custom_sentences_dir / src.name
             if not dest.exists():
                 dest.symlink_to(src)
+
+        # Remove any orphaned sentence files in the HA custom sentences directory
+        await self.hass.async_add_executor_job(
+            remove_orphaned_sentence_files, custom_sentences_dir
+        )
 
     async def unregister_custom_sentences(self) -> None:
         """Unregister custom sentences for intents."""
