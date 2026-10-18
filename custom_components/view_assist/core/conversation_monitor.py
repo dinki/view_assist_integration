@@ -1,17 +1,13 @@
 """Chat monitor for handling conversation intents."""
 
+import contextlib
 from dataclasses import dataclass
 from datetime import datetime
 import logging
 from typing import Any
 
 from homeassistant.components.assist_satellite.entity import AssistSatelliteState
-from homeassistant.components.conversation import (
-    AssistantContent,
-    SystemContent,
-    ToolResultContent,
-    UserContent,
-)
+from homeassistant.components.conversation import AssistantContent
 from homeassistant.components.conversation.chat_log import (
     DATA_CHAT_LOGS,
     ChatLog,
@@ -40,20 +36,6 @@ class Conversation:
     last_tool_result: dict[str, Any] | None = None
     last_tool_data: dict[str, Any] | None = None
     last_assistant_content: str | None = None
-    created: datetime | None = None
-    last_updated: datetime | None = None
-
-
-@dataclass
-class ChatLogConversation:
-    """Holds chatlog conversation information."""
-
-    conversation_id: str
-    system_content: SystemContent | None = None
-    user_content: UserContent | None = None
-    assistant_content: AssistantContent | None = None
-    tool_calls: AssistantContent | None = None
-    tool_results: ToolResultContent | None = None
     created: datetime | None = None
     last_updated: datetime | None = None
 
@@ -116,81 +98,83 @@ class ConversationMonitor:
             entry_info = self._set_conversation_id(conversation_id)
 
         if event_type == ChatLogEventType.CONTENT_ADDED:
-            conversation = self.conversations[conversation_id]
-            if content := data.get("content"):
-                created = content.get("created")
-                if created and created >= entry_info.last_updated:
-                    role = content.get("role")
-                    if role == "user" and content.get("content"):
-                        self.conversations[
-                            conversation_id
-                        ].last_user_content = content.get("content")
-                        conversation.last_updated = dt_util.now()
-                        payload = {"command": conversation.last_user_content}
-                    elif role == "tool_result" and content.get("tool_name"):
-                        tool_name = content.get("tool_name")
-                        tool_domain = (
-                            tool_name.split("__")[0]
-                            if tool_name and "__" in tool_name
-                            else None
-                        )
-                        self.conversations[
-                            conversation_id
-                        ].last_tool_domain = tool_domain
+            with contextlib.suppress(KeyError):
+                conversation = self.conversations[conversation_id]
+                if content := data.get("content"):
+                    created = content.get("created")
+                    if created and created >= entry_info.last_updated:
+                        role = content.get("role")
+                        if role == "user" and content.get("content"):
+                            self.conversations[
+                                conversation_id
+                            ].last_user_content = content.get("content")
+                            conversation.last_updated = dt_util.now()
+                            payload = {"command": conversation.last_user_content}
+                        elif role == "tool_result" and content.get("tool_name"):
+                            tool_name = content.get("tool_name")
+                            tool_domain = (
+                                tool_name.split("__")[0]
+                                if tool_name and "__" in tool_name
+                                else None
+                            )
+                            self.conversations[
+                                conversation_id
+                            ].last_tool_domain = tool_domain
 
-                        self.conversations[conversation_id].last_tool = tool_name.split(
-                            "__"
-                        )[-1]
+                            self.conversations[
+                                conversation_id
+                            ].last_tool = tool_name.split("__")[-1]
 
-                        self.conversations[
-                            conversation_id
-                        ].last_tool_result = content.get("result")
+                            self.conversations[
+                                conversation_id
+                            ].last_tool_result = content.get("result")
 
-                        self.conversations[
-                            conversation_id
-                        ].last_tool_data = content.get("data")
+                            self.conversations[
+                                conversation_id
+                            ].last_tool_data = content.get("data")
 
-                        conversation.last_updated = dt_util.now()
+                            conversation.last_updated = dt_util.now()
 
-                        payload = {
-                            "intent_domain": conversation.last_tool_domain,
-                            "intent": conversation.last_tool,
-                            "result": conversation.last_tool_result,
-                            "data": conversation.last_tool_data,
-                        }
-                    elif role == "assistant" and content.get("content"):
-                        self.conversations[
-                            conversation_id
-                        ].last_assistant_content = content.get("content")
-                        conversation.last_updated = dt_util.now()
-                        payload = {
-                            "intent_domain": conversation.last_tool_domain,
-                            "intent": conversation.last_tool,
-                            "result": conversation.last_tool_result,
-                            "data": conversation.last_tool_data,
-                            "response": conversation.last_assistant_content,
-                        }
+                            payload = {
+                                "intent_domain": conversation.last_tool_domain,
+                                "intent": conversation.last_tool,
+                                "result": conversation.last_tool_result,
+                                "data": conversation.last_tool_data,
+                            }
+                        elif role == "assistant" and content.get("content"):
+                            self.conversations[
+                                conversation_id
+                            ].last_assistant_content = content.get("content")
+                            conversation.last_updated = dt_util.now()
+                            payload = {
+                                "intent_domain": conversation.last_tool_domain,
+                                "intent": conversation.last_tool,
+                                "result": conversation.last_tool_result,
+                                "data": conversation.last_tool_data,
+                                "response": conversation.last_assistant_content,
+                            }
 
         elif event_type == ChatLogEventType.UPDATED:
             # For non intent responses, the response text is only shown in a chat log update event
             # not in a subscribed assistant message.
             # The update is a combination of multiple conversations, so we need to extract the relevant content for this conversation.
-            conversation = self.conversations[conversation_id]
-            for entry in get_key("chat_log.content", data):
-                created = entry.get("created")
-                if created and created >= entry_info.last_updated:
-                    if entry.get("role") == "assistant" and entry.get("content"):
-                        self.conversations[
-                            conversation_id
-                        ].last_assistant_content = entry.get("content")
-                        conversation.last_updated = dt_util.now()
-                        payload = {
-                            "intent_domain": conversation.last_tool_domain,
-                            "intent": conversation.last_tool,
-                            "result": conversation.last_tool_result,
-                            "data": conversation.last_tool_data,
-                            "response": conversation.last_assistant_content,
-                        }
+            with contextlib.suppress(KeyError):
+                conversation = self.conversations[conversation_id]
+                for entry in get_key("chat_log.content", data):
+                    created = entry.get("created")
+                    if created and created >= entry_info.last_updated:
+                        if entry.get("role") == "assistant" and entry.get("content"):
+                            self.conversations[
+                                conversation_id
+                            ].last_assistant_content = entry.get("content")
+                            conversation.last_updated = dt_util.now()
+                            payload = {
+                                "intent_domain": conversation.last_tool_domain,
+                                "intent": conversation.last_tool,
+                                "result": conversation.last_tool_result,
+                                "data": conversation.last_tool_data,
+                                "response": conversation.last_assistant_content,
+                            }
 
         elif event_type == ChatLogEventType.DELETED:
             # Handle deleted chat log entries if necessary
