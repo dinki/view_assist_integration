@@ -303,7 +303,7 @@ INTENT_TO_VIEW_MAPPING = {
     ],
     CONF_WEATHER: ["HassGetWeather"],
     "list": [
-        "todo__get_items",
+        "get_items",
         "HassShoppingListAddItem",
         "HassShoppingListCompleteItem",
         "HassListAddItem",
@@ -311,9 +311,6 @@ INTENT_TO_VIEW_MAPPING = {
         "HassListRemoveItem",
     ],
     "calendar": ["ViewAssistShowCalendar"],
-    "info": [
-        "info",
-        "HassBroadcast",
-        "VAWhatDidYouSay",
-    ],
+    "info": ["info", "HassBroadcast", "VAWhatDidYouSay", "AIResponse"],
+    "intent": ["HassTurnOn", "HassTurnOff"],
 }

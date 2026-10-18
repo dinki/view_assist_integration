@@ -74,6 +74,7 @@ class Status:
     """Class to represent the status of a device."""
 
     config: Config | None = None
+    entity_id: str | None = None
     browser_connected: bool = False
     assist_state: AssistSatelliteState = AssistSatelliteState.IDLE
     muted: bool = False
@@ -97,7 +98,6 @@ class Status:
     view_data: dict[str, Any] | None = None
     hide_sidebar: bool = False
     hide_header: bool = False
-
     volume: int | None = None
     do_not_disturb: bool = False
     has_timers: bool = False
@@ -146,7 +146,6 @@ class StatusManager(DeviceModule, Status):
         """Initialize the status manager."""
         super().__init__(hass, config)
         self._store = StatusStore(hass, config)
-        self._entity_id = "Unknown"
         self._rt = config.runtime_data
         self._notify_cancel: CALLBACK_TYPE | None = None
         self._event_listeners: dict[str, list[CALLBACK_TYPE]] = {}
@@ -160,6 +159,8 @@ class StatusManager(DeviceModule, Status):
                 self._async_event_handler,
             )
         )
+
+        self.entity_id = get_sensor_entity_from_instance(hass, config.entry_id)
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Set an attribute, notifying on_change if the value changed."""
@@ -177,9 +178,6 @@ class StatusManager(DeviceModule, Status):
 
     async def async_setup(self) -> bool:
         """Set up the status manager."""
-        self._entity_id = get_sensor_entity_from_instance(
-            self._hass, self._config.entry_id
-        )
         self.config = Config(
             core=self._rt.core,
             dashboard=(self._rt.dashboard if hasattr(self._rt, "dashboard") else None),
@@ -198,7 +196,7 @@ class StatusManager(DeviceModule, Status):
 
         # Get current timers
         if tm := TimerManager.get(self._hass):
-            self.timers = tm.get_timers_as_dict(entity_id=self._entity_id)
+            self.timers = tm.get_timers_as_dict(entity_id=self.entity_id)
         self.has_timers = len(self.timers) > 0
 
         # Set sidebar and header bar status
@@ -337,7 +335,7 @@ class StatusManager(DeviceModule, Status):
         elif event_type == VAEventType.TIMER_UPDATE:
             timer_event = event.payload.get("event", None)
             if tm := TimerManager.get(self._hass):
-                self.timers = tm.get_timers_as_dict(entity_id=self._entity_id)
+                self.timers = tm.get_timers_as_dict(entity_id=self.entity_id)
                 self.has_timers = len(self.timers) > 0
             self.register_activity()
             _LOGGER.debug(
@@ -397,6 +395,11 @@ class StatusManager(DeviceModule, Status):
         # Handle intent updates
         elif event_type == VAEventType.INTENT_UPDATE:
             # Process intent update payload
+            _LOGGER.debug(
+                "Handling intent update for device %s with payload: %s",
+                self._config.runtime_data.core.name,
+                event.payload,
+            )
             payload = event.payload
             if "intent" in payload:
                 self.last_intent = payload.get("intent")
@@ -404,8 +407,6 @@ class StatusManager(DeviceModule, Status):
                 self.last_command = payload.get("command")
             if "response" in payload:
                 self.last_response = payload.get("response")
-            if "changed_entities" in payload:
-                self.changed_entities = payload.get("changed_entities", [])
             if "view_data" in payload:
                 self.view_data = payload.get("view_data")
 
@@ -430,7 +431,7 @@ class StatusManager(DeviceModule, Status):
         # Return True if the action was successfully handled, False otherwise
         for name, value in data.items():
             if hasattr(self, name):
-                _LOGGER.debug("Setting %s to %s for %s", name, value, self._entity_id)
+                _LOGGER.debug("Setting %s to %s for %s", name, value, self.entity_id)
                 setattr(self, name, value)
                 continue
 

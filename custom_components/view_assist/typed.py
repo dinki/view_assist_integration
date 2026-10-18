@@ -225,6 +225,7 @@ class VAEventType(StrEnum):
     ALARM_SOUNDING = "alarm_sounding"
 
     INTENT_UPDATE = "intent_update"
+    CONVERSATION_UPDATE = "conversation_update"
     NAVIGATION = "navigate"
     ICONS_UPDATE = "icons_update"
     TIMER_EXPIRED = "timer_expired"

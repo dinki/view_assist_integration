@@ -6,9 +6,14 @@ import logging
 from typing import Any
 
 from homeassistant.components.assist_satellite.entity import AssistSatelliteState
+from homeassistant.components.conversation import (
+    AssistantContent,
+    SystemContent,
+    ToolResultContent,
+    UserContent,
+)
 from homeassistant.components.conversation.chat_log import (
     DATA_CHAT_LOGS,
-    AssistantContent,
     ChatLog,
     async_subscribe_chat_logs,
 )
@@ -19,7 +24,7 @@ from homeassistant.util import dt as dt_util
 
 from ..const import DOMAIN  # noqa: TID252
 from ..helpers import get_key, get_sensor_entity_from_instance  # noqa: TID252
-from ..typed import VAConfigEntry, VAEvent, VAEventType  # noqa: TID252
+from ..typed import VAConfigEntry  # noqa: TID252
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,8 +35,25 @@ class Conversation:
 
     conversation_id: str
     last_user_content: str | None = None
-    last_tool_result: str | None = None
+    last_tool_domain: str | None = None
+    last_tool: str | None = None
+    last_tool_result: dict[str, Any] | None = None
+    last_tool_data: dict[str, Any] | None = None
     last_assistant_content: str | None = None
+    created: datetime | None = None
+    last_updated: datetime | None = None
+
+
+@dataclass
+class ChatLogConversation:
+    """Holds chatlog conversation information."""
+
+    conversation_id: str
+    system_content: SystemContent | None = None
+    user_content: UserContent | None = None
+    assistant_content: AssistantContent | None = None
+    tool_calls: AssistantContent | None = None
+    tool_results: ToolResultContent | None = None
     created: datetime | None = None
     last_updated: datetime | None = None
 
@@ -98,27 +120,54 @@ class ConversationMonitor:
             if content := data.get("content"):
                 created = content.get("created")
                 if created and created >= entry_info.last_updated:
-                    if content.get("role") == "user" and content.get("content"):
+                    role = content.get("role")
+                    if role == "user" and content.get("content"):
                         self.conversations[
                             conversation_id
                         ].last_user_content = content.get("content")
                         conversation.last_updated = dt_util.now()
                         payload = {"command": conversation.last_user_content}
-                    elif content.get("role") == "tool_result" and content.get(
-                        "tool_name"
-                    ):
+                    elif role == "tool_result" and content.get("tool_name"):
                         tool_name = content.get("tool_name")
-                        tool_name = tool_name.split("__")[-1]
-                        self.conversations[conversation_id].last_tool_result = tool_name
+                        tool_domain = (
+                            tool_name.split("__")[0]
+                            if tool_name and "__" in tool_name
+                            else None
+                        )
+                        self.conversations[
+                            conversation_id
+                        ].last_tool_domain = tool_domain
+
+                        self.conversations[conversation_id].last_tool = tool_name.split(
+                            "__"
+                        )[-1]
+
+                        self.conversations[
+                            conversation_id
+                        ].last_tool_result = content.get("result")
+
+                        self.conversations[
+                            conversation_id
+                        ].last_tool_data = content.get("data")
+
                         conversation.last_updated = dt_util.now()
-                        payload = {"intent": conversation.last_tool_result}
-                    elif content.get("role") == "assistant" and content.get("content"):
+
+                        payload = {
+                            "intent_domain": conversation.last_tool_domain,
+                            "intent": conversation.last_tool,
+                            "result": conversation.last_tool_result,
+                            "data": conversation.last_tool_data,
+                        }
+                    elif role == "assistant" and content.get("content"):
                         self.conversations[
                             conversation_id
                         ].last_assistant_content = content.get("content")
                         conversation.last_updated = dt_util.now()
                         payload = {
-                            "intent": conversation.last_tool_result,
+                            "intent_domain": conversation.last_tool_domain,
+                            "intent": conversation.last_tool,
+                            "result": conversation.last_tool_result,
+                            "data": conversation.last_tool_data,
                             "response": conversation.last_assistant_content,
                         }
 
@@ -136,7 +185,10 @@ class ConversationMonitor:
                         ].last_assistant_content = entry.get("content")
                         conversation.last_updated = dt_util.now()
                         payload = {
-                            "intent": conversation.last_tool_result,
+                            "intent_domain": conversation.last_tool_domain,
+                            "intent": conversation.last_tool,
+                            "result": conversation.last_tool_result,
+                            "data": conversation.last_tool_data,
                             "response": conversation.last_assistant_content,
                         }
 
@@ -192,7 +244,10 @@ class ConversationMonitor:
                                 self.conversations[c_id].last_updated = dt_util.now()
                                 conversation = self.conversations[c_id]
                                 payload = {
-                                    "intent": conversation.last_tool_result,
+                                    "intent_domain": conversation.last_tool_domain,
+                                    "intent": conversation.last_tool,
+                                    "result": conversation.last_tool_result,
+                                    "data": conversation.last_tool_data,
                                     "response": conversation.last_assistant_content,
                                 }
                                 self._send_chat_payload(entry_id, payload)
@@ -253,9 +308,8 @@ class ConversationMonitor:
     def _send_chat_payload(self, entry_id: str, payload: dict[str, Any]) -> None:
         """Send the chat payload to the appropriate destination."""
         # Implement the logic to send the chat payload here
-        _LOGGER.debug("Sending INTENT UPDATE with payload: %s", payload)
         async_dispatcher_send(
             self.hass,
-            f"{DOMAIN}_{entry_id}_event",
-            VAEvent(VAEventType.INTENT_UPDATE, payload),
+            f"{DOMAIN}_{entry_id}_chatlog_event",
+            payload,
         )

@@ -110,7 +110,7 @@ class ViewAssistSensor(SensorEntity):
             attrs.update(self._get_display_device_status_attributes())
 
         # Active overrides
-        attrs["active_overrides"] = self._get_active_overrides_attributes()
+        attrs.update(self._get_active_overrides_attributes())
 
         # Add extra_data attributes from runtime data
         # TODO: Reinstate this but remove current_path
@@ -134,7 +134,6 @@ class ViewAssistSensor(SensorEntity):
         if sm := StatusManager.get(self.hass, self.config):
             attrs["assist_state"] = sm.assist_state
             attrs["do_not_disturb"] = sm.do_not_disturb
-            attrs["extra_data"] = sm.extra_data
             attrs["is_music_playing"] = sm.is_music_playing
             attrs["last_command"] = sm.last_command
             attrs["last_intent"] = sm.last_intent
@@ -150,7 +149,6 @@ class ViewAssistSensor(SensorEntity):
                 get_mute_switch_entity_id(self.hass, sm.config.core.mic_device),
             )
             attrs["alarm_sounding"] = sm.alarm_sounding
-            attrs["changed_entities"] = sm.changed_entities
         return attrs
 
     def _get_display_device_status_attributes(self) -> dict[str, Any]:
@@ -179,11 +177,14 @@ class ViewAssistSensor(SensorEntity):
             )
             attrs["view_timeout"] = sm.config.default.view_timeout
             attrs["weather_entity"] = sm.config.default.weather_entity
+
             if sm.view_data:
                 attrs["view_data"] = sm.view_data
                 attrs["title"] = sm.view_data.get("title")
                 attrs["message"] = sm.view_data.get("message")
                 attrs["message_font_size"] = sm.view_data.get("message_font_size")
+                attrs["intent_entities"] = sm.view_data.get("changed_entities")
+                attrs["list"] = sm.view_data.get("list")
 
         return attrs
 
