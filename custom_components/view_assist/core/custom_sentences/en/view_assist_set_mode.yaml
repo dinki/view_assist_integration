@@ -12,7 +12,7 @@ intents:
   ViewAssistSetMode:
     data:
       - sentences:
-          - "set mode to {mode}"
+          - "set mode [to] {mode}"
           - "turn on {mode} mode"
           - "set [to] {mode} mode"
 responses:
