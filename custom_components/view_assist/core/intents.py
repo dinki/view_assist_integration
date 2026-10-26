@@ -159,22 +159,24 @@ class IntentsManager:
         )
 
         # Register hooks with overrides
-        for intent_type, handler in existing_intents.items():
+        for intent_type, original_handler in existing_intents.items():
             if intent_type in custom_handlers:
-                new_handler = IntentHookHandler(
+                handler = IntentHookHandler(
                     handler=custom_handlers[intent_type](),
-                    original_handler=handler,
+                    original_handler=original_handler,
                 )
             else:
-                new_handler = IntentHookHandler(
-                    handler=handler,
+                handler = IntentHookHandler(
+                    handler=original_handler,
                 )
             async_remove(self.hass, intent_type)
             async_register(
                 self.hass,
-                new_handler,
+                handler,
             )
-            _LOGGER.debug("Registered intent hook: %s -> %s", intent_type, handler)
+            _LOGGER.debug(
+                "Registered intent hook: %s -> %s", intent_type, handler.handler
+            )
 
         # Register new intents that are not already in existing_intents
         for intent_type, handler_cls in custom_handlers.items():
@@ -187,7 +189,7 @@ class IntentsManager:
                     new_handler,
                 )
                 _LOGGER.debug(
-                    "Registered new intent: %s -> %s", intent_type, new_handler
+                    "Registered new intent: %s -> %s", intent_type, new_handler.handler
                 )
 
     def unregister_intent_hooks_and_handlers(self):

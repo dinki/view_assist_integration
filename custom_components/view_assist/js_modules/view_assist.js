@@ -1,6 +1,6 @@
 import { timerCards } from "./timers.js?v=1.0.30";
 
-const version = "1.0.32-rc5"
+const version = "1.0.32-rc13"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 const INITIAL_LOAD_OVERLAY_ID = "view-assist-initial-load-overlay";
@@ -8,7 +8,7 @@ const INITIAL_LOAD_FADE_MS = 400;
 
 function show_initial_loading_screen() {
   // Hide the unstyled/unhidden page immediately (no transition) and cover it
-  // with a plain black screen while View Assist connects and configures itself
+  // with a loading screen while View Assist connects and configures itself
   // Only perform if registered device
   if (self.localStorage.getItem("view_assist_status") !== "registered" || self.localStorage.getItem("view_assist_mimic_device") === "true") return;
   if (document.getElementById(INITIAL_LOAD_OVERLAY_ID)) return;
@@ -26,8 +26,32 @@ function show_initial_loading_screen() {
         z-index: 999999;
         background: black;
         transition: opacity ${INITIAL_LOAD_FADE_MS}ms ease-in-out;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        color: rgba(255, 255, 255, 0.85);
+        font-family: Roboto, sans-serif;
+      }
+      .spinner {
+        width: 4rem;
+        height: 4rem;
+        border: 0.4rem solid rgba(255, 255, 255, 0.2);
+        border-top-color: rgba(255, 255, 255, 0.85);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      .label {
+        font-size: 1.5rem;
+        letter-spacing: 0.05em;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
     </style>
+    <div class="spinner"></div>
+    <div class="label">Loading...</div>
   `;
   document.documentElement.appendChild(el);
 }
@@ -708,23 +732,53 @@ class ViewAssist {
     const payload = msg["payload"];
     const is_mimic = this.variables.config?.is_mimic;
 
-    //console.log("Event: " + event + ", Payload: " + JSON.stringify(payload));
-
     switch (event) {
-      case "registered":
+
+      case "registered": {
+        let newly_registered = localStorage.getItem("view_assist_status") !== "registered";
         localStorage.setItem("view_assist_status", "registered");
+        // Entity id changed
+        if (payload.entity_id && payload.entity_id != localStorage.getItem("view_assist_sensor")) {
+          localStorage.setItem("view_assist_sensor", payload.entity_id);
+          newly_registered = true;
+        }
+        // Mimic device flag
+        if (payload.is_mimic != localStorage.getItem("view_assist_mimic_device")) {
+          localStorage.setItem("view_assist_mimic_device", payload.is_mimic);
+        }
+
         this.variables.registered = true
-        // Add listening overlay html from overlay.html and overlay.css files
-        await this.inject_assist_listening_overlay();
+
+        if (newly_registered) {
+          console.log("View Assist - Newly registered device");
+          // Persist identity so the reloaded page starts up as a registered device
+        }
+
         // Setup device config
         this.process_config(event, payload);
+
+        // Add listening overlay html from overlay.html and overlay.css files
+        await this.inject_assist_listening_overlay();
+
+        if (!payload.is_mimic) {
+          // On register, go to default page
+          this.hide_sections();
+          setTimeout(() => this.display_browser_id(), 2000);
+          setTimeout(() => window.location.reload());
+          this.browser_navigate(payload.config.dashboard.home);
+        }
+
+        this.reveal_initial_load();
+
         break;
+      }
       case "reload":
         clearInterval(this.serverTimeHandler);
         this.connected = false;
         setTimeout(() => this.connect(), 1000);
         break;
       case "unregistered":
+        let newly_unregistered = localStorage.getItem("view_assist_status") === "registered";
         localStorage.removeItem("view_assist_sensor");
         localStorage.removeItem("view_assist_mimic_device");
         localStorage.setItem("view_assist_status", "unregistered");
@@ -732,6 +786,12 @@ class ViewAssist {
         this.variables.registered = false;
         await this.hide_sections(this.variables.registered);
         setTimeout(() => this.display_browser_id(), 2000);
+        if (newly_unregistered) {
+          console.log("View Assist - Newly unregistered device");
+          // Persist identity so the reloaded page starts up as an unregistered device
+          window.location.reload();
+          break;
+        }
         break;
       case "status_change":
         this.process_config(event, payload);
@@ -755,37 +815,10 @@ class ViewAssist {
   }
 
   process_config(event, payload) {
-    let reload = false;
-
-    if (event == "registered") {
-      reload = true;
-    }
-
-    // Entity id changed
-    if (payload.entity_id && payload.entity_id != localStorage.getItem("view_assist_sensor")) {
-      localStorage.setItem("view_assist_sensor", payload.entity_id);
-      reload = true;
-    }
-
-    // Mimic device flag
-    if (payload.is_mimic != localStorage.getItem("view_assist_mimic_device")) {
-      localStorage.setItem("view_assist_mimic_device", payload.is_mimic);
-    }
 
     // Set variables to payload
     this.variables.config = payload
 
-    if (!payload.is_mimic) {
-      // On register, go to default page
-      if (reload) {
-        this.hide_sections();
-        this.browser_navigate(payload.home);
-      }
-    }
-
-    if (event == "registered") {
-      this.reveal_initial_load();
-    }
   }
 
   async set_time_delta() {
@@ -819,7 +852,7 @@ class ViewAssist {
 
   async fade_navigate(path) {
     // Fade out, navigate, wait for the new page to render, then fade back in
-    const FADE_DURATION_MS = 800;
+    const FADE_DURATION_MS = 250;
     const elContainer = await selectTree(
       document.body,
       "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root $ div hui-view-container",

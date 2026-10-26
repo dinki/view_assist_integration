@@ -25,7 +25,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, entity_registry as er, intent
 
-from . import IntentOverrideHandler, IntentOverrideResponse
+from . import IntentOverrideHandler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,6 +67,10 @@ _SUPPORTED_MEDIA_CLASSES = [
     MediaClass.PLAYLIST,
     MediaClass.PODCAST,
 ]
+
+# Values the LLM may pass in the media_class slot. "radio" is not a MediaClass
+# member, but Music Assistant results use it.
+_SLOT_MEDIA_CLASSES = ["track", "album", "artist", "playlist", "podcast", "radio"]
 
 # When the request doesn't name (or imply) a specific media type, prefer
 # results in this order.
@@ -126,10 +130,24 @@ class VAMediaSearchAndPlayHandler(IntentOverrideHandler):
 
     intent_type = INTENT_MEDIA_SEARCH_AND_PLAY
     description = (
-        "Searches for media and plays the first result. "
-        "You must provide the query in the 'search_query' field, the media_player_entity_id value in a field called 'name' and "
-        "identify if the requested media is a track, album, artist, playlist or podcast and provide that in the 'media_class' field. If you do not know the media class, leave it blank and the tool will try to infer it from the search query. "
-        "In your response tell me the media class you are playing if it is not a track.  If an error occurred, the tool will return an error message in the 'error' field. If the tool was successful, it will return a 'success' field with a value of True. "
+        "Use this tool whenever the user asks to play, put on, listen to or stream specific music or audio content by name: "
+        "a song/track, album, artist (e.g. 'music by ...'), playlist, podcast, or radio station. "
+        "Examples: 'play Bohemian Rhapsody by Queen', 'put on the album Rumours', 'play some Taylor Swift', "
+        "'play my workout playlist', 'play the Joe Rogan podcast', 'play BBC Radio 2'. "
+        "This tool searches the media library or streaming service itself and starts playback of the best match in one step, "
+        "so call it directly. Do not search for the media first, and do not use a generic play/resume tool for a named request. "
+        "Only use a play/resume tool when no specific content is named. "
+        "Parameters: "
+        "'search_query' (required) is only the name of what to play, with no 'play' verb or player/room name, "
+        "e.g. 'Bohemian Rhapsody by Queen', 'Rumours', 'music by Adele'. Keep the artist in the query using 'by'. "
+        "'media_class' (optional) is one of track, album, artist, playlist, podcast or radio. "
+        "Set it when the user says or clearly implies the type (a song is a track; a radio station is radio). "
+        "If unsure, omit it and the tool infers it from the query. "
+        "'name' (optional) is the media player's entity_id, or its friendly name. "
+        "Omit it if the user did not name a player or room, and the current device's player will be used. "
+        "The result contains 'success' set to true if playback started, or an 'error' message otherwise. "
+        "On success, briefly confirm what is playing; if it is not a track, also say its type (album, playlist, etc.). "
+        "On error, tell the user what went wrong rather than claiming playback started."
     )
 
     @property
@@ -137,7 +155,7 @@ class VAMediaSearchAndPlayHandler(IntentOverrideHandler):
         """Return a slot schema."""
         return {
             vol.Required("search_query"): cv.string,
-            vol.Optional("media_class"): vol.In([cls.value for cls in MediaClass]),
+            vol.Optional("media_class"): vol.In(_SLOT_MEDIA_CLASSES),
             # Optional name/area/floor slots handled by intent matcher
             vol.Optional("name"): cv.string,
             vol.Optional("area"): cv.string,
@@ -168,7 +186,7 @@ class VAMediaSearchAndPlayHandler(IntentOverrideHandler):
         # Populate media player from extra_data if not provided in the slots, e.g. from a VADeviceInfo context
         device_info = self.get_device_info(intent_obj)
         if not entity_name and device_info:
-            entity_name = device_info.entity_id
+            entity_name = device_info.music_player
 
         # Find matching entities
         match_constraints = intent.MatchTargetsConstraints(

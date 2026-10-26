@@ -106,14 +106,16 @@ class VAAssistAPI(llm.API):
         prompt = []
 
         if llm_context.device_id:
-            entity_id = get_config_entry_by_device_id(self.hass, llm_context.device_id)
+            entity_id = get_entity_id_from_conversation_device_id(
+                self.hass, llm_context.device_id
+            )
             entity_name = (
-                get_entity_attribute(self.hass, self.entity_id, "friendly_name")
-                if self.entity_id
+                get_entity_attribute(self.hass, entity_id, "friendly_name")
+                if entity_id
                 else None
             )
             music_player = (
-                get_entity_attribute(self.hass, self.entity_id, "musicplayer_device")
+                get_entity_attribute(self.hass, entity_id, "musicplayer_device")
                 if entity_id
                 else None
             )
@@ -127,11 +129,6 @@ class VAAssistAPI(llm.API):
         prompt.append(
             "If you need information about this device use the VADeviceInfo tool. "
         )
-
-        if not llm_context.device_id or not llm.async_device_supports_timers(
-            self.hass, llm_context.device_id
-        ):
-            prompt.append("This device is not able to start timers.")
 
         return prompt
 
