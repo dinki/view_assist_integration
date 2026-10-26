@@ -63,6 +63,16 @@ def discover_sentence_files(path: Path) -> list[Path]:
     return list(path.glob("*.yaml")) if path.is_dir() else []
 
 
+def remove_orphaned_sentence_files(path: Path) -> None:
+    """Remove orphaned sentence files in the given path."""
+    if not path.is_dir():
+        return
+    for file_path in path.glob("*.yaml"):
+        # If it is symlinked to ./custom_sentences but no longer exists in that directory, remove the symlink
+        if file_path.is_symlink() and not file_path.exists():
+            file_path.unlink()
+
+
 def intent_to_dict(intent_obj: Intent) -> dict[str, Any]:
     """Convert the intent object to a dictionary."""
     return {
@@ -149,22 +159,24 @@ class IntentsManager:
         )
 
         # Register hooks with overrides
-        for intent_type, handler in existing_intents.items():
+        for intent_type, original_handler in existing_intents.items():
             if intent_type in custom_handlers:
-                new_handler = IntentHookHandler(
+                handler = IntentHookHandler(
                     handler=custom_handlers[intent_type](),
-                    original_handler=handler,
+                    original_handler=original_handler,
                 )
             else:
-                new_handler = IntentHookHandler(
-                    handler=handler,
+                handler = IntentHookHandler(
+                    handler=original_handler,
                 )
             async_remove(self.hass, intent_type)
             async_register(
                 self.hass,
-                new_handler,
+                handler,
             )
-            _LOGGER.debug("Registered intent hook: %s -> %s", intent_type, handler)
+            _LOGGER.debug(
+                "Registered intent hook: %s -> %s", intent_type, handler.handler
+            )
 
         # Register new intents that are not already in existing_intents
         for intent_type, handler_cls in custom_handlers.items():
@@ -177,7 +189,7 @@ class IntentsManager:
                     new_handler,
                 )
                 _LOGGER.debug(
-                    "Registered new intent: %s -> %s", intent_type, new_handler
+                    "Registered new intent: %s -> %s", intent_type, new_handler.handler
                 )
 
     def unregister_intent_hooks_and_handlers(self):
@@ -231,6 +243,11 @@ class IntentsManager:
             dest = custom_sentences_dir / src.name
             if not dest.exists():
                 dest.symlink_to(src)
+
+        # Remove any orphaned sentence files in the HA custom sentences directory
+        await self.hass.async_add_executor_job(
+            remove_orphaned_sentence_files, custom_sentences_dir
+        )
 
     async def unregister_custom_sentences(self) -> None:
         """Unregister custom sentences for intents."""
