@@ -121,8 +121,7 @@ assert.equal(storage.get('view_assist_sensor'),'sensor.library');
 
 });
 
-test('identical URLs do not navigate;
- new intent variables still refresh without adding history',async()=>{
+test('identical URLs do not navigate; new intent variables still refresh without adding history',async()=>{
  const {instance,events,pushes}=fixture();
 instance.variables.config={mimic_device:false};
 
