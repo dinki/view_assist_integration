@@ -36,15 +36,20 @@ async function _selectTree(root, path, all = false) {
 }
 
 export async function selectTree(root, path, all = false, timeout = 10000) {
-  return Promise.race([
-    _selectTree(root, path, all),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(TIMEOUT_ERROR)), timeout)
-    ),
-  ]).catch((err) => {
+  let timer;
+  try {
+    return await Promise.race([
+      _selectTree(root, path, all),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(TIMEOUT_ERROR)), timeout);
+      }),
+    ]);
+  } catch (err) {
     if (!err.message || err.message !== TIMEOUT_ERROR) throw err;
     return null;
-  });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function hass_base_el() {
@@ -343,59 +348,64 @@ class ViewAssist {
     }
   }
 
-  async hide_header(enabled) {
+  async hide_header(enabled, attempt = 0) {
+    clearTimeout(this.hide_header_timeout);
     try {
       let elMain = await selectTree(
         document.body,
         "home-assistant $ home-assistant-main $ partial-panel-resolver ha-panel-lovelace $ hui-root $"
       )
 
+      if (!elMain) throw new Error("Lovelace root not ready");
       await selectTree(
         elMain, "hui-view-container"
       ).then((el) => {
-        enabled ? el.style.setProperty("padding-top", "0px") : el.style.removeProperty("padding-top")
+        enabled ? el?.style?.setProperty("padding-top", "0px") : el?.style?.removeProperty("padding-top")
       });
 
       await selectTree(
         elMain, ".header"
       ).then((el) => {
-        enabled ? el.style.setProperty("display", "none") : el.style.removeProperty("display")
+        enabled ? el?.style?.setProperty("display", "none") : el?.style?.removeProperty("display")
       });
     } catch (e) {
-      clearTimeout(this.hide_header_timeout);
-      this.hide_header_timeout = setTimeout(() => {
-        this.hide_header(enabled);
-      }, 200);
+      if (attempt < 25) {
+        this.hide_header_timeout = setTimeout(() => {
+          this.hide_header(enabled, attempt + 1);
+        }, 200);
+      }
     }
   }
 
-  async hide_sidebar(enabled) {
+  async hide_sidebar(enabled, attempt = 0) {
+    clearTimeout(this.hide_sidebar_timeout);
     try {
       let elMain = await selectTree(
         document.body,
         "home-assistant $ home-assistant-main"
       )
 
+      if (!elMain) throw new Error("HA main not ready");
       enabled ? elMain?.style?.setProperty("--mdc-drawer-width", "0px") : elMain?.style?.removeProperty("--mdc-drawer-width");
       //Fix for HA 2026.6 where they changed the sidebar width variable name
-      enabled ? elMain?.style?.setProperty("--ha-sidebar-width", "0px") : elMain?.style?.removeProperty("--ha-sidebar -width");
+      enabled ? elMain?.style?.setProperty("--ha-sidebar-width", "0px") : elMain?.style?.removeProperty("--ha-sidebar-width");
 
       await selectTree(
         elMain, "$ partial-panel-resolver"
       ).then((el) => {
-        enabled ? el.style.setProperty("--mdc-top-app-bar-width", "100% !important") : el.style.removeProperty("--mdc-top-app-bar-width")
+        enabled ? el?.style?.setProperty("--mdc-top-app-bar-width", "100%", "important") : el?.style?.removeProperty("--mdc-top-app-bar-width")
       });
 
       await selectTree(
         elMain, "$ ha-drawer ha-sidebar"
       ).then((el) => {
-        enabled ? el.style.setProperty("display", "none !important") : el.style.removeProperty("display")
+        enabled ? el?.style?.setProperty("display", "none", "important") : el?.style?.removeProperty("display")
       });
 
       await selectTree(
         elMain, "$ partial-panel-resolver ha-panel-lovelace $ hui-root $ ha-menu-button"
       ).then((el) => {
-        enabled ? el.style.setProperty("display", "none") : el.style.removeProperty("display")
+        enabled ? el?.style?.setProperty("display", "none") : el?.style?.removeProperty("display")
       });
 
       // HA 2026.6
@@ -405,13 +415,14 @@ class ViewAssist {
       await selectTree(
         elMain, "$ ha-drawer $ aside"
       ).then((el) => {
-        enabled ? el.style.setProperty("display", "none") : el.style.removeProperty("display");
+        enabled ? el?.style?.setProperty("display", "none") : el?.style?.removeProperty("display");
       });
     } catch (e) {
-      clearTimeout(this.hide_sidebar_timeout);
-      this.hide_sidebar_timerout = setTimeout(() => {
-        this.hide_sidebar(enabled);
-      }, 200);
+      if (attempt < 25) {
+        this.hide_sidebar_timeout = setTimeout(() => {
+          this.hide_sidebar(enabled, attempt + 1);
+        }, 200);
+      }
     }
 
   }
