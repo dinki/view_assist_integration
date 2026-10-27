@@ -519,7 +519,8 @@ class ViewAssist {
         });
 
         window.addEventListener("location-changed", () => {
-          setTimeout(() => {
+          clearTimeout(this.hide_sections_timeout);
+          this.hide_sections_timeout = setTimeout(() => {
             this.hide_sections(false);
             this.display_browser_id();
           }, 100);
@@ -553,7 +554,30 @@ class ViewAssist {
     return storedBrowserId;
   }
 
-  async connect(attempts = 1) {
+  async subscribe_to_server(connection, reset = false) {
+    const previous = this.serverSubscription;
+    if (!reset && previous?.connection === connection) return previous.promise;
+    // Native HA subscriptions already replay on reconnect. Keep one per browser.
+    const subscription = { connection };
+    subscription.promise = (async () => {
+      if (previous) {
+        try { await (await previous.promise)(); } catch (_) { /* Already closed. */ }
+      }
+      return connection.subscribeMessage((msg) => this.incoming_message(msg), {
+        type: "view_assist/connect",
+        browser_id: this.variables.browser_id,
+      });
+    })();
+    this.serverSubscription = subscription;
+    try {
+      return await subscription.promise;
+    } catch (error) {
+      if (this.serverSubscription === subscription) this.serverSubscription = null;
+      throw error;
+    }
+  }
+
+  async connect(attempts = 1, reset = false) {
     // Subscribe to server updates
     try {
       this.variables.browser_id = this.get_browser_id();
@@ -561,10 +585,7 @@ class ViewAssist {
 
       // Subscribe to server messages
       const conn = this._hass.connection;
-      conn.subscribeMessage((msg) => this.incoming_message(msg), {
-        type: "view_assist/connect",
-        browser_id: this.variables.browser_id,
-      })
+      await this.subscribe_to_server(conn, reset);
 
       // Test connection - this will fail if integration not yet loaded and cause a retry
       const delta = await this._hass.callWS({
@@ -587,6 +608,7 @@ class ViewAssist {
       // Create time sync job with server - updates every 5 minutes
       await this.set_time_delta();
       var t = this;
+      clearInterval(this.serverTimeHandler);
       this.serverTimeHandler = setInterval(function () {
         t.set_time_delta();
       }, 300 * 1000);
@@ -613,7 +635,7 @@ class ViewAssist {
       case "reload":
         clearInterval(this.serverTimeHandler);
         this.connected = false;
-        setTimeout(() => this.connect(), 1000);
+        setTimeout(() => this.connect(1, true), 1000);
         break;
       case "unregistered":
         localStorage.removeItem("view_assist_sensor");
@@ -635,7 +657,7 @@ class ViewAssist {
           if (payload["variables"]) {
             this.variables.navigation = payload["variables"];
           }
-          this.browser_navigate(payload["path"]);
+          this.browser_navigate(payload["path"], Boolean(payload["variables"]));
         }
         break;
       case "listening":
@@ -652,7 +674,8 @@ class ViewAssist {
     let reload = false;
     const old_config = this.variables?.config
 
-    if (event == "registered") {
+    if (event == "registered" && (!old_config?.entity_id ||
+        old_config.entity_id !== payload.entity_id || old_config.home !== payload.home)) {
       reload = true;
     }
 
@@ -685,9 +708,14 @@ class ViewAssist {
     }
   }
 
-  browser_navigate(path) {
-    // Navigate the browser window
+  browser_navigate(path, refresh = false) {
     if (!path) return;
+    const target = new URL(path, window.location.href);
+    if (target.href === window.location.href) {
+      // New intent variables can require refreshing the current view.
+      if (refresh) window.dispatchEvent(new CustomEvent("location-changed"));
+      return;
+    }
     history.pushState(null, "", path);
     window.dispatchEvent(new CustomEvent("location-changed"));
   }
