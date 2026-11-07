@@ -1,0 +1,21 @@
+language: "en"
+intents:
+  HassGetState:
+    data:
+      - sentences:
+          - "(locate | map | where is | where's) [my] {name}"
+
+lists:
+  name:
+    wildcard: true
+
+responses:
+  intents:
+    HassGetState:
+      default: >
+        {% if slots.found %}
+        {% if slots.away %}{{ slots.name }} is away.{% else %}{{ slots.name }} is at {{ slots.location }}.{% endif %}
+        Last updated {% if slots.seconds < 60 %}now{% elif slots.seconds < 3600 %}{% set n = slots.seconds // 60 %}{{ n }} minute{{ '' if n == 1 else 's' }} ago{% elif slots.seconds < 86400 %}{% set n = slots.seconds // 3600 %}{{ n }} hour{{ '' if n == 1 else 's' }} ago{% else %}{% set n = slots.seconds // 86400 %}{{ n }} day{{ '' if n == 1 else 's' }} ago{% endif %}.
+        {% else %}
+        Sorry, I could not find that.
+        {% endif %}

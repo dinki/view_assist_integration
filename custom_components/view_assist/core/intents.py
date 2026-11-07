@@ -314,7 +314,7 @@ class IntentHookHandler(IntentHandler):
             response = result.response
             view_data = result.view_data
 
-            if self.call_original and self.original_handler:
+            if (self.call_original or result.call_original) and self.original_handler:
                 response = await self.original_handler.async_handle(
                     intent_obj=intent_obj
                 )

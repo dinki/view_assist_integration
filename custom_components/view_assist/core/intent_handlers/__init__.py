@@ -50,6 +50,8 @@ class IntentOverrideResponse:
         """Initialize an IntentResponse."""
         self.response = response
         self.view_data: dict[str, Any] = {}
+        # Set by a handler to pass the intent on to the original handler
+        self.call_original: bool = False
 
     @callback
     def async_set_speech(
