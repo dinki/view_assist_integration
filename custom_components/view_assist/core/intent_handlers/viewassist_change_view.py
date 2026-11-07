@@ -8,7 +8,7 @@ from homeassistant.helpers import intent
 
 from ...const import DOMAIN  # noqa: TID252
 
-from ...helpers import get_config_entry_by_entity_id
+from . import IntentDeviceInfo
 from ...typed import VAConfigEntry
 
 
@@ -35,15 +35,23 @@ class VASetChangeViewIntentHandler(intent.IntentHandler):
         """Change View Assist view."""
         hass = intent_obj.hass
         view = intent_obj.slots["view"]["value"]
-        
+
+        # Work out the satellite from the intent itself. The voice path does not
+        # pass extra_data, so an entity_id from extra_data is used only if given.
+        device_info = IntentDeviceInfo(intent_obj)
         entity_id = (
             extra_data["entity_id"]
             if extra_data and "entity_id" in extra_data
-            else None
+            else device_info.entity_id
         )
+        entry: VAConfigEntry = device_info.entry
 
-        # Retrieve the dashboard path now that hass and entity_id are available
-        entry: VAConfigEntry = get_config_entry_by_entity_id(hass, entity_id)
+        if entry is None:
+            response = intent_obj.create_response()
+            response.async_set_speech("I could not find the satellite for that view.")
+            return response
+
+        # Retrieve the dashboard path now that the config entry is available
         dashboard_path = entry.runtime_data.dashboard.dashboard
 
         await hass.services.async_call(

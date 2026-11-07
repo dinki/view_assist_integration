@@ -11,14 +11,22 @@ lists:
       - in: infopic
         out: infopic
       - in: music
-        out: music 
+        out: music
+      - in: alarm
+        out: alarm
+      - in: intent
+        out: intent
 intents:
   ViewAssistChangeView:
     data:
       - sentences:
-          - "set view [to] {view}"
+          - "set view [to] {view} [view]"
+          - "change [the] view [to] {view}"
           - "change [to] {view} view"
           - "set [to] {view} view"
+          - "show [me] [the] {view} view"
+          - "go to [the] {view} view"
+          - "switch to [the] {view} view"
 responses:
   intents:
     ViewAssistChangeView:
