@@ -310,7 +310,6 @@ INTENT_TO_VIEW_MAPPING = {
         "HassListCompleteItem",
         "HassListRemoveItem",
         "ViewAssistListAdd",
-        "ViewAssistShowList",
         "ViewAssistShowAllList",
         "ViewAssistReadRestList",
     ],

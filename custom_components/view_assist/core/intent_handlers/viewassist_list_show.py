@@ -10,13 +10,19 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.intent import Intent, IntentResponse
 
 from ...const import DOMAIN  # noqa: TID252
-from . import IntentOverrideHandler
+from . import IntentDeviceInfo, IntentOverrideHandler
+from .viewassist_camera_show import (
+    async_show_cameras,
+    resolve_cameras,
+    split_camera_word,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 # Number of unchecked items read out before offering to read the rest
 MAX_ITEMS_READOUT = 5
 LIST_VIEW_FONT_SIZE = "4vw"
+LIST_VIEW = "list"
 
 # Last list read on each satellite: satellite entity_id -> (todo entity_id, items already read)
 LAST_READ: dict[str, tuple[str, int]] = {}
@@ -24,7 +30,7 @@ LAST_READ: dict[str, tuple[str, int]] = {}
 
 def normalise_list_name(name: str) -> str:
     """Lower case the name and strip an optional trailing 'list'."""
-    name = name.strip().lower()
+    name = str(name).strip().lower()
     if name.endswith(" list"):
         name = name[: -len(" list")]
     return name.strip()
@@ -35,13 +41,18 @@ def friendly_name(hass: HomeAssistant, entity_id: str) -> str:
     state = hass.states.get(entity_id)
     if state is None:
         return entity_id
-    return state.attributes.get("friendly_name") or state.name
+    return str(state.attributes.get("friendly_name") or state.name)
 
 
 def entity_aliases(hass: HomeAssistant, entity_id: str) -> set[str]:
     """Return the Assist aliases set on an entity in the entity registry."""
     entry = er.async_get(hass).async_get(entity_id)
-    return set(getattr(entry, "aliases", None) or set())
+    # Registry aliases are normally text, but skip anything else rather than fail
+    return {
+        alias
+        for alias in (getattr(entry, "aliases", None) or ())
+        if isinstance(alias, str) and alias.strip()
+    }
 
 
 def find_todo_entity(hass: HomeAssistant, spoken_name: str) -> str | None:
@@ -107,6 +118,35 @@ async def async_show_list_view(
     )
 
 
+async def async_show_camera_phrase(
+    intent_obj: Intent, response: IntentResponse, spoken_name: str
+) -> bool:
+    """Show cameras for a phrase the list intent received. Return False if no camera matches."""
+    kind, name, cameras = resolve_cameras(intent_obj.hass, spoken_name)
+    if kind == "none":
+        return False
+    await async_show_cameras(intent_obj, kind, cameras)
+    response.async_set_speech_slots({"camera_kind": kind, "camera_name": name})
+    return True
+
+
+async def async_navigate_to_list_view(intent_obj: Intent, satellite: str | None) -> None:
+    """Navigate the satellite to the list view. Done here, not by the view mapping."""
+    if not satellite:
+        return
+    entry = IntentDeviceInfo(intent_obj).entry
+    if entry is None:
+        return
+    dashboard = entry.runtime_data.dashboard.dashboard or "/view-assist"
+    await intent_obj.hass.services.async_call(
+        DOMAIN,
+        "navigate",
+        {"device": satellite, "path": f"/{dashboard.strip('/')}/{LIST_VIEW}"},
+        blocking=True,
+        context=intent_obj.context,
+    )
+
+
 class VAShowListIntentHandler(IntentOverrideHandler):
     """Show a named todo list and read the first few unchecked items."""
 
@@ -132,10 +172,25 @@ class VAShowListIntentHandler(IntentOverrideHandler):
         spoken_name = intent_obj.slots["list"]["value"]
         response = intent_obj.create_response()
 
+        # A phrase ending in a camera word is a camera request. Otherwise try lists first.
+        _, camera_word = split_camera_word(spoken_name)
+        if camera_word and await async_show_camera_phrase(
+            intent_obj, response, spoken_name
+        ):
+            return response
+
         entity_id = find_todo_entity(hass, spoken_name)
         if entity_id is None:
+            if not camera_word and await async_show_camera_phrase(
+                intent_obj, response, spoken_name
+            ):
+                return response
             response.async_set_speech_slots(
-                {"found": False, "spoken_name": spoken_name}
+                {
+                    "found": False,
+                    "spoken_name": spoken_name,
+                    "camera_not_found": camera_word,
+                }
             )
             return response
 
@@ -162,4 +217,5 @@ class VAShowListIntentHandler(IntentOverrideHandler):
             }
         )
         await async_show_list_view(hass, intent_obj, satellite, entity_id)
+        await async_navigate_to_list_view(intent_obj, satellite)
         return response

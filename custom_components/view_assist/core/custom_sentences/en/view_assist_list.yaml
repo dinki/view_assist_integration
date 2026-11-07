@@ -47,9 +47,17 @@ responses:
   intents:
     ViewAssistShowList:
       default: >
+        {% if slots.camera_kind is defined and slots.camera_kind %}
+          {% if slots.camera_kind == 'all' %}Showing all cameras.
+          {% elif slots.camera_kind == 'group' %}Showing {{ slots.camera_name }} cameras.
+          {% elif slots.camera_kind == 'single' %}Showing {{ slots.camera_name }} camera.
+          {% else %}There are no cameras in {{ slots.camera_name }}.{% endif %}
+        {% else %}
         {% set count = slots.count %}
         {% set name = slots.list_name %}
-        {% if not slots.found %}
+        {% if not slots.found and slots.camera_not_found %}
+          Sorry, I couldn't find a camera called {{ slots.spoken_name }}.
+        {% elif not slots.found %}
           I could not find a list called {{ slots.spoken_name }}.
         {% elif count == 0 %}
           There are no unchecked items on your {{ name }}.
@@ -59,6 +67,7 @@ responses:
           There are {{ count }} items on your {{ name }}. The first {{ slots.item_names | length }} are: {{ slots.item_names | join(', ') }}, and others. Say read the rest to hear more.
         {% else %}
           There are {{ count }} items on your {{ name }}. They are {{ slots.item_names | join(', ') }}.
+        {% endif %}
         {% endif %}
     ViewAssistShowAllList:
       default: >
