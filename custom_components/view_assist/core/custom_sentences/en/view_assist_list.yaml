@@ -1,0 +1,126 @@
+language: "en"
+intents:
+  ViewAssistListAdd:
+    data:
+      - sentences:
+          - "(add | at) {item} to [my | the] {name} [list]"
+  ViewAssistShowList:
+    data:
+      - sentences:
+          - "(what's | what is) on [my | the] {list} [list]"
+          - "show [me] [my | the] {list} [list]"
+  ViewAssistShowAllList:
+    data:
+      - sentences:
+          - "[tell me | read me | read | list] (everything | all) (on | in) [my | the] {list} [list]"
+          - "show [me] (everything | all) (on | in) [my | the] {list} [list]"
+  ViewAssistReadRestList:
+    data:
+      - sentences:
+          - "read the rest"
+          - "read the rest of [my | the] {list} [list]"
+          - "what else is on [my | the] {list} [list]"
+  ViewAssistCheckListItem:
+    data:
+      - sentences:
+          - "is {item} on [my | the] {list} [list]"
+  ViewAssistListNames:
+    data:
+      - sentences:
+          - "what [todo | to do] lists do I have"
+          - "what are my [todo | to do] lists"
+          - "(tell me | list) my [todo | to do] lists"
+  HassListCompleteItem:
+    data:
+      - sentences:
+          - "(remove | take) {item} (from | off) [my | the] {name} [list]"
+
+lists:
+  list:
+    wildcard: true
+  name:
+    wildcard: true
+  item:
+    wildcard: true
+
+responses:
+  intents:
+    ViewAssistShowList:
+      default: >
+        {% set count = slots.count %}
+        {% set name = slots.list_name %}
+        {% if not slots.found %}
+          I could not find a list called {{ slots.spoken_name }}.
+        {% elif count == 0 %}
+          There are no unchecked items on your {{ name }}.
+        {% elif count == 1 %}
+          There is 1 unchecked item on your {{ name }}. It is {{ slots.item_names[0] }}.
+        {% elif count > slots.item_names | length %}
+          There are {{ count }} items on your {{ name }}. The first {{ slots.item_names | length }} are: {{ slots.item_names | join(', ') }}, and others. Say read the rest to hear more.
+        {% else %}
+          There are {{ count }} items on your {{ name }}. They are {{ slots.item_names | join(', ') }}.
+        {% endif %}
+    ViewAssistShowAllList:
+      default: >
+        {% set count = slots.count %}
+        {% set name = slots.list_name %}
+        {% if not slots.found %}
+          I could not find a list called {{ slots.spoken_name }}.
+        {% elif count == 0 %}
+          There are no unchecked items on your {{ name }}.
+        {% elif count == 1 %}
+          There is 1 unchecked item on your {{ name }}. It is {{ slots.item_names[0] }}.
+        {% else %}
+          There are {{ count }} items on your {{ name }}. They are {{ slots.item_names | join(', ') }}.
+        {% endif %}
+    ViewAssistReadRestList:
+      default: >
+        {% set name = slots.list_name %}
+        {% if slots.status == 'not_found' %}
+          I could not find a list called {{ slots.spoken_name }}.
+        {% elif slots.status == 'no_list' %}
+          I do not have a list to read the rest of. Ask for a list first.
+        {% elif slots.status == 'nothing_more' %}
+          There is nothing more to read on your {{ name }}.
+        {% else %}
+          Here is the rest of your {{ name }}: {{ slots.item_names | join(', ') }}.
+        {% endif %}
+    ViewAssistCheckListItem:
+      default: >
+        {% set item = slots.spoken_item %}
+        {% set name = slots.list_name %}
+        {% if slots.status == 'list_not_found' %}
+          I could not find a list called {{ slots.spoken_name }}.
+        {% elif slots.status == 'unchecked' %}
+          Yes, {{ item }} is on your {{ name }} and has not been checked off yet.
+        {% elif slots.status == 'checked' %}
+          Yes, {{ item }} is on your {{ name }} and has already been checked off.
+        {% else %}
+          No, {{ item }} is not on your {{ name }}.
+        {% endif %}
+    ViewAssistListNames:
+      default: >
+        {% set names = slots.names %}
+        {% set count = slots.count %}
+        {% if count == 0 %}
+          You do not have any todo lists.
+        {% elif count == 1 %}
+          You have one list: {{ names[0] }}.
+        {% elif count == 2 %}
+          You have two lists: {{ names[0] }} and {{ names[1] }}.
+        {% else %}
+          You have {{ count }} lists: {% for n in names %}{% if loop.index == count %} and {% elif loop.index > 1 %}, {% endif %}{{ n }}{% endfor %}.
+        {% endif %}
+    ViewAssistListAdd:
+      default: >
+        {% set name = slots.list_name %}
+        {% if slots.status == 'list_not_found' %}
+          I could not find a list called {{ slots.spoken_name }}.
+        {% elif slots.status == 'already' %}
+          {{ slots.item }} is already on your {{ name }}.
+        {% else %}
+          Added {{ slots.item }} to your {{ name }}.
+        {% endif %}
+    HassListCompleteItem:
+      default: >
+        {{ slots.item }} removed from {{ slots.name }}.

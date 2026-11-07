@@ -1,0 +1,165 @@
+"""Shared list helpers and the show list intent for View Assist."""
+
+import logging
+from typing import override
+
+import voluptuous as vol
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.intent import Intent, IntentResponse
+
+from ...const import DOMAIN  # noqa: TID252
+from . import IntentOverrideHandler
+
+_LOGGER = logging.getLogger(__name__)
+
+# Number of unchecked items read out before offering to read the rest
+MAX_ITEMS_READOUT = 5
+LIST_VIEW_FONT_SIZE = "4vw"
+
+# Last list read on each satellite: satellite entity_id -> (todo entity_id, items already read)
+LAST_READ: dict[str, tuple[str, int]] = {}
+
+
+def normalise_list_name(name: str) -> str:
+    """Lower case the name and strip an optional trailing 'list'."""
+    name = name.strip().lower()
+    if name.endswith(" list"):
+        name = name[: -len(" list")]
+    return name.strip()
+
+
+def friendly_name(hass: HomeAssistant, entity_id: str) -> str:
+    """Return the friendly name of an entity, falling back to its entity_id."""
+    state = hass.states.get(entity_id)
+    if state is None:
+        return entity_id
+    return state.attributes.get("friendly_name") or state.name
+
+
+def entity_aliases(hass: HomeAssistant, entity_id: str) -> set[str]:
+    """Return the Assist aliases set on an entity in the entity registry."""
+    entry = er.async_get(hass).async_get(entity_id)
+    return set(getattr(entry, "aliases", None) or set())
+
+
+def find_todo_entity(hass: HomeAssistant, spoken_name: str) -> str | None:
+    """Return the todo entity_id matching the spoken name.
+
+    Friendly names are checked first, then Home Assistant aliases.
+    """
+    wanted = normalise_list_name(spoken_name)
+    states = list(hass.states.async_all("todo"))
+    for state in states:
+        if normalise_list_name(friendly_name(hass, state.entity_id)) == wanted:
+            return state.entity_id
+    for state in states:
+        if any(
+            normalise_list_name(alias) == wanted
+            for alias in entity_aliases(hass, state.entity_id)
+        ):
+            return state.entity_id
+    return None
+
+
+def todo_entities(hass: HomeAssistant) -> list[str]:
+    """Return all todo entity_ids."""
+    return [state.entity_id for state in hass.states.async_all("todo")]
+
+
+async def async_get_items(
+    hass: HomeAssistant, entity_id: str, status: str | None = None
+) -> list[dict]:
+    """Return todo items, optionally filtered by status."""
+    data = {"entity_id": entity_id}
+    if status:
+        data["status"] = status
+    result = await hass.services.async_call(
+        "todo", "get_items", data, blocking=True, return_response=True
+    )
+    return result.get(entity_id, {}).get("items", [])
+
+
+def satellite_key(satellite: str | None) -> str:
+    """Return the key used to remember state for a satellite."""
+    return satellite or ""
+
+
+async def async_show_list_view(
+    hass: HomeAssistant, intent_obj: Intent, satellite: str | None, entity_id: str
+) -> None:
+    """Set the satellite's list and title so the list view shows the right list."""
+    if not satellite:
+        _LOGGER.debug("No satellite found to show list %s", entity_id)
+        return
+    await hass.services.async_call(
+        DOMAIN,
+        "set_state",
+        {
+            "title": friendly_name(hass, entity_id),
+            "message_font_size": LIST_VIEW_FONT_SIZE,
+            "list": entity_id,
+        },
+        blocking=True,
+        context=intent_obj.context,
+        target={"entity_id": satellite},
+    )
+
+
+class VAShowListIntentHandler(IntentOverrideHandler):
+    """Show a named todo list and read the first few unchecked items."""
+
+    intent_type = "ViewAssistShowList"
+    description = """
+        Shows a named todo list, such as the shopping list, on a View Assist satellite
+        and reads the first few unchecked items. The list slot is the friendly name of
+        the list without the word list.
+        """
+
+    @property
+    @override
+    def slot_schema(self) -> dict | None:
+        """Return a slot schema."""
+        return {
+            vol.Required("list"): str,
+        }
+
+    @override
+    async def async_handle(self, intent_obj: Intent) -> IntentResponse:
+        """Read the first unchecked items and show the list."""
+        hass = intent_obj.hass
+        spoken_name = intent_obj.slots["list"]["value"]
+        response = intent_obj.create_response()
+
+        entity_id = find_todo_entity(hass, spoken_name)
+        if entity_id is None:
+            response.async_set_speech_slots(
+                {"found": False, "spoken_name": spoken_name}
+            )
+            return response
+
+        items = [
+            item["summary"]
+            for item in await async_get_items(hass, entity_id, "needs_action")
+        ]
+
+        device_info = self.get_device_info(intent_obj)
+        satellite = device_info.entity_id if device_info else None
+        LAST_READ[satellite_key(satellite)] = (
+            entity_id,
+            min(MAX_ITEMS_READOUT, len(items)),
+        )
+
+        # Speech text lives in the custom sentence responses, not here
+        response.async_set_speech_slots(
+            {
+                "found": True,
+                "spoken_name": spoken_name,
+                "list_name": friendly_name(hass, entity_id),
+                "count": len(items),
+                "item_names": items[:MAX_ITEMS_READOUT],
+            }
+        )
+        await async_show_list_view(hass, intent_obj, satellite, entity_id)
+        return response
