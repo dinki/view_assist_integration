@@ -6,7 +6,12 @@ from typing import override
 import voluptuous as vol
 
 from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
-from homeassistant.const import STATE_PAUSED, STATE_PLAYING, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import (
+    STATE_PAUSED,
+    STATE_PLAYING,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import (
     area_registry as ar,
@@ -36,7 +41,9 @@ def _find_area_ids(hass: HomeAssistant, area_name: str) -> set[str]:
     }
 
 
-def _find_music_assistant_players(hass: HomeAssistant, area_ids: set[str]) -> list[State]:
+def _find_music_assistant_players(
+    hass: HomeAssistant, area_ids: set[str]
+) -> list[State]:
     """Return states of Music Assistant media players located in the given areas."""
     ent_reg = er.async_get(hass)
     dev_reg = dr.async_get(hass)
@@ -67,6 +74,7 @@ def _find_music_assistant_players(hass: HomeAssistant, area_ids: set[str]) -> li
             players.append(state)
 
     return players
+
 
 class VAWhatIsPlayingHandler(IntentOverrideHandler):
     """Report the title/artist currently playing on a music player."""
@@ -115,10 +123,12 @@ class VAWhatIsPlayingHandler(IntentOverrideHandler):
             )
         else:
             # No room: use this device's own music player
-            entity_id: str | None = slots.get("name", {}).get("value")
-            if not entity_id and extra_data:
-                entity_id = extra_data.get("music_player")
-            state = hass.states.get(entity_id) if entity_id else None
+            device_info = self.get_device_info(intent_obj)
+            state = (
+                hass.states.get(device_info.music_player)
+                if device_info.music_player
+                else None
+            )
 
         response = intent_obj.create_response()
         response.response_type = intent.IntentResponseType.QUERY_ANSWER
