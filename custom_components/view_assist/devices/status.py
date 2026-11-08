@@ -103,6 +103,7 @@ class Status:
     has_timers: bool = False
     timers: list[Timer] | None = None
     alarm_sounding: bool = False
+    cameras: str | list[str] | None = None
     last_activity: datetime | None = None
     extra_data: dict[str, Any] | None = None
 
@@ -320,6 +321,11 @@ class StatusManager(DeviceModule, Status):
             # Register state with chat log monitor to support last conversation statuses
             if clm := ConversationMonitor.get(self._hass):
                 clm.register_assist_status(self._config.entry_id, self.assist_state)
+
+        # Handle mode change
+        elif event_type == VAEventType.MODE_CHANGE:
+            self.mode = event.payload.get("mode", None)
+            self.force_activity_timeout()
 
         # Handle background image change events
         elif event_type == VAEventType.BACKGROUND_CHANGE:

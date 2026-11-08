@@ -1,0 +1,28 @@
+language: "en"
+lists:
+  camera:
+    wildcard: true
+
+intents:
+  ViewAssistDisplayCamera:
+    data:
+      - sentences:
+          - "(display|show) (my|the) {camera} [camera]"
+          - "(display|show) (my|the|all) [my|the] cameras"
+  ViewAssistCancelCamera:
+    data:
+      - sentences:
+          - "(cancel|stop) (my|the) camera"
+
+responses:
+  intents:
+    ViewAssistDisplayCamera:
+      default: >
+        {% if slots.camera == "all" or not slots.camera %}
+          "Displaying all cameras"
+        {% else %}
+          "Displaying the {{slots.camera}} camera"
+        {% endif %}
+    ViewAssistCancelCamera:
+      default: >
+        "OK"

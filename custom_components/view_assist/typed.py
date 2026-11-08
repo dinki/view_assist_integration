@@ -149,6 +149,7 @@ class DashboardConfig:
     intent: str | None = None
     list_view: str | None = None
     info: str | None = None
+    camera: str | None = None
     background_settings: BackgroundConfig = field(default_factory=BackgroundConfig)
     display_settings: DisplayConfig = field(default_factory=DisplayConfig)
 
