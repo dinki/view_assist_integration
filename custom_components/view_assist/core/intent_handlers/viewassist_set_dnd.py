@@ -1,5 +1,6 @@
 """Assist Satellite intents."""
 
+import logging
 from typing import override
 
 import voluptuous as vol
@@ -7,6 +8,19 @@ import voluptuous as vol
 from homeassistant.helpers import intent
 
 from ...const import DOMAIN  # noqa: TID252
+from . import IntentDeviceInfo
+
+_LOGGER = logging.getLogger(__name__)
+
+# Spoken values mapped to the stored "on"/"off" value
+DND_VALUES = {
+    "on": "on",
+    "enable": "on",
+    "enabled": "on",
+    "off": "off",
+    "disable": "off",
+    "disabled": "off",
+}
 
 
 class VASetDNDIntentHandler(intent.IntentHandler):
@@ -31,14 +45,27 @@ class VASetDNDIntentHandler(intent.IntentHandler):
     ) -> intent.IntentResponse:
         """Change View Assist do not disturb setting."""
         hass = intent_obj.hass
-        dnd_setting = intent_obj.slots["dnd_setting"]["value"]
-        entity_id = (
-            extra_data["entity_id"]
-            if extra_data and "entity_id" in extra_data
-            else None
-        )
+        raw_value = str(intent_obj.slots["dnd_setting"]["value"]).strip().lower()
+        dnd_setting = DND_VALUES.get(raw_value)
+        response = intent_obj.create_response()
 
-        # Call mode change here
+        if dnd_setting is None:
+            _LOGGER.warning("Unknown do not disturb value '%s'", raw_value)
+            response.async_set_speech(
+                f"I didn't understand the do not disturb setting {raw_value}."
+            )
+            return response
+
+        # extra_data is empty on the voice path, so take the satellite
+        # from the device that received the command.
+        entity_id = IntentDeviceInfo(intent_obj).entity_id
+        if entity_id is None:
+            _LOGGER.warning("No View Assist satellite found for do not disturb")
+            response.async_set_speech(
+                "I couldn't tell which satellite to change."
+            )
+            return response
+
         await hass.services.async_call(
             DOMAIN,
             "set_state",
@@ -48,10 +75,5 @@ class VASetDNDIntentHandler(intent.IntentHandler):
             target={"entity_id": entity_id},
         )
 
-        response = intent_obj.create_response()
-        response.async_set_speech_slots(
-            {
-                "dnd_setting": intent_obj.slots["dnd_setting"]["value"],
-            }
-        )
+        response.async_set_speech_slots({"dnd_setting": dnd_setting})
         return response

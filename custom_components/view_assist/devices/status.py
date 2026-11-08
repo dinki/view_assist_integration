@@ -448,6 +448,13 @@ class StatusManager(DeviceModule, Status):
             self.hold = True
             return False
 
+        # Show the cycle icon while in cycle mode
+        if mm := MenuManager.get(self._hass, self._config):
+            if value == VAMode.CYCLE:
+                mm.add_items(VAMode.CYCLE)
+            elif self.mode == VAMode.CYCLE:
+                mm.remove_items(VAMode.CYCLE)
+
         if value == "normal":
             self.hold = False
         return True
@@ -474,10 +481,10 @@ class StatusManager(DeviceModule, Status):
             path,
         )
 
-    def _on_set_do_not_disturb(self, enable: bool) -> None:
-        """Set the Do Not Disturb icon for the device."""
+    def _on_set_do_not_disturb(self, value: str) -> None:
+        """Show the dnd status icon while do not disturb is on."""
         if mm := MenuManager.get(self._hass, self._config):
-            if enable:
-                mm.add_items(VAMode.DND)
+            if value in ("on", True):
+                mm.add_items("dnd")
             else:
-                mm.remove_items(VAMode.DND)
+                mm.remove_items("dnd")
