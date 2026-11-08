@@ -2,12 +2,12 @@ language: "en"
 lists:
   mode:
     values:
-      - in: music
-        out: music
       - in: normal
         out: normal
       - in: cycle
         out: cycle
+      - in: camera
+        out: camera
 intents:
   ViewAssistSetMode:
     data:

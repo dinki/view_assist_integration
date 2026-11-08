@@ -114,6 +114,13 @@ class DisplayManager(DeviceModule):
                 else None
             )
 
+        if sm.mode == VAMode.CAMERA:
+            return (
+                sm.config.dashboard.camera
+                if sm.current_path != sm.config.dashboard.camera
+                else None
+            )
+
         if sm.is_music_playing:
             return (
                 sm.config.dashboard.music

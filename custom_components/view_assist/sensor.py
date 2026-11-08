@@ -158,6 +158,7 @@ class ViewAssistSensor(SensorEntity):
         if sm := StatusManager.get(self.hass, self.config):
             attrs["background"] = sm.background
             attrs["browser_connected"] = sm.browser_connected
+            attrs["cameras"] = sm.cameras
             attrs["current_path"] = sm.current_path
             attrs["font_style"] = sm.config.dashboard.display_settings.font_style
             attrs["hold"] = sm.hold

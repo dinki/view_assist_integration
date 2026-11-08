@@ -83,6 +83,7 @@ class VAMode(StrEnum):
     NIGHT = "night"
     ROTATE = "rotate"
     GAME = "game"
+    CAMERA = "camera"
 
 
 MUSIC_MEDIA_TYPES = (
@@ -176,6 +177,7 @@ DEFAULT_VALUES = {
     CONF_INTENT: "/view-assist/intent",
     CONF_LIST: "/view-assist/list",
     CONF_INFO: "/view-assist/info",
+    CONF_CAMERA: "/view-assist/camera",
     CONF_BACKGROUND_SETTINGS: {
         CONF_BACKGROUND_MODE: VABackgroundMode.DEFAULT_BACKGROUND,
         CONF_BACKGROUND: "/view_assist/dashboard/background.jpg",
@@ -316,4 +318,5 @@ INTENT_TO_VIEW_MAPPING = {
     "calendar": ["ViewAssistShowCalendar"],
     "info": ["info", "HassBroadcast", "VAWhatDidYouSay", "AIResponse"],
     "intent": ["HassTurnOn", "HassTurnOff"],
+    "camera": ["ViewAssistDisplayCamera"],
 }

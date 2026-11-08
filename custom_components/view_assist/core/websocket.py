@@ -131,24 +131,24 @@ class WebsocketListenerHandler:
         self.entity_id, self.mimic = self._get_entity_id(self.browser_id)
         if self.entity_id:
             self.config = get_config_entry_by_entity_id(self.hass, self.entity_id)
-
-            if "global" not in self.listeners:
-                self.listeners["global"] = async_dispatcher_connect(
-                    self.hass, f"{DOMAIN}_event", self._send_event
-                )
-            if "device" not in self.listeners:
-                self.listeners["device"] = async_dispatcher_connect(
+            if self.config:
+                if "global" not in self.listeners:
+                    self.listeners["global"] = async_dispatcher_connect(
+                        self.hass, f"{DOMAIN}_event", self._send_event
+                    )
+                if "device" not in self.listeners:
+                    self.listeners["device"] = async_dispatcher_connect(
+                        self.hass,
+                        f"{DOMAIN}_{self.config.entry_id}_event",
+                        self._send_event,
+                    )
+                async_dispatcher_send(
                     self.hass,
                     f"{DOMAIN}_{self.config.entry_id}_event",
-                    self._send_event,
+                    VAEvent(
+                        VAEventType.BROWSER_REGISTERED, {"browser_id": self.browser_id}
+                    ),
                 )
-            async_dispatcher_send(
-                self.hass,
-                f"{DOMAIN}_{self.config.entry_id}_event",
-                VAEvent(
-                    VAEventType.BROWSER_REGISTERED, {"browser_id": self.browser_id}
-                ),
-            )
         else:
             self._send_event(
                 VAEvent(VAEventType.BROWSER_UNREGISTERED),
