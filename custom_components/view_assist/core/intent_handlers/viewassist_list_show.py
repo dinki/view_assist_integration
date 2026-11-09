@@ -11,9 +11,9 @@ from homeassistant.helpers.intent import Intent, IntentResponse
 
 from ...const import DOMAIN  # noqa: TID252
 from . import IntentDeviceInfo, IntentOverrideHandler
-from .viewassist_camera_show import (
-    async_show_cameras,
-    resolve_cameras,
+from .viewassist_display_camera import (
+    resolve_camera,
+    show_camera,
     split_camera_word,
 )
 
@@ -121,11 +121,12 @@ async def async_show_list_view(
 async def async_show_camera_phrase(
     intent_obj: Intent, response: IntentResponse, spoken_name: str
 ) -> bool:
-    """Show cameras for a phrase the list intent received. Return False if no camera matches."""
-    kind, name, cameras = resolve_cameras(intent_obj.hass, spoken_name)
+    """Show a camera for a phrase the list intent received. Return False if no camera matches."""
+    kind, name, entity_ids = resolve_camera(intent_obj.hass, spoken_name)
     if kind == "none":
         return False
-    await async_show_cameras(intent_obj, kind, cameras)
+    if kind != "empty":
+        show_camera(intent_obj.hass, IntentDeviceInfo(intent_obj), entity_ids)
     response.async_set_speech_slots({"camera_kind": kind, "camera_name": name})
     return True
 
