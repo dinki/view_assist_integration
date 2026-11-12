@@ -1,0 +1,159 @@
+language: "en"
+lists:
+  weather:
+    wildcard: true
+  forecast_day:
+    values:
+      - in: "today"
+        out: "today"
+      - in: "tonight"
+        out: "tonight"
+      - in: "tomorrow"
+        out: "tomorrow"
+      - in: "day after tomorrow"
+        out: "day after tomorrow"
+      - in: "monday"
+        out: "monday"
+      - in: "tuesday"
+        out: "tuesday"
+      - in: "wednesday"
+        out: "wednesday"
+      - in: "thursday"
+        out: "thursday"
+      - in: "friday"
+        out: "friday"
+      - in: "saturday"
+        out: "saturday"
+      - in: "sunday"
+        out: "sunday"
+  day:
+    values:
+      - in: "today"
+        out: "today"
+      - in: "tomorrow"
+        out: "tomorrow"
+      - in: "day after tomorrow"
+        out: "day after tomorrow"
+      - in: "monday"
+        out: "monday"
+      - in: "tuesday"
+        out: "tuesday"
+      - in: "wednesday"
+        out: "wednesday"
+      - in: "thursday"
+        out: "thursday"
+      - in: "friday"
+        out: "friday"
+      - in: "saturday"
+        out: "saturday"
+      - in: "sunday"
+        out: "sunday"
+  part:
+    values:
+      - in: "this morning"
+        out: "morning"
+      - in: "morning"
+        out: "morning"
+      - in: "this afternoon"
+        out: "afternoon"
+      - in: "afternoon"
+        out: "afternoon"
+      - in: "this evening"
+        out: "evening"
+      - in: "evening"
+        out: "evening"
+      - in: "tonight"
+        out: "night"
+      - in: "overnight"
+        out: "night"
+      - in: "this night"
+        out: "night"
+      - in: "night"
+        out: "night"
+intents:
+  ViewAssistWeatherCurrent:
+    data:
+      - sentences:
+          - "(what's | what is | how's | how is) [the] weather [like] (outside | right now | currently | now) [in {weather}]"
+          - "(what's | what is | how's | how is) it (like | going) outside [in {weather}]"
+          - "(what's | what is) [the] (outside | current) temperature [in {weather}]"
+          - "(current | right now) weather [in {weather}]"
+  ViewAssistWeatherForecast:
+    data:
+      - slots:
+          measure: "high"
+        sentences:
+          - "(what's | what is | what will be | what will) [the] [forecast | forecasted] high [temperature] [for] [{forecast_day}] [in {weather}]"
+          - "how hot will it (be | get) [{forecast_day}] [in {weather}]"
+      - slots:
+          measure: "low"
+        sentences:
+          - "(what's | what is | what will be | what will) [the] [forecast | forecasted] low [temperature] [for] [{forecast_day}] [in {weather}]"
+          - "how cold will it (be | get) [{forecast_day}] [in {weather}]"
+      - slots:
+          measure: "outlook"
+        sentences:
+          - "(what's | what is | what will) [the] (forecast | weather forecast) [like] [for] [{forecast_day}] [in {weather}]"
+          - "what's the forecast [for] [{forecast_day}] [in {weather}]"
+  ViewAssistWeatherRain:
+    data:
+      - slots:
+          precip: "snow"
+        sentences:
+          - "(will it | is it going to | is there going to be) snow [on] [{day}] [{part}] [in {weather}]"
+          - "(will it | is it going to) be snowing [on] [{day}] [{part}] [in {weather}]"
+      - slots:
+          precip: "rain"
+        sentences:
+          - "(will it | is it going to | is there going to be) (rain | rain or snow | pour | be raining) [on] [{day}] [{part}] [in {weather}]"
+          - "do I need (an umbrella | a jacket | rain gear) [on] [{day}] [{part}] [in {weather}]"
+responses:
+  intents:
+    ViewAssistWeatherCurrent:
+      default: >
+        {% set condition_words = {'clear-night': 'clear', 'cloudy': 'cloudy', 'exceptional': 'exceptional', 'fog': 'foggy', 'hail': 'hailing', 'lightning': 'stormy', 'lightning-rainy': 'stormy with rain', 'partlycloudy': 'partly cloudy', 'pouring': 'pouring with rain', 'rainy': 'rainy', 'snowy': 'snowy', 'snowy-rainy': 'a mix of snow and rain', 'sunny': 'sunny', 'windy': 'windy', 'windy-variant': 'windy and cloudy'} %}
+        {% set comfort_words = {'dry': 'dry and crisp', 'pleasant': 'pleasant', 'sticky': 'a bit sticky', 'muggy': 'muggy', 'oppressive': 'very oppressive'} %}
+        {% set wind_words = {'calm': 'calm winds', 'light': 'a light breeze', 'gentle': 'a gentle breeze', 'moderate': 'moderate winds', 'breezy': 'breezy conditions', 'strong': 'strong winds'} %}
+        {% set wind_units = {'mph': 'miles per hour', 'km/h': 'kilometers per hour', 'm/s': 'meters per second', 'kn': 'knots', 'ft/s': 'feet per second'} %}
+        {% set uv_words = {'low': 'no protection is needed', 'sunscreen': 'wear sunscreen', 'shade': 'seek shade and wear SPF', 'indoors': 'stay indoors if possible'} %}
+        {% if slots.error == 'not_found' %}Sorry, I couldn't find {{ slots.name }}.
+        {% elif slots.error == 'no_entity' %}I can't find a weather entity to check.
+        {% elif slots.error == 'no_data' %}Sorry, I can't get the current weather right now.
+        {% else %}It's currently {{ condition_words.get(slots.condition, slots.condition) }}.{% if slots.comfort %} It feels {{ comfort_words[slots.comfort] }}.{% endif %}
+        {% if slots.temperature is not none %}The temperature is {{ slots.temperature }} degrees{% if slots.feels_like is not none %}, feeling like {{ slots.feels_like }}{% endif %}.{% endif %}
+        {% if slots.humidity is not none %}Humidity is {{ slots.humidity }} percent.{% endif %}
+        {% if slots.wind_band %}We have {{ wind_words[slots.wind_band] }} at {{ slots.wind }} {{ wind_units.get(slots.wind_unit, slots.wind_unit or '') }}.{% endif %}
+        {% if slots.uv_band %}The UV index is {{ slots.uv }}, so {{ uv_words[slots.uv_band] }}.{% endif %}
+        {% endif %}
+    ViewAssistWeatherForecast:
+      default: >
+        {% set condition_words = {'clear-night': 'clear', 'cloudy': 'cloudy', 'exceptional': 'exceptional', 'fog': 'foggy', 'hail': 'hailing', 'lightning': 'stormy', 'lightning-rainy': 'stormy with rain', 'partlycloudy': 'partly cloudy', 'pouring': 'pouring with rain', 'rainy': 'rainy', 'snowy': 'snowy', 'snowy-rainy': 'a mix of snow and rain', 'sunny': 'sunny', 'windy': 'windy', 'windy-variant': 'windy and cloudy'} %}
+        {% set when = {'today': 'today', 'tonight': 'tonight', 'tomorrow': 'tomorrow', 'day after tomorrow': 'the day after tomorrow'}.get(slots.day, 'on ' ~ slots.day|capitalize) %}
+        {% set title = {'today': 'Today', 'tonight': 'Tonight', 'tomorrow': 'Tomorrow', 'day after tomorrow': 'The day after tomorrow'}.get(slots.day, slots.day|capitalize) %}
+        {% if slots.error == 'not_found' %}Sorry, I couldn't find {{ slots.name }}.
+        {% elif slots.error == 'no_entity' %}I can't find a weather entity to check.
+        {% elif slots.error == 'unsupported' %}That weather entity doesn't give a forecast I can use.
+        {% elif slots.error == 'passed' %}That time has already passed.
+        {% elif slots.error == 'no_data' %}Sorry, I don't have a forecast for that.
+        {% elif slots.measure == 'high' %}The forecasted high {{ when }} is {{ slots.value }} degrees.
+        {% elif slots.measure == 'low' %}The forecasted low {{ when }} is {{ slots.value }} degrees.
+        {% else %}{{ title }}{% if slots.condition %} will be {{ condition_words.get(slots.condition, slots.condition) }}{% endif %}{% if slots.high is not none %}, with a high of {{ slots.high }} degrees{% endif %}{% if slots.low is not none %}{% if slots.high is not none %} and{% else %}, with{% endif %} a low of {{ slots.low }} degrees{% endif %}.
+        {% if slots.rain_band == 'slight' %}There's a slight chance of {{ slots.rain_word }}{% if slots.rain_chance is not none %}, about {{ slots.rain_chance }} percent{% endif %}{% elif slots.rain_band == 'scattered' %}Scattered {{ slots.rain_word }} showers are possible{% elif slots.rain_band == 'likely' %}{{ slots.rain_word|capitalize }} is likely{% elif slots.rain_band == 'heavy' %}Heavy {{ slots.rain_word }} is expected{% endif %}{% if slots.rain_band != 'slight' and slots.rain_chance is not none %}, with a {{ slots.rain_chance }} percent chance{% endif %}{% if slots.rain_band in ['slight', 'scattered', 'likely', 'heavy'] %}.{% endif %}
+        {% endif %}
+    ViewAssistWeatherRain:
+      default: >
+        {% set day_words = {'today': 'today', 'tomorrow': 'tomorrow', 'day after tomorrow': 'the day after tomorrow'} %}
+        {% set part_words = {'morning': 'this morning', 'afternoon': 'this afternoon', 'evening': 'this evening', 'night': 'tonight'} %}
+        {% set day_text = day_words.get(slots.day, 'on ' ~ slots.day|capitalize) %}
+        {% set when = 'tonight' if (slots.part == 'night' and slots.day == 'today') else (day_text ~ ' night' if slots.part == 'night' else (part_words[slots.part] if (slots.part and slots.day == 'today') else (day_text ~ ' ' ~ slots.part if slots.part else day_text))) %}
+        {% if slots.error == 'not_found' %}Sorry, I couldn't find {{ slots.name }}.
+        {% elif slots.error == 'no_entity' %}I can't find a weather entity to check.
+        {% elif slots.error == 'unsupported' %}That weather entity doesn't give a forecast I can use.
+        {% elif slots.error == 'passed' %}That time has already passed.
+        {% elif slots.error == 'no_data' %}Sorry, I don't have a forecast for that.
+        {% elif slots.rain_band == 'none' %}No {{ slots.rain_word }} is expected {{ when }}{% if slots.rain_chance is not none and slots.rain_chance > 0 %}, with a {{ slots.rain_chance }} percent chance{% endif %}.
+        {% elif slots.rain_band == 'slight' %}Probably no {{ slots.rain_word }} {{ when }}, but there's {% if slots.rain_chance is not none %}a {{ slots.rain_chance }} percent chance{% else %}a slight chance{% endif %}.
+        {% elif slots.rain_band == 'scattered' %}Yes, scattered {{ slots.rain_word }} showers are possible {{ when }}{% if slots.rain_chance is not none %}, with a {{ slots.rain_chance }} percent chance{% endif %}.
+        {% elif slots.rain_band == 'likely' %}Yes, {{ slots.rain_word }} is likely {{ when }}{% if slots.rain_chance is not none %}, with a {{ slots.rain_chance }} percent chance{% endif %}.
+        {% else %}Yes, heavy {{ slots.rain_word }} is expected {{ when }}{% if slots.rain_chance is not none %}, with a {{ slots.rain_chance }} percent chance{% endif %}.
+        {% endif %}
