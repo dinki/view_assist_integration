@@ -83,6 +83,12 @@ def set_runtime_data_for_config(  # noqa: C901
         for attr in r.developer_settings.__dict__:
             if value := get_config_value(attr, is_master=True):
                 setattr(r.developer_settings, attr, value)
+
+        # Experimental options - False is a valid value
+        for attr in r.experimental.__dict__:
+            value = get_config_value(attr, is_master=True)
+            if value is not None:
+                setattr(r.experimental, attr, value)
     else:
         r = config_entry.runtime_data = DeviceRuntimeData()
         r.core = DeviceCoreConfig(**config_entry.data)

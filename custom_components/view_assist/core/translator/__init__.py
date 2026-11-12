@@ -3,16 +3,14 @@
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components import conversation
 from homeassistant.core import HomeAssistant
 
 from ...const import DOMAIN  # noqa: TID252
 from ...typed import VAConfigEntry  # noqa: TID252
-from .translator import ConversationAgentTranslator, TimeSentenceTranslator
+from .translator import TimeSentenceTranslator
 
 __all__ = [
     "DOMAIN",
-    "ConversationAgentTranslator",
     "Normaliser",
     "TimeSentenceTranslator",
     "TimerInfo",
@@ -63,13 +61,7 @@ class Translator:
 
     async def async_setup(self) -> bool:
         """Set up the Translator."""
-        engine = self.config.runtime_data.integration.translation_engine
-
-        if engine is None or engine == conversation.HOME_ASSISTANT_AGENT:
-            self.translator = TimeSentenceTranslator(self.hass, self.config)
-        else:
-            self.translator = ConversationAgentTranslator(self.hass, self.config)
-
+        self.translator = TimeSentenceTranslator(self.hass, self.config)
         return True
 
     async def async_unload(self) -> bool:

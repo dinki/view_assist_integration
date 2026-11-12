@@ -174,12 +174,10 @@
       "integration_options": {
         "title": "{name} Integrationsoptionen",
         "data": {
-          "enable_updates": "Update-Benachrichtigungen aktivieren",
-          "translation_engine": "Übersetzungs-Engine"
+          "enable_updates": "Update-Benachrichtigungen aktivieren"
         },
         "data_description": {
-          "enable_updates": "Update-Benachrichtigungen für Dashboard, Ansichten und Blueprints aktivieren oder deaktivieren",
-          "translation_engine": "Die Übersetzungs-Engine für Timer (experimentell)"
+          "enable_updates": "Update-Benachrichtigungen für Dashboard, Ansichten und Blueprints aktivieren oder deaktivieren"
         }
       },
       "developer_options": {

@@ -27,7 +27,6 @@ from ...const import (  # noqa: TID252
     ATTR_TIMER_ID,
     ATTR_TYPE,
     DOMAIN,
-    USE_LLM_FOR_TIMER_ENHANCEMENT,
 )
 from ...helpers import (  # noqa: TID252
     get_device_id_from_entity_id,
@@ -330,7 +329,7 @@ class TimerManager:
         if not timer_info:
             # The encoder may not be able to parse the sentence for complex asks.
             # So we can use the LLM encoder to try and parse it
-            if USE_LLM_FOR_TIMER_ENHANCEMENT:
+            if self._config.runtime_data.experimental.use_llm_for_timer_enhancement:
                 _LOGGER.debug("Using LLM to parse sentence: %s", sentence)
                 llm_encoder = LLMSentenceEncoder(self._hass, source, language)
                 llm_timer_info = await llm_encoder.encode(sentence)

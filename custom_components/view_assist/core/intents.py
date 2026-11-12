@@ -21,11 +21,7 @@ from homeassistant.helpers.intent import (
 )
 from homeassistant.helpers.start import async_at_started
 
-from ..const import (  # noqa: TID252
-    DOMAIN,
-    ENABLE_INTENT_OVERRIDES,
-    INSTALL_CUSTOM_SENTENCES,
-)
+from ..const import DOMAIN  # noqa: TID252
 from ..typed import VAConfigEntry  # noqa: TID252
 from . import intent_handlers
 
@@ -127,18 +123,20 @@ class IntentsManager:
     async def async_setup(self) -> bool:
         """Set up the Intents Manager."""
 
-        if ENABLE_INTENT_OVERRIDES:
+        experimental = self.config.runtime_data.experimental
+
+        if experimental.enable_intent_overrides:
             # Discover and register intent handlers, then hook into all
             # registered intents, after Home Assistant has started and
             # hopefully all integrations have registered their intents
             async_at_started(self.hass, self.async_register_intent_hooks_and_handlers)
 
         # Enable custom sentences for intents
-        if INSTALL_CUSTOM_SENTENCES:
+        if experimental.install_custom_sentences:
             await self.register_custom_sentences()
         else:
             _LOGGER.debug(
-                "Custom sentences for intents are disabled. Set INSTALL_CUSTOM_SENTENCES to True to enable"
+                "Custom sentences for intents are disabled in the experimental options"
             )
             await self.unregister_custom_sentences()
 

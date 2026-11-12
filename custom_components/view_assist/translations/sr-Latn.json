@@ -174,12 +174,10 @@
       "integration_options": {
         "title": "{name} Opcije integracije",
         "data": {
-          "enable_updates": "Omogući obaveštenja o ažuriranjima",
-          "translation_engine": "Prevodilačka mašina"
+          "enable_updates": "Omogući obaveštenja o ažuriranjima"
         },
         "data_description": {
-          "enable_updates": "Omogućite ili onemogućite obaveštenja o ažuriranjima za kontrolnu tablu, prikaze i šablone",
-          "translation_engine": "Prevodilačka mašina koja se koristi za tajmere (eksperimentalno)"
+          "enable_updates": "Omogućite ili onemogućite obaveštenja o ažuriranjima za kontrolnu tablu, prikaze i šablone"
         }
       },
       "developer_options": {

@@ -176,12 +176,26 @@
       "integration_options": {
         "title": "{name} Integration Options",
         "data": {
-          "enable_updates": "Enable update notifications",
-          "translation_engine": "Translation engine"
+          "enable_updates": "Enable update notifications"
         },
         "data_description": {
-          "enable_updates": "Enable or disable update notifications for the dashboard, views and blueprints",
-          "translation_engine": "The translation engine to use for timers (experimental)"
+          "enable_updates": "Enable or disable update notifications for the dashboard, views and blueprints"
+        },
+        "sections": {
+          "experimental_options": {
+            "name": "Experimental Options",
+            "description": "These features are experimental and not yet fully tested for production use. They may change or be removed in future releases.",
+            "data": {
+              "enable_intent_overrides": "Enable intent overrides",
+              "install_custom_sentences": "Install custom sentences",
+              "use_llm_for_timer_enhancement": "Use LLM for timer parsing"
+            },
+            "data_description": {
+              "enable_intent_overrides": "Register View Assist handlers that override or extend Home Assistant intents",
+              "install_custom_sentences": "Install View Assist custom sentences for intents",
+              "use_llm_for_timer_enhancement": "Use the conversation agent to parse timer sentences that the built-in encoder cannot understand"
+            }
+          }
         }
       },
       "developer_options": {

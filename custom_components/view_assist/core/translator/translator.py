@@ -8,10 +8,8 @@ from pathlib import Path
 import re
 from typing import Any
 
-from homeassistant.components.conversation import async_converse, get_agent_manager
-from homeassistant.core import Context, HomeAssistant
+from homeassistant.core import HomeAssistant
 
-from ...helpers import get_config_entry_by_entity_id, get_key  # noqa: TID252
 from . import DOMAIN, VAConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,88 +39,6 @@ CLEAN_SYMBOLS = ["-", "_"]
 
 
 PROJECT_ID = environ.get("PROJECT_ID", "")
-
-
-# TODO: Add ability to use Conversation Engine (LLM) or Translation services like Google, DeepL, LibreTranslate etc.
-class ConversationAgentTranslator:
-    """Translate text using a conversation agent.
-
-    Basically an LLM translator
-    """
-
-    INSTRUCTIONS = """Translate the text in quotation marks from {}.  All numbers should be digits and not words.
-    If the output is a time or datetime, provide only the datetime in iso format with current timezone.
-    If the output is an interval, provide as days, hours, minutes, seconds.  The text is '{}'"""
-
-    RESPONSE = """Translate the text in quotation marks into a time or interval sentence in a spoken style in the language of locale {}.  The text is '{}'."""
-
-    def __init__(self, hass: HomeAssistant, config: VAConfigEntry) -> None:
-        """Initialise the conversation agent translator."""
-        self.hass = hass
-        self.agent_id = None
-        self.config = config
-
-        self.responses = {
-            "timer_set": "Timer set for {time}",
-            "timer_named_set": "{name} timer set for {time}",
-            "timer_already_exists": "A timer called {name} already exists",
-            "timer_none": "No timers are set",
-            "timer_list": "You have the following timers set: {timers}",
-            "timer_deleted": "Deleted timer {name}",
-            "timer_not_found": "No timer called {name} could be found",
-            "time_remaining": "{remaining} remaining on timer {name}",
-            "timer_error": "Unable to decode time or interval information",
-        }
-
-    async def _agent_translation(self, sentence: str, locale: str) -> str:
-        """Translate text using the conversation agent."""
-        am = get_agent_manager(self.hass)
-        agent_entity = self.config.runtime_data.integration.translation_engine
-        if agent_config := get_config_entry_by_entity_id(self.hass, agent_entity):
-            self.agent_id = agent_config.entry_id
-
-        if am.async_is_valid_agent_id(self.agent_id):
-            # TODO: Add device id etc in here
-            response = await async_converse(
-                self.hass,
-                sentence,
-                conversation_id="ViewAssistTranslator",
-                context=Context(),
-                language=locale,
-                agent_id=self.agent_id,
-            )
-            _LOGGER.warning("Response: %s", response.as_dict())
-            if output := get_key("response.speech.plain.speech", response.as_dict()):
-                return output
-            _LOGGER.warning("No output from conversation agent")
-        _LOGGER.error("Invalid translation engine provided")
-        return None
-
-    async def translate(self, sentence: str, locale: str) -> str:
-        """Translate text to the target language using the conversation agent."""
-        return await self._agent_translation(
-            self.INSTRUCTIONS.format(locale, sentence), locale
-        )
-
-    async def translate_response(
-        self, sentence_id: str, params: dict[str, Any] | None = None, locale: str = "en"
-    ) -> str | None:
-        """Translate a response sentence id with optional params."""
-        if sentence_id in self.responses:
-            sentence = self.responses[sentence_id]
-
-            # set time param to time_{lang} param
-            params["time"] = params.get(f"time_{locale}", params.get("time_en"))
-
-            # Replace params in sentence
-            if params:
-                for k, v in params.items():
-                    sentence = sentence.replace(f"{{{k}}}", str(v))
-
-            return await self._agent_translation(
-                self.RESPONSE.format(locale, sentence), locale
-            )
-        return None
 
 
 class TimeSentenceTranslator:

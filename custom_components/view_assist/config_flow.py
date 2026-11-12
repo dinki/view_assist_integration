@@ -17,7 +17,6 @@ from homeassistant.data_entry_flow import SectionConfig, section
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.selector import (
     BooleanSelector,
-    ConversationAgentSelector,
     DeviceSelector,
     DeviceSelectorConfig,
     EntitySelector,
@@ -44,9 +43,12 @@ from .const import (
     CONF_DISPLAY_SETTINGS,
     CONF_DO_NOT_DISTURB,
     CONF_DUCKING_VOLUME,
+    CONF_ENABLE_INTENT_OVERRIDES,
     CONF_ENABLE_UPDATES,
+    CONF_EXPERIMENTAL_OPTIONS,
     CONF_FONT_STYLE,
     CONF_HOME,
+    CONF_INSTALL_CUSTOM_SENTENCES,
     CONF_INTENT,
     CONF_INTENT_DEVICE,
     CONF_KEEP_TIMER_SCREEN_ON,
@@ -71,8 +73,8 @@ from .const import (
     CONF_STATUS_ICONS,
     CONF_TIME_FORMAT,
     CONF_TIMERS,
-    CONF_TRANSLATION_ENGINE,
     CONF_USE_ANNOUNCE,
+    CONF_USE_LLM_FOR_TIMER_ENHANCEMENT,
     CONF_VIEW_TIMEOUT,
     CONF_WEATHER_ENTITY,
     DEFAULT_NAME,
@@ -370,10 +372,20 @@ DEFAULT_OPTIONS_SCHEMA = vol.Schema(
     }
 )
 
+EXPERIMENTAL_OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_ENABLE_INTENT_OVERRIDES): BooleanSelector(),
+        vol.Optional(CONF_INSTALL_CUSTOM_SENTENCES): BooleanSelector(),
+        vol.Optional(CONF_USE_LLM_FOR_TIMER_ENHANCEMENT): BooleanSelector(),
+    }
+)
+
 INTEGRATION_OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_ENABLE_UPDATES): BooleanSelector(),
-        vol.Optional(CONF_TRANSLATION_ENGINE): ConversationAgentSelector(),
+        vol.Required(CONF_EXPERIMENTAL_OPTIONS): section(
+            EXPERIMENTAL_OPTIONS_SCHEMA, options=SectionConfig(collapsed=True)
+        ),
     }
 )
 
@@ -666,17 +678,22 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
             INTEGRATION_OPTIONS_SCHEMA,
             {
                 CONF_ENABLE_UPDATES: self.config_entry.options.get(CONF_ENABLE_UPDATES),
-                CONF_TRANSLATION_ENGINE: self.config_entry.options.get(
-                    CONF_TRANSLATION_ENGINE
+                CONF_EXPERIMENTAL_OPTIONS: get_suggested_option_values(
+                    self.config_entry
                 ),
             },
         )
 
         if user_input is not None:
-            # This is just updating the core config so update config_entry.data
-            options = self.config_entry.options | user_input
-            for o in data_schema.schema:
-                if o not in user_input:
+            # Experimental options are stored flat; the section is only for the UI
+            user_input = dict(user_input)
+            experimental = user_input.pop(CONF_EXPERIMENTAL_OPTIONS, {})
+            options = self.config_entry.options | user_input | experimental
+            for o in (
+                *INTEGRATION_OPTIONS_SCHEMA.schema,
+                *EXPERIMENTAL_OPTIONS_SCHEMA.schema,
+            ):
+                if o not in user_input and o not in experimental:
                     options.pop(o, None)
             return self.async_create_entry(data=options)
 
