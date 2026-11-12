@@ -104,6 +104,7 @@ class Status:
     timers: list[Timer] | None = None
     alarm_sounding: bool = False
     cameras: str | list[str] | None = None
+    thermostats: str | list[str] | None = None
     last_activity: datetime | None = None
     extra_data: dict[str, Any] | None = None
 

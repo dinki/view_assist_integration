@@ -1,0 +1,52 @@
+language: "en"
+lists:
+  name:
+    wildcard: true
+  read:
+    values:
+      - in: "everything on"
+        out: "all"
+      - in: "all on"
+        out: "all"
+      - in: "everything in"
+        out: "all"
+      - in: "all in"
+        out: "all"
+intents:
+  ViewAssistShowRouter:
+    data:
+      - sentences:
+          - "(show | display) [me] [my | the | all] {name}"
+          - "(show | display) [me] {read} [my | the] {name} [list]"
+responses:
+  intents:
+    ViewAssistShowRouter:
+      default: >
+        {% if slots.owner == 'ViewAssistShowThermostat' %}
+          {% if slots.error == 'device' %}Sorry. This device cannot display the thermostat.
+          {% elif slots.error == 'not_found' %}Sorry, I couldn't find {{ slots.name }}.
+          {% elif slots.error == 'empty' %}There are no thermostats in {{ slots.name }}.
+          {% elif slots.group and slots.name %}Showing {{ slots.name }} thermostats.
+          {% elif slots.group %}Showing all thermostats.
+          {% elif slots.name %}Showing the {{ slots.name }} thermostat.
+          {% else %}Showing thermostat.{% endif %}
+        {% elif slots.owner == 'ViewAssistDisplayCamera' %}
+          {% if slots.kind == 'empty' %}{% if slots.name %}There are no cameras in {{ slots.name }}.{% else %}There are no cameras available.{% endif %}
+          {% elif slots.kind == 'group' %}Displaying {{ slots.name }} cameras.
+          {% elif slots.kind == 'single' %}Displaying the {{ slots.name }} camera.
+          {% else %}Displaying all cameras.{% endif %}
+        {% elif slots.owner == 'ViewAssistShowList' %}
+          {% set count = slots.count %}{% set name = slots.list_name %}
+          {% if not slots.found %}I could not find a list called {{ slots.spoken_name }}.
+          {% elif count == 0 %}There are no unchecked items on your {{ name }}.
+          {% elif count == 1 %}There is 1 unchecked item on your {{ name }}. It is {{ slots.item_names[0] }}.
+          {% elif count > slots.item_names | length %}There are {{ count }} items on your {{ name }}. The first {{ slots.item_names | length }} are: {{ slots.item_names | join(', ') }}, and others. Say read the rest to hear more.
+          {% else %}There are {{ count }} items on your {{ name }}. They are {{ slots.item_names | join(', ') }}.{% endif %}
+        {% elif slots.owner == 'ViewAssistShowAllList' %}
+          {% set count = slots.count %}{% set name = slots.list_name %}
+          {% if not slots.found %}I could not find a list called {{ slots.spoken_name }}.
+          {% elif count == 0 %}There are no unchecked items on your {{ name }}.
+          {% elif count == 1 %}There is 1 unchecked item on your {{ name }}. It is {{ slots.item_names[0] }}.
+          {% else %}There are {{ count }} items on your {{ name }}. They are {{ slots.item_names | join(', ') }}.{% endif %}
+        {% elif slots.owner == 'ViewAssistChangeView' %}Setting view to {{ slots.view }}
+        {% else %}Sorry, I couldn't find {{ slots.name }}.{% endif %}

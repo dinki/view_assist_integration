@@ -8,12 +8,10 @@ intents:
     data:
       - sentences:
           - "(what's | what is) on [my | the] {list} [list]"
-          - "show [me] [my | the] {list} [list]"
   ViewAssistShowAllList:
     data:
       - sentences:
           - "[tell me | read me | read | list] (everything | all) (on | in) [my | the] {list} [list]"
-          - "show [me] (everything | all) (on | in) [my | the] {list} [list]"
   ViewAssistReadRestList:
     data:
       - sentences:

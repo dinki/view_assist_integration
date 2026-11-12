@@ -302,6 +302,10 @@ INTENT_TO_VIEW_MAPPING = {
     CONF_CLIMATE: [
         intent.INTENT_GET_TEMPERATURE,
         "HassClimateSetTemperature",
+        "ViewAssistIncreaseThermostat",
+        "ViewAssistDecreaseThermostat",
+        "ViewAssistSetThermostat",
+        "ViewAssistShowThermostat",
     ],
     CONF_WEATHER: ["HassGetWeather"],
     "list": [
