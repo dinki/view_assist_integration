@@ -49,7 +49,9 @@ from .const import (
     CONF_HOME,
     CONF_INTENT,
     CONF_INTENT_DEVICE,
+    CONF_CLOCK_STYLE,
     CONF_KEEP_TIMER_SCREEN_ON,
+    VA_CLOCK_STYLES,
     CONF_LIST,
     CONF_MEDIAPLAYER_DEVICE,
     CONF_MENU_CONFIG,
@@ -299,6 +301,13 @@ async def get_dashboard_options_schema(
         ),
         vol.Optional(CONF_NAVIGATION_TRANSITION): BooleanSelector(),
         vol.Optional(CONF_KEEP_TIMER_SCREEN_ON): BooleanSelector(),
+        vol.Optional(CONF_CLOCK_STYLE): SelectSelector(
+            SelectSelectorConfig(
+                translation_key="clock_style_selector",
+                options=VA_CLOCK_STYLES,
+                mode=SelectSelectorMode.DROPDOWN,
+            )
+        ),
     }
 
     BACKGROUND_SETTINGS.update(background_extra)

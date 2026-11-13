@@ -159,6 +159,7 @@ class ViewAssistSensor(SensorEntity):
             attrs["background"] = sm.background
             attrs["browser_connected"] = sm.browser_connected
             attrs["cameras"] = sm.cameras
+            attrs["clock_style"] = sm.config.dashboard.display_settings.clock_style
             attrs["thermostats"] = sm.thermostats
             attrs["current_path"] = sm.current_path
             attrs["font_style"] = sm.config.dashboard.display_settings.font_style

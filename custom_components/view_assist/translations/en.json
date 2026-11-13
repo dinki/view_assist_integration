@@ -129,7 +129,8 @@
               "time_format": "Time format",
               "screen_mode": "Show/hide header and sidebar",
               "cycle_views": "Cycle views",
-              "navigation_transition": "Fade transition on navigation"
+              "navigation_transition": "Fade transition on navigation",
+              "clock_style": "Clock style"
             },
             "data_description": {
               "assist_prompt": "The Assist notification prompt style to use for wake word detection and intent processing",
@@ -142,7 +143,8 @@
               "time_format": "Sets clock display time format",
               "screen_mode": "Show or hide the header and sidebar",
               "cycle_views": "List of items to show when in cycle mode",
-              "navigation_transition": "Fade the screen out and back in when navigating between views"
+              "navigation_transition": "Fade the screen out and back in when navigating between views",
+              "clock_style": "Choose the clock layout for this display. Standard: ![Standard clock](/local/view_assist/views/clock/standard.png) Alternate: ![Alternate clock](/local/view_assist/views/clock/alternate.png)"
             }
           }
         }
@@ -252,6 +254,12 @@
     },
     "menu_icons_selector": {
       "options": {}
+    },
+    "clock_style_selector": {
+      "options": {
+        "standard": "Standard",
+        "alternate": "Alternate"
+      }
     },
     "lookup_selector": {
       "options": {
