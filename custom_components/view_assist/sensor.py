@@ -16,7 +16,7 @@ from homeassistant.helpers.config_validation import make_entity_service_schema
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, VA_CLOCK_STYLES
 from .devices.status import StatusManager
 from .helpers import get_device_id_from_entity_id, get_mute_switch_entity_id
 from .typed import (
@@ -159,7 +159,8 @@ class ViewAssistSensor(SensorEntity):
             attrs["background"] = sm.background
             attrs["browser_connected"] = sm.browser_connected
             attrs["cameras"] = sm.cameras
-            attrs["clock_style"] = sm.config.dashboard.display_settings.clock_style
+            clock_style = sm.config.dashboard.display_settings.clock_style
+            attrs["clock_style"] = clock_style if clock_style in VA_CLOCK_STYLES else "standard"
             attrs["thermostats"] = sm.thermostats
             attrs["current_path"] = sm.current_path
             attrs["font_style"] = sm.config.dashboard.display_settings.font_style

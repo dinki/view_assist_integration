@@ -144,7 +144,7 @@
               "screen_mode": "Show or hide the header and sidebar",
               "cycle_views": "List of items to show when in cycle mode",
               "navigation_transition": "Fade the screen out and back in when navigating between views",
-              "clock_style": "Choose the clock layout for this display. Standard: ![Standard clock](/local/view_assist/views/clock/standard.png) Alternate: ![Alternate clock](/local/view_assist/views/clock/alternate.png)"
+              "clock_style": "Choose the clock layout for this display.\n\n**Standard**\n\n![Standard clock](/local/viewassist/views/clock/standard.png)\n\n**Alternate**\n\n![Alternate clock](/local/viewassist/views/clock/alternate.png)"
             }
           }
         }
