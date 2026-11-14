@@ -30,6 +30,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .assets import AssetClass, AssetsManager
+from .assets.plugins import PluginManager, REQUIRED_PLUGINS
 from .const import (
     CONF_ASSIST_PROMPT,
     CONF_BACKGROUND,
@@ -541,15 +542,93 @@ class ViewAssistConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="options", data_schema=data_schema)
 
     async def async_step_master_config(self, discovery_info=None):
-        """Handle the options step."""
+        """Handle the master config step."""
         if discovery_info is not None and not get_master_config_entry(self.hass):
-            return self.async_create_entry(
-                title="Master Configuration", data={"type": VAType.MASTER_CONFIG}
-            )
+            return await self.async_step_plugin_confirm()
         return self.async_show_form(
             step_id="master_config",
             data_schema=vol.Schema({}),
         )
+
+    async def async_step_plugin_confirm(self, user_input=None):
+        """Handle plugin installation confirmation step."""
+        plugin_manager = PluginManager(self.hass, None, {})
+        hacs_available = plugin_manager.get_repository_manager() is not None
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            install = user_input["confirm_plugins"]
+            if install:
+                for plugin in REQUIRED_PLUGINS:
+                    installed, _ = await plugin_manager.async_get_plugin_status(
+                        plugin.respository_id
+                    )
+                    if not installed and not await plugin_manager.async_install_plugin(
+                        plugin.respository_id, plugin.version
+                    ):
+                        errors["base"] = "plugin_install_failed"
+                        break
+
+            if not errors:
+                return self.async_create_entry(
+                    title="Master Configuration",
+                    data={"type": VAType.MASTER_CONFIG},
+                )
+
+        plugin_statuses = []
+        for plugin in REQUIRED_PLUGINS:
+            if hacs_available:
+                installed, version = await plugin_manager.async_get_plugin_status(
+                    plugin.respository_id
+                )
+            else:
+                installed, version = False, None
+
+            plugin_statuses.append(
+                {
+                    "name": plugin.name,
+                    "required_version": plugin.version,
+                    "installed_version": version,
+                    "installed": installed,
+                }
+            )
+
+        # If all plugins are installed, skip to creation
+        if all(status["installed"] for status in plugin_statuses):
+            return self.async_create_entry(
+                title="Master Configuration", data={"type": VAType.MASTER_CONFIG}
+            )
+
+        return self.async_show_form(
+            step_id="plugin_confirm",
+            errors=errors,
+            data_schema=vol.Schema(
+                {
+                    vol.Required("confirm_plugins", default=True): BooleanSelector(),
+                }
+            ),
+            description_placeholders={
+                "plugins_info": self._format_plugins_info(plugin_statuses),
+                "hacs_warning": (
+                    "\n\n⚠️ **HACS/Marketplace not available**: Could not determine plugin installation status. "
+                    "Please ensure HACS or Marketplace is installed and loaded."
+                    if not hacs_available
+                    else ""
+                ),
+            },
+        )
+
+    def _format_plugins_info(self, plugin_statuses: list[dict]) -> str:
+        """Format plugin information for display."""
+        lines = []
+        for plugin in plugin_statuses:
+            status = "✓ Installed" if plugin["installed"] else "✗ Not Installed"
+            installed_version = plugin["installed_version"] or "—"
+            lines.append(
+                f"• {plugin['name']}: {status} (Required: {plugin['required_version']}, "
+                f"Installed: {installed_version})"
+            )
+        return "\n".join(lines)
 
 
 class ViewAssistOptionsFlowHandler(OptionsFlow):

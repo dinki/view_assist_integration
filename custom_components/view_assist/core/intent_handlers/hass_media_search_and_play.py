@@ -520,14 +520,15 @@ class VAMediaSearchAndPlayHandler(IntentOverrideHandler):
         title_term, artist_term, inferred_class = self._parse_search_query(
             search_query, language
         )
+
+        requested_class = (media_class or inferred_class or "").lower()
+
         _LOGGER.info(
             "Parsed search query: title=%s, artist=%s, inferred_class=%s",
             title_term,
             artist_term,
-            inferred_class,
+            requested_class,
         )
-
-        requested_class = (media_class or inferred_class or "").lower()
 
         def class_priority_rank(candidate: _MediaCandidate) -> int:
             if requested_class and candidate.media_class == requested_class:
@@ -543,10 +544,13 @@ class VAMediaSearchAndPlayHandler(IntentOverrideHandler):
 
         whole_term = search_query.strip().lower()
 
-        # Stage 1: exact match of the whole search term against the name
+        # Stage 1: exact match of the title term against the name
         exact_matches = [
-            c for c in candidates if c.name and c.name.strip().lower() == whole_term
+            c
+            for c in candidates
+            if c.name and c.name.strip().lower() == title_term.strip().lower()
         ]
+
         if exact_matches:
             _LOGGER.debug("Exact whole-term match(es): %s", exact_matches)
             return best_of(exact_matches)

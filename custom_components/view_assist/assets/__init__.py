@@ -30,6 +30,7 @@ from ..typed import VAConfigEntry  # noqa: TID252
 from .base import AssetManagerException, BaseAssetManager
 from .blueprints import BlueprintManager
 from .dashboard import DashboardManager
+from .plugins import PluginManager
 from .views import ViewManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ class AssetClass(StrEnum):
 
     DASHBOARD = "dashboard"
     VIEW = "views"
+    PLUGIN = "plugins"
     BLUEPRINT = "blueprints"
 
 
@@ -49,6 +51,7 @@ ASSET_CLASS_MANAGERS = {
     AssetClass.DASHBOARD: DashboardManager,
     AssetClass.VIEW: ViewManager,
     AssetClass.BLUEPRINT: BlueprintManager,
+    AssetClass.PLUGIN: PluginManager,
 }
 
 LOAD_ASSET_SERVICE_SCHEMA = vol.Schema(
@@ -135,7 +138,7 @@ class AssetsManager:
     """Class to manage VA asset installs/updates/deletes etc."""
 
     @classmethod
-    def get(cls, hass: HomeAssistant) -> "AssetsManager":
+    def get(cls, hass: HomeAssistant) -> AssetsManager:
         """Get the asset manager."""
         try:
             return hass.data[DOMAIN][cls.__name__]
@@ -162,12 +165,13 @@ class AssetsManager:
                     self.hass, self.config, self.data.get(asset_class)
                 )
 
-            # Onboard managers
-            await self.onboard_managers()
-
             # Setup managers
             for manager in self.managers.values():
-                await manager.async_setup()
+                if hasattr(manager, "async_setup"):
+                    await manager.async_setup()
+
+            # Onboard managers
+            await self.onboard_managers()
 
             # Add update action
             self.hass.services.async_register(
@@ -205,6 +209,10 @@ class AssetsManager:
         except Exception as ex:
             _LOGGER.error("Error setting up AssetsManager. Error is %s", ex)
             raise HomeAssistantError(f"Error setting up AssetsManager: {ex}") from ex
+
+    def get_manager(self, asset_class: str) -> BaseAssetManager | None:
+        """Return the manager for a given asset class."""
+        return self.managers.get(asset_class)
 
     async def _async_handle_update_versions_service_call(self, call: ServiceCall):
         """Handle update of the view versions."""
@@ -257,16 +265,35 @@ class AssetsManager:
             _LOGGER.debug("Dashboard not installed, forcing onboarding")
             self.force_onboard = True
 
-        # Check if onboarding is needed and if so, run it
-        for asset_class, manager in self.managers.items():
-            if not self.data.get(asset_class) or self.force_onboard:
-                _LOGGER.debug("Onboarding %s", asset_class)
-                result = await manager.async_onboard(force=self.force_onboard)
+        # Check if onboarding is needed and if so, run it for all managers in parallel
+        to_onboard = {
+            asset_class: manager
+            for asset_class, manager in self.managers.items()
+            if not self.data.get(asset_class) or self.force_onboard
+        }
+        if not to_onboard:
+            return
 
-                if result:
-                    _LOGGER.debug("Onboarding result %s - %s", asset_class, result)
-                    self.data[asset_class] = result
-                    await self.store.update(asset_class, None, result)
+        for asset_class in to_onboard:
+            _LOGGER.debug("Onboarding %s", asset_class)
+
+        results = await asyncio.gather(
+            *(
+                manager.async_onboard(force=self.force_onboard)
+                for manager in to_onboard.values()
+            ),
+            return_exceptions=True,
+        )
+
+        for asset_class, result in zip(to_onboard, results, strict=True):
+            if isinstance(result, BaseException):
+                _LOGGER.error("Error onboarding %s: %s", asset_class, result)
+                continue
+
+            if result:
+                _LOGGER.debug("Onboarding result %s - %s", asset_class, result)
+                self.data[asset_class] = result
+                await self.store.update(asset_class, None, result)
 
     async def async_update_version_info(
         self, asset_class: AssetClass | None = None, force: bool = False
@@ -281,7 +308,14 @@ class AssetsManager:
             ) < timedelta(minutes=VERSION_CHECK_INTERVAL):
                 return
 
-        managers = self.managers
+        # Filter managers to only those that have the async_get_version_info method
+        managers = {
+            k: v
+            for k, v in self.managers.items()
+            if hasattr(v, "async_get_version_info")
+        }
+
+        # Filter for any asset class parameter
         if asset_class and asset_class in self.managers:
             managers = {k: v for k, v in self.managers.items() if k == asset_class}
 
@@ -342,10 +376,15 @@ class AssetsManager:
             await self.store.update(asset_class, None, self.data[asset_class])
         _LOGGER.debug("Latest versions updated")
 
-    async def get_installed_version(self, asset_class: AssetClass, name: str) -> str:
+    async def get_installed_version(
+        self, asset_class: AssetClass, name: str
+    ) -> str | None:
         """Get version info for asset."""
         if self.managers.get(asset_class):
-            return await self.managers[asset_class].async_get_installed_version(name)
+            if hasattr(self.managers[asset_class], "async_get_installed_version"):
+                return await self.managers[asset_class].async_get_installed_version(
+                    name
+                )
         return None
 
     async def async_install_or_update(
@@ -358,7 +397,12 @@ class AssetsManager:
         backup_existing: bool = False,
     ):
         """Install asset."""
-        if manager := self.managers.get(asset_class):
+        managers = {
+            k: v
+            for k, v in self.managers.items()
+            if k == asset_class and hasattr(v, "async_install_or_update")
+        }
+        if manager := managers.get(asset_class):
             # Install the asset
             status = await manager.async_install_or_update(
                 name,
