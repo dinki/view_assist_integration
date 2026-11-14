@@ -1,0 +1,81 @@
+language: "en"
+lists:
+  thermostat:
+    wildcard: true
+  amount:
+    wildcard: true
+intents:
+  ViewAssistIncreaseThermostat:
+    data:
+      - sentences:
+          - "(increase thermostat | raise thermostat | increase temperature | raise temperature) [by] {amount} (degree | degrees | °)"
+          - "(increase | raise) [the] {thermostat} [thermostat | thermostats] [by] {amount} (degree | degrees | °)"
+  ViewAssistDecreaseThermostat:
+    data:
+      - sentences:
+          - "(decrease thermostat | lower thermostat | decrease temperature | lower temperature) [by] {amount} (degree | degrees | °)"
+          - "(decrease | lower) [the] {thermostat} [thermostat | thermostats] [by] {amount} (degree | degrees | °)"
+  ViewAssistSetThermostat:
+    data:
+      - sentences:
+          - "(set thermostat | change thermostat | set temperature | change temperature) [to] {amount} [degree | degrees | °]"
+          - "(set | change) [the] {thermostat} [thermostat | thermostats] [to] {amount} [degree | degrees | °]"
+responses:
+  intents:
+    ViewAssistIncreaseThermostat:
+      default: >
+        {% if slots.error == 'amount' %}Sorry. I did not understand the temperature value.
+        {% elif slots.error == 'range' %}The requested temperature is not allowed.
+        {% elif slots.error == 'not_found' %}Sorry, I couldn't find {{ slots.name }}.
+        {% elif slots.error == 'empty' %}There are no thermostats in {{ slots.name }}.
+        {% elif slots.error == 'off' %}The thermostat is off.
+        {% elif slots.error == 'mode' %}Temperature adjustment is not available.
+        {% elif slots.error == 'unavailable' %}That thermostat is not available.
+        {% elif slots.error and slots.total == 1 %}Temperature adjustment is not available.
+        {% elif slots.error %}Could not change the thermostats.
+        {% elif slots.changed < slots.total %}Changed {{ slots.changed }} of {{ slots.total }} thermostats. Could not change {{ slots.failed_names | join(', ') }}.
+        {% elif slots.group and slots.name %}Thermostat temperatures in {{ slots.name }} raised {{ slots.amount }} {{ 'degree' if slots.amount == 1 else 'degrees' }}.
+        {% elif slots.group %}Thermostat temperatures raised {{ slots.amount }} {{ 'degree' if slots.amount == 1 else 'degrees' }}.
+        {% elif slots.name %}{{ slots.name | capitalize }} thermostat temperature raised {{ slots.amount }} {{ 'degree' if slots.amount == 1 else 'degrees' }}.
+        {% else %}Thermostat temperature raised {{ slots.amount }} {{ 'degree' if slots.amount == 1 else 'degrees' }}.{% endif %}
+    ViewAssistDecreaseThermostat:
+      default: >
+        {% if slots.error == 'amount' %}Sorry. I did not understand the temperature value.
+        {% elif slots.error == 'range' %}The requested temperature is not allowed.
+        {% elif slots.error == 'not_found' %}Sorry, I couldn't find {{ slots.name }}.
+        {% elif slots.error == 'empty' %}There are no thermostats in {{ slots.name }}.
+        {% elif slots.error == 'off' %}The thermostat is off.
+        {% elif slots.error == 'mode' %}Temperature adjustment is not available.
+        {% elif slots.error == 'unavailable' %}That thermostat is not available.
+        {% elif slots.error and slots.total == 1 %}Temperature adjustment is not available.
+        {% elif slots.error %}Could not change the thermostats.
+        {% elif slots.changed < slots.total %}Changed {{ slots.changed }} of {{ slots.total }} thermostats. Could not change {{ slots.failed_names | join(', ') }}.
+        {% elif slots.group and slots.name %}Thermostat temperatures in {{ slots.name }} lowered {{ slots.amount }} {{ 'degree' if slots.amount == 1 else 'degrees' }}.
+        {% elif slots.group %}Thermostat temperatures lowered {{ slots.amount }} {{ 'degree' if slots.amount == 1 else 'degrees' }}.
+        {% elif slots.name %}{{ slots.name | capitalize }} thermostat temperature lowered {{ slots.amount }} {{ 'degree' if slots.amount == 1 else 'degrees' }}.
+        {% else %}Thermostat temperature lowered {{ slots.amount }} {{ 'degree' if slots.amount == 1 else 'degrees' }}.{% endif %}
+    ViewAssistSetThermostat:
+      default: >
+        {% if slots.error == 'amount' %}Sorry. I did not understand the temperature value.
+        {% elif slots.error == 'range' %}The requested temperature is not allowed.
+        {% elif slots.error == 'not_found' %}Sorry, I couldn't find {{ slots.name }}.
+        {% elif slots.error == 'empty' %}There are no thermostats in {{ slots.name }}.
+        {% elif slots.error == 'off' %}The thermostat is off.
+        {% elif slots.error == 'mode' %}Temperature adjustment is not available.
+        {% elif slots.error == 'unavailable' %}That thermostat is not available.
+        {% elif slots.error and slots.total == 1 %}Temperature adjustment is not available.
+        {% elif slots.error %}Could not change the thermostats.
+        {% elif slots.changed < slots.total %}Changed {{ slots.changed }} of {{ slots.total }} thermostats. Could not change {{ slots.failed_names | join(', ') }}.
+        {% elif slots.group and slots.name %}Thermostat temperatures in {{ slots.name }} set to {{ slots.amount }} degrees.
+        {% elif slots.group %}Thermostat temperatures set to {{ slots.amount }} degrees.
+        {% elif slots.name %}{{ slots.name | capitalize }} thermostat temperature set to {{ slots.amount }} degrees.
+        {% else %}Thermostat temperature set to {{ slots.amount }} degrees.{% endif %}
+    ViewAssistShowThermostat:
+      default: >
+        {% if slots.error == 'device' %}Sorry. This device cannot display the thermostat.
+        {% elif slots.error == 'not_found' %}Sorry, I couldn't find {{ slots.name }}.
+        {% elif slots.error == 'empty' %}There are no thermostats in {{ slots.name }}.
+        {% elif slots.group and slots.name %}Showing {{ slots.name }} thermostats.
+        {% elif slots.group %}Showing all thermostats.
+        {% elif slots.name %}Showing the {{ slots.name }} thermostat.
+        {% else %}Showing thermostat.{% endif %}

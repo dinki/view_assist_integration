@@ -4,11 +4,6 @@ lists:
     wildcard: true
 
 intents:
-  ViewAssistDisplayCamera:
-    data:
-      - sentences:
-          - "(display|show) (my|the) {camera} [camera]"
-          - "(display|show) (my|the|all) [my|the] cameras"
   ViewAssistCancelCamera:
     data:
       - sentences:

@@ -133,6 +133,7 @@ CONF_SCREEN_MODE = "screen_mode"
 CONF_CYCLE_VIEWS = "cycle_views"
 CONF_NAVIGATION_TRANSITION = "navigation_transition"
 CONF_KEEP_TIMER_SCREEN_ON = "keep_timer_screen_on"
+CONF_CLOCK_STYLE = "clock_style"
 
 CONF_WEATHER_ENTITY = "weather_entity"
 CONF_VIEW_TIMEOUT = "view_timeout"
@@ -161,6 +162,10 @@ CONF_HIDE_HEADER = "hide_header"
 CONF_HIDE_SIDEBAR = "hide_sidebar"
 CONF_ROTATE_BACKGROUND = "rotate_background"
 CONF_ROTATE_BACKGROUND_SOURCE = "rotate_background_source"
+
+
+# Clock view styles, selectable per satellite (values match clock.yaml)
+VA_CLOCK_STYLES = ["standard", "alternate"]
 
 
 DEFAULT_VALUES = {
@@ -193,6 +198,7 @@ DEFAULT_VALUES = {
         CONF_CYCLE_VIEWS: CYCLE_VIEWS,
         CONF_NAVIGATION_TRANSITION: False,
         CONF_KEEP_TIMER_SCREEN_ON: False,
+        CONF_CLOCK_STYLE: "standard",
     },
     # Default options
     CONF_WEATHER_ENTITY: "weather.home",
@@ -301,6 +307,10 @@ INTENT_TO_VIEW_MAPPING = {
     CONF_CLIMATE: [
         intent.INTENT_GET_TEMPERATURE,
         "HassClimateSetTemperature",
+        "ViewAssistIncreaseThermostat",
+        "ViewAssistDecreaseThermostat",
+        "ViewAssistSetThermostat",
+        "ViewAssistShowThermostat",
     ],
     CONF_WEATHER: ["HassGetWeather"],
     "list": [
