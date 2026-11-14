@@ -105,6 +105,7 @@ class Status:
     alarm_sounding: bool = False
     cameras: str | list[str] | None = None
     last_activity: datetime | None = None
+    current_activity_timeout: int | None = None
     extra_data: dict[str, Any] | None = None
 
 
@@ -211,6 +212,7 @@ class StatusManager(DeviceModule, Status):
         ]
         self.current_path = self.config.dashboard.home
 
+        self.current_activity_timeout = self._rt.default.view_timeout
         self.last_activity = dt_util.now()
 
         return True
@@ -430,6 +432,12 @@ class StatusManager(DeviceModule, Status):
                 self._config.runtime_data.core.name,
             )
             self.register_activity()
+
+        # Set activity timeout for navigation if set
+        elif event_type == VAEventType.NAVIGATION:
+            timeout = event.payload.get("timeout")
+            if timeout is not None:
+                self.current_activity_timeout = timeout
 
     async def handle_set_state_action_call(self, data: dict[str, Any]) -> bool:
         """Handle a set state action call for the device."""

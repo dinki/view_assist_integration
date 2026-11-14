@@ -82,7 +82,7 @@ class DisplayManager(DeviceModule):
                     continue
 
                 timeout = (
-                    sm.config.default.view_timeout
+                    sm.current_activity_timeout
                     if sm.mode != VAMode.CYCLE
                     else self._cycle_interval
                 )

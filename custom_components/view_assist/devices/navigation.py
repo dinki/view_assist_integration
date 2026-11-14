@@ -21,7 +21,6 @@ from .base import DeviceModule
 
 ATTR_PATH = "path"
 ATTR_REVERT_TIMEOUT = "revert_timeout"
-NAVIGATION_MANAGER = "navigation_manager"
 
 NAVIGATE_SERVICE_SCHEMA = vol.Schema(
     {
@@ -78,7 +77,12 @@ class NavigationManager(DeviceModule):
         NavigationManagerServices(self._hass).unregister()
         return True
 
-    def browser_navigate(self, path: str, view_data: dict[str, Any] | None = None):
+    def browser_navigate(
+        self,
+        path: str,
+        view_data: dict[str, Any] | None = None,
+        timeout: int | None = None,
+    ):
         """Navigate browser to defined view.
 
         Optionally revert to another view after timeout.
@@ -111,7 +115,14 @@ class NavigationManager(DeviceModule):
         async_dispatcher_send(
             self._hass,
             f"{DOMAIN}_{self._config.entry_id}_event",
-            VAEvent(VAEventType.NAVIGATION, {"path": path}),
+            VAEvent(
+                VAEventType.NAVIGATION,
+                {
+                    "path": path,
+                    "timeout": timeout
+                    or self._config.runtime_data.default.view_timeout,
+                },
+            ),
         )
 
     def navigate_to_view(self, view: str, view_data: dict[str, Any] | None = None):
@@ -161,13 +172,14 @@ class NavigationManagerServices:
 
         entity_id = call.data.get(ATTR_DEVICE)
         path = call.data.get(ATTR_PATH)
+        timeout = call.data.get(ATTR_REVERT_TIMEOUT)
 
         # get config entry from entity id to allow access to browser_id parameter
         if navigation_manager := self._get_navigation_manager(entity_id):
             if path == "home":
                 navigation_manager.navigate_home()
             else:
-                navigation_manager.browser_navigate(path=path)
+                navigation_manager.browser_navigate(path=path, timeout=timeout)
         else:
             _LOGGER.error("No navigation manager found for entity_id: %s", entity_id)
 
