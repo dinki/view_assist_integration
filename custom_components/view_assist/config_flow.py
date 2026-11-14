@@ -30,7 +30,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .assets import AssetClass, AssetsManager
-from .assets.plugins import PluginManager, REQUIRED_PLUGINS
+from .assets.plugins import PluginManager, REQUIRED_PLUGINS, RepositoryManager
 from .const import (
     CONF_ASSIST_PROMPT,
     CONF_BACKGROUND,
@@ -553,16 +553,17 @@ class ViewAssistConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_plugin_confirm(self, user_input=None):
         """Handle plugin installation confirmation step."""
         plugin_manager = PluginManager(self.hass, None, {})
-        hacs_available = plugin_manager.get_repository_manager() is not None
+        repo_mgr = plugin_manager.get_repository_manager()
+        hacs_available = repo_mgr is not None
         errors: dict[str, str] = {}
 
         if user_input is not None:
             if user_input["confirm_plugins"] and hacs_available:
                 for plugin in REQUIRED_PLUGINS:
-                    installed, _ = await self._async_get_plugin_status(
-                        plugin_manager, plugin.respository_id
+                    installed, _ = await repo_mgr.async_get_plugin_status(
+                        plugin.respository_id
                     )
-                    if not installed and not await plugin_manager.async_install_plugin(
+                    if not installed and not await repo_mgr.async_install_plugin(
                         plugin.respository_id, plugin.version
                     ):
                         errors["base"] = "plugin_install_failed"
@@ -577,9 +578,7 @@ class ViewAssistConfigFlow(ConfigFlow, domain=DOMAIN):
         plugin_statuses = []
         for plugin in REQUIRED_PLUGINS:
             installed, version = (
-                await self._async_get_plugin_status(
-                    plugin_manager, plugin.respository_id
-                )
+                await repo_mgr.async_get_plugin_status(plugin.respository_id)
                 if hacs_available
                 else (False, None)
             )
@@ -618,11 +617,11 @@ class ViewAssistConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def _async_get_plugin_status(
-        self, plugin_manager: PluginManager, repository_id: str
+        self, repo_mgr: RepositoryManager, repository_id: str
     ) -> tuple[bool, str | None]:
         """Get plugin status without letting HACS/Marketplace errors abort the flow."""
         try:
-            return await plugin_manager.async_get_plugin_status(repository_id)
+            return await repo_mgr.async_get_plugin_status(repository_id)
         except Exception:  # noqa: BLE001
             _LOGGER.exception("Unable to get status for plugin %s", repository_id)
             return False, None
