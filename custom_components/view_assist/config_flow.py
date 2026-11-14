@@ -557,11 +557,10 @@ class ViewAssistConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            install = user_input["confirm_plugins"]
-            if install:
+            if user_input["confirm_plugins"] and hacs_available:
                 for plugin in REQUIRED_PLUGINS:
-                    installed, _ = await plugin_manager.async_get_plugin_status(
-                        plugin.respository_id
+                    installed, _ = await self._async_get_plugin_status(
+                        plugin_manager, plugin.respository_id
                     )
                     if not installed and not await plugin_manager.async_install_plugin(
                         plugin.respository_id, plugin.version
@@ -577,13 +576,13 @@ class ViewAssistConfigFlow(ConfigFlow, domain=DOMAIN):
 
         plugin_statuses = []
         for plugin in REQUIRED_PLUGINS:
-            if hacs_available:
-                installed, version = await plugin_manager.async_get_plugin_status(
-                    plugin.respository_id
+            installed, version = (
+                await self._async_get_plugin_status(
+                    plugin_manager, plugin.respository_id
                 )
-            else:
-                installed, version = False, None
-
+                if hacs_available
+                else (False, None)
+            )
             plugin_statuses.append(
                 {
                     "name": plugin.name,
@@ -617,6 +616,16 @@ class ViewAssistConfigFlow(ConfigFlow, domain=DOMAIN):
                 ),
             },
         )
+
+    async def _async_get_plugin_status(
+        self, plugin_manager: PluginManager, repository_id: str
+    ) -> tuple[bool, str | None]:
+        """Get plugin status without letting HACS/Marketplace errors abort the flow."""
+        try:
+            return await plugin_manager.async_get_plugin_status(repository_id)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Unable to get status for plugin %s", repository_id)
+            return False, None
 
     def _format_plugins_info(self, plugin_statuses: list[dict]) -> str:
         """Format plugin information for display."""
