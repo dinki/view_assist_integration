@@ -68,64 +68,35 @@ class PluginManager:
         """Onboard the asset manager."""
         return {}
 
-    async def install_listed_plugins(self, force: bool = False) -> dict[str, Any]:
-        plugin_versions: dict[str, Any] = {}
-        if not self.data or force:
-            self.onboarding = True
-            if self.get_repository_manager():
-                for plugin in REQUIRED_PLUGINS:
-                    installed, version = await self.async_get_plugin_status(
-                        plugin.respository_id
-                    )
-
-                    if installed:
-                        _LOGGER.info(
-                            "HACS plugin %s is already installed with version %s",
-                            plugin.name,
-                            version,
-                        )
-                        plugin_versions[plugin.name] = {
-                            "installed": AwesomeVersion(version)
-                        }
-
-                    elif not installed or (
-                        version
-                        and AwesomeVersion(version) < AwesomeVersion(plugin.version)
-                    ):
-                        success = await self.async_install_plugin(
-                            plugin.respository_id, plugin.version
-                        )
-                        if success:
-                            plugin_versions[plugin.name] = {
-                                "installed": AwesomeVersion(plugin.version),
-                            }
-
-        return plugin_versions
-
-    def get_repository_manager(self) -> Any | None:
+    def get_repository_manager(self) -> RepositoryManager | None:
         """Return the appropriate repository manager based on the current configuration."""
         if self.use_marketplace:
-            marketplace = self.hass.data.get(MARKETPLACE_DOMAIN)
-            if marketplace is None:
-                _LOGGER.error("Marketplace is not loaded")
-            return marketplace
-        hacs = self.hass.data.get(HACS_DOMAIN)
-        if hacs is None:
+            return MarketPlaceRepositoryManager(self.hass)
+        if not self.hass.data.get(HACS_DOMAIN):
             _LOGGER.error("HACS is not installed or not loaded")
-        return hacs
+            return None
+        return HacsRepositoryManager(self.hass)
+
+
+class RepositoryManager:
+    """Manage HACS/Marketplace repositories."""
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        """Initialize the HACsRepositoryManager with the Home Assistant instance."""
+        self.hass = hass
+        self.repository_manager = None
 
     def _get_repository(self, repository_id: str) -> Any | None:
         """Return the repository object for a repository id."""
-        repository_manager = self.get_repository_manager()
-        if repository_manager is None:
+        if self.repository_manager is None:
             return None
 
         _LOGGER.info(
             "Fetching repository %s using repository manager: %s",
             repository_id,
-            repository_manager,
+            self.repository_manager,
         )
-        repository = repository_manager.repositories.get_by_id(repository_id)
+        repository = self.repository_manager.repositories.get_by_id(repository_id)
         if repository is None:
             _LOGGER.error("Repository %s not found", repository_id)
         return repository
@@ -163,7 +134,7 @@ class PluginManager:
             _LOGGER.error("Error installing plugin %s: %s", repository_id, ex)
             return False
 
-        await self.get_repository_manager().data.async_write()
+        await self.repository_manager.data.async_write()
         return True
 
     async def async_uninstall_plugin(self, repository_id: str) -> bool:
@@ -178,13 +149,46 @@ class PluginManager:
             _LOGGER.error("Error uninstalling plugin %s: %s", repository_id, ex)
             return False
 
-        await self.get_repository_manager().data.async_write()
+        await self.repository_manager.data.async_write()
         return True
 
-    def check_for_plugin(self, plugin_id: str) -> bool:
-        """Check if a plugin id is in the tracked plugins list."""
-        return any(plugin.repository_id == plugin_id for plugin in self.plugins)
 
-    def get_plugins(self):
-        """Return the tracked plugins list."""
-        return self.plugins
+class HacsRepositoryManager(RepositoryManager):
+    """Manage HACS repositories."""
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        """Initialize the HacsRepositoryManager with the Home Assistant instance."""
+        super().__init__(hass)
+        self.repository_manager = self.hass.data.get(HACS_DOMAIN)
+
+
+class MarketPlaceRepositoryManager(RepositoryManager):
+    """Manage Marketplace repositories."""
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        """Initialize the MarketPlaceRepositoryManager with the Home Assistant instance."""
+        super().__init__(hass)
+        try:
+            from homeassistant.components.marketplace.base import (  # noqa: I001, PLC0415
+                async_get_marketplace,
+            )
+        except ImportError:
+            _LOGGER.error("Error trying to import Marketplace component")
+        self.repository_manager = async_get_marketplace(self.hass)
+
+    async def async_install_plugin(
+        self, repository_id: str, version: str | None = None
+    ) -> bool:
+        """Install a plugin by repository id, optionally at a specific version."""
+        repository = self._get_repository(repository_id)
+        if repository is None:
+            return False
+
+        try:
+            await repository.async_install_repository(ref=version)
+        except Exception as ex:  # noqa: BLE001
+            _LOGGER.error("Error installing plugin %s: %s", repository_id, ex)
+            return False
+
+        await self.repository_manager.data.async_write()
+        return True
