@@ -20,15 +20,6 @@ from .typed import (
     VATimeFormat,
 )
 
-# LABS FUNCTIONS
-# -------------------------------------------------------------------------------------------------
-# These are here to enable experimental features that are not yet ready for general use.
-# They will be removed from here when they are ready for general use.
-ENABLE_INTENT_OVERRIDES = True
-INSTALL_CUSTOM_SENTENCES = True
-USE_LLM_FOR_TIMER_ENHANCEMENT = True
-# -------------------------------------------------------------------------------------------------
-
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 DOMAIN = "view_assist"
@@ -154,10 +145,14 @@ CONF_MUSIC_MODE_AUTO = "music_mode_auto"
 CONF_MUSIC_MODE_TIMEOUT = "music_mode_timeout"
 
 CONF_ENABLE_UPDATES = "enable_updates"
-CONF_TRANSLATION_ENGINE = "translation_engine"
 CONF_DEVELOPER_DEVICE = "developer_device"
 CONF_DEVELOPER_MIMIC_DEVICE = "developer_mimic_device"
 
+# Experimental features that are not yet ready for general use
+CONF_EXPERIMENTAL_OPTIONS = "experimental_options"
+CONF_ENABLE_INTENT_OVERRIDES = "enable_intent_overrides"
+CONF_INSTALL_CUSTOM_SENTENCES = "install_custom_sentences"
+CONF_USE_LLM_FOR_TIMER_ENHANCEMENT = "use_llm_for_timer_enhancement"
 
 # Legacy
 CONF_MIC_TYPE = "mic_type"
@@ -220,6 +215,10 @@ DEFAULT_VALUES = {
     # Default developer otions
     CONF_DEVELOPER_DEVICE: "",
     CONF_DEVELOPER_MIMIC_DEVICE: "",
+    # Default experimental options
+    CONF_ENABLE_INTENT_OVERRIDES: True,
+    CONF_INSTALL_CUSTOM_SENTENCES: True,
+    CONF_USE_LLM_FOR_TIMER_ENHANCEMENT: True,
 }
 
 # Config default values

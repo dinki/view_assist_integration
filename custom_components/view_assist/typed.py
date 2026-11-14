@@ -91,7 +91,6 @@ class IntegrationConfig:
     """Class to hold integration config data."""
 
     enable_updates: bool = True
-    translation_engine: str | None = None
 
 
 @dataclass
@@ -179,6 +178,15 @@ class DeveloperConfig:
 
 
 @dataclass
+class ExperimentalConfig:
+    """Class to hold experimental config data."""
+
+    enable_intent_overrides: bool = True
+    install_custom_sentences: bool = True
+    use_llm_for_timer_enhancement: bool = True
+
+
+@dataclass
 class RuntimeConfigOverrides:
     """Class to hold runtime override data."""
 
@@ -195,6 +203,7 @@ class MasterConfigRuntimeData:
         self.dashboard: DashboardConfig = DashboardConfig()
         self.default: DefaultConfig = DefaultConfig()
         self.developer_settings: DeveloperConfig = DeveloperConfig()
+        self.experimental: ExperimentalConfig = ExperimentalConfig()
         # Extra data for holding key/value pairs passed in by set_state service call
         self.extra_data: dict[str, Any] = {}
 

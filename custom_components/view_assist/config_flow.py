@@ -17,7 +17,6 @@ from homeassistant.data_entry_flow import SectionConfig, section
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.selector import (
     BooleanSelector,
-    ConversationAgentSelector,
     DeviceSelector,
     DeviceSelectorConfig,
     EntitySelector,
@@ -31,6 +30,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .assets import AssetClass, AssetsManager
+from .assets.plugins import PluginManager, REQUIRED_PLUGINS
 from .const import (
     CONF_ASSIST_PROMPT,
     CONF_BACKGROUND,
@@ -44,9 +44,12 @@ from .const import (
     CONF_DISPLAY_SETTINGS,
     CONF_DO_NOT_DISTURB,
     CONF_DUCKING_VOLUME,
+    CONF_ENABLE_INTENT_OVERRIDES,
     CONF_ENABLE_UPDATES,
+    CONF_EXPERIMENTAL_OPTIONS,
     CONF_FONT_STYLE,
     CONF_HOME,
+    CONF_INSTALL_CUSTOM_SENTENCES,
     CONF_INTENT,
     CONF_INTENT_DEVICE,
     CONF_CLOCK_STYLE,
@@ -73,8 +76,8 @@ from .const import (
     CONF_STATUS_ICONS,
     CONF_TIME_FORMAT,
     CONF_TIMERS,
-    CONF_TRANSLATION_ENGINE,
     CONF_USE_ANNOUNCE,
+    CONF_USE_LLM_FOR_TIMER_ENHANCEMENT,
     CONF_VIEW_TIMEOUT,
     CONF_WEATHER_ENTITY,
     DEFAULT_NAME,
@@ -379,10 +382,20 @@ DEFAULT_OPTIONS_SCHEMA = vol.Schema(
     }
 )
 
+EXPERIMENTAL_OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_ENABLE_INTENT_OVERRIDES): BooleanSelector(),
+        vol.Optional(CONF_INSTALL_CUSTOM_SENTENCES): BooleanSelector(),
+        vol.Optional(CONF_USE_LLM_FOR_TIMER_ENHANCEMENT): BooleanSelector(),
+    }
+)
+
 INTEGRATION_OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_ENABLE_UPDATES): BooleanSelector(),
-        vol.Optional(CONF_TRANSLATION_ENGINE): ConversationAgentSelector(),
+        vol.Required(CONF_EXPERIMENTAL_OPTIONS): section(
+            EXPERIMENTAL_OPTIONS_SCHEMA, options=SectionConfig(collapsed=True)
+        ),
     }
 )
 
@@ -529,15 +542,102 @@ class ViewAssistConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="options", data_schema=data_schema)
 
     async def async_step_master_config(self, discovery_info=None):
-        """Handle the options step."""
+        """Handle the master config step."""
         if discovery_info is not None and not get_master_config_entry(self.hass):
-            return self.async_create_entry(
-                title="Master Configuration", data={"type": VAType.MASTER_CONFIG}
-            )
+            return await self.async_step_plugin_confirm()
         return self.async_show_form(
             step_id="master_config",
             data_schema=vol.Schema({}),
         )
+
+    async def async_step_plugin_confirm(self, user_input=None):
+        """Handle plugin installation confirmation step."""
+        plugin_manager = PluginManager(self.hass, None, {})
+        hacs_available = plugin_manager.get_repository_manager() is not None
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            if user_input["confirm_plugins"] and hacs_available:
+                for plugin in REQUIRED_PLUGINS:
+                    installed, _ = await self._async_get_plugin_status(
+                        plugin_manager, plugin.respository_id
+                    )
+                    if not installed and not await plugin_manager.async_install_plugin(
+                        plugin.respository_id, plugin.version
+                    ):
+                        errors["base"] = "plugin_install_failed"
+                        break
+
+            if not errors:
+                return self.async_create_entry(
+                    title="Master Configuration",
+                    data={"type": VAType.MASTER_CONFIG},
+                )
+
+        plugin_statuses = []
+        for plugin in REQUIRED_PLUGINS:
+            installed, version = (
+                await self._async_get_plugin_status(
+                    plugin_manager, plugin.respository_id
+                )
+                if hacs_available
+                else (False, None)
+            )
+            plugin_statuses.append(
+                {
+                    "name": plugin.name,
+                    "required_version": plugin.version,
+                    "installed_version": version,
+                    "installed": installed,
+                }
+            )
+
+        # If all plugins are installed, skip to creation
+        if all(status["installed"] for status in plugin_statuses):
+            return self.async_create_entry(
+                title="Master Configuration", data={"type": VAType.MASTER_CONFIG}
+            )
+
+        return self.async_show_form(
+            step_id="plugin_confirm",
+            errors=errors,
+            data_schema=vol.Schema(
+                {
+                    vol.Required("confirm_plugins", default=True): BooleanSelector(),
+                }
+            ),
+            description_placeholders={
+                "plugins_info": self._format_plugins_info(plugin_statuses),
+                "hacs_warning": (
+                    "\n\n⚠️ **HACS/Marketplace not available**: Could not determine plugin installation status. "
+                    "Please ensure HACS or Marketplace is installed and loaded."
+                    if not hacs_available
+                    else ""
+                ),
+            },
+        )
+
+    async def _async_get_plugin_status(
+        self, plugin_manager: PluginManager, repository_id: str
+    ) -> tuple[bool, str | None]:
+        """Get plugin status without letting HACS/Marketplace errors abort the flow."""
+        try:
+            return await plugin_manager.async_get_plugin_status(repository_id)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Unable to get status for plugin %s", repository_id)
+            return False, None
+
+    def _format_plugins_info(self, plugin_statuses: list[dict]) -> str:
+        """Format plugin information for display."""
+        lines = []
+        for plugin in plugin_statuses:
+            status = "✓ Installed" if plugin["installed"] else "✗ Not Installed"
+            installed_version = plugin["installed_version"] or "—"
+            lines.append(
+                f"• {plugin['name']}: {status} (Required: {plugin['required_version']}, "
+                f"Installed: {installed_version})"
+            )
+        return "\n".join(lines)
 
 
 class ViewAssistOptionsFlowHandler(OptionsFlow):
@@ -675,17 +775,22 @@ class ViewAssistOptionsFlowHandler(OptionsFlow):
             INTEGRATION_OPTIONS_SCHEMA,
             {
                 CONF_ENABLE_UPDATES: self.config_entry.options.get(CONF_ENABLE_UPDATES),
-                CONF_TRANSLATION_ENGINE: self.config_entry.options.get(
-                    CONF_TRANSLATION_ENGINE
+                CONF_EXPERIMENTAL_OPTIONS: get_suggested_option_values(
+                    self.config_entry
                 ),
             },
         )
 
         if user_input is not None:
-            # This is just updating the core config so update config_entry.data
-            options = self.config_entry.options | user_input
-            for o in data_schema.schema:
-                if o not in user_input:
+            # Experimental options are stored flat; the section is only for the UI
+            user_input = dict(user_input)
+            experimental = user_input.pop(CONF_EXPERIMENTAL_OPTIONS, {})
+            options = self.config_entry.options | user_input | experimental
+            for o in (
+                *INTEGRATION_OPTIONS_SCHEMA.schema,
+                *EXPERIMENTAL_OPTIONS_SCHEMA.schema,
+            ):
+                if o not in user_input and o not in experimental:
                     options.pop(o, None)
             return self.async_create_entry(data=options)
 

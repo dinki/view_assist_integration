@@ -9,12 +9,20 @@
       "cannot_connect": "Failed to connect",
       "invalid_auth": "Invalid authentication",
       "invalid_settings": "Invalid settings",
+      "plugin_install_failed": "Failed to install one or more plugins. Check that HACS or Marketplace is loaded and see the log for details",
       "unknown": "Unexpected error"
     },
     "step": {
       "master_config": {
         "title": "Master Configuration",
         "description": "This adds a master configuration instance of View Assist\n\nIt must be added before you can setup any View Assist device instances if a new install or any more View Assist devices instances if an existing install\n\nYou may need to refresh any existing View Assist devices to enable the full functionality"
+      },
+      "plugin_confirm": {
+        "title": "Install Required Plugins",
+        "description": "View Assist requires the following plugins from HACS or Marketplace:\n\n{plugins_info}{hacs_warning}\n\nSelect the option below to install any missing plugins now. If unselected, setup continues without installing them and you must install them manually.",
+        "data": {
+          "confirm_plugins": "Install missing plugins"
+        }
       },
       "options": {
         "title": "Configure a View Assist device",
@@ -180,12 +188,26 @@
       "integration_options": {
         "title": "{name} Integration Options",
         "data": {
-          "enable_updates": "Enable update notifications",
-          "translation_engine": "Translation engine"
+          "enable_updates": "Enable update notifications"
         },
         "data_description": {
-          "enable_updates": "Enable or disable update notifications for the dashboard, views and blueprints",
-          "translation_engine": "The translation engine to use for timers (experimental)"
+          "enable_updates": "Enable or disable update notifications for the dashboard, views and blueprints"
+        },
+        "sections": {
+          "experimental_options": {
+            "name": "Experimental Options",
+            "description": "These features are experimental and not yet fully tested for production use. They may change or be removed in future releases.",
+            "data": {
+              "enable_intent_overrides": "Enable intent overrides",
+              "install_custom_sentences": "Install custom sentences",
+              "use_llm_for_timer_enhancement": "Use LLM for timer parsing"
+            },
+            "data_description": {
+              "enable_intent_overrides": "Register View Assist handlers that override or extend Home Assistant intents",
+              "install_custom_sentences": "Install View Assist custom sentences for intents",
+              "use_llm_for_timer_enhancement": "Use the conversation agent to parse timer sentences that the built-in encoder cannot understand"
+            }
+          }
         }
       },
       "developer_options": {
