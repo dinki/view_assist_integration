@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime as dt
+import hashlib
 import logging
 from pathlib import Path
 import random
@@ -156,6 +157,8 @@ class BackgroundImageManager(DeviceModule):
                 image_path = await self._get_download_image_path(RANDOM_IMAGE_URL)
             elif self.mode == VABackgroundMode.DOWNLOAD_URL:
                 image_path = await self._get_download_image_path(source_path)
+            elif self.mode == VABackgroundMode.IMMICH_RANDOM:
+                image_path = await self._get_immich_image_path()
 
         if image_path is None:
             # If error getting image, revert to default
@@ -189,6 +192,14 @@ class BackgroundImageManager(DeviceModule):
             self._hass,
             self._config,
             url,
+        )
+
+    async def _get_immich_image_path(self) -> Path | None:
+        """Get a random photo from the Immich server and return the file path."""
+        return await self._hass.async_add_executor_job(
+            ImageProvider.get_immich_random_image,
+            self._hass,
+            self._config,
         )
 
     async def _handle_linked_image_change_event(self, event: VAEvent | None = None):
@@ -288,6 +299,143 @@ class ImageProvider:
 
         _LOGGER.warning("No existing images found for background")
         return None
+
+    @staticmethod
+    def _immich_request(
+        method: str, url: str, api_key: str, **kwargs
+    ) -> requests.Response | None:
+        """Call the Immich API. Logs failures but never logs the API key."""
+        try:
+            response = requests.request(
+                method,
+                url,
+                headers={"x-api-key": api_key},
+                timeout=15,
+                **kwargs,
+            )
+        except requests.RequestException as ex:
+            _LOGGER.warning("Could not reach Immich server: %s", ex)
+            return None
+
+        if response.status_code == 401:
+            _LOGGER.warning("Immich rejected the API key (HTTP 401)")
+            return None
+        if response.status_code == 403:
+            _LOGGER.warning(
+                "Immich API key is missing a permission (HTTP 403). "
+                "It needs asset.read, asset.view and album.read"
+            )
+            return None
+        if not 200 <= response.status_code < 300:
+            _LOGGER.warning(
+                "Immich returned HTTP %s for %s", response.status_code, url
+            )
+            return None
+        return response
+
+    @staticmethod
+    def _immich_album_id(server: str, api_key: str, album_name: str) -> str | None:
+        """Look up an album ID from its exact name."""
+        response = ImageProvider._immich_request(
+            "GET", f"{server}/api/albums", api_key
+        )
+        if response is None:
+            return None
+        try:
+            albums = response.json()
+        except ValueError:
+            _LOGGER.warning("Immich album list was not valid JSON")
+            return None
+        for album in albums:
+            if album.get("albumName") == album_name:
+                return album.get("id")
+        _LOGGER.warning("No Immich album named '%s' was found", album_name)
+        return None
+
+    @staticmethod
+    def get_immich_random_image(
+        hass: HomeAssistant,
+        config: VAConfigEntry,
+        save_path: str = IMAGE_PATH,
+    ) -> Path | None:
+        """Download a random photo from Immich, optionally limited to one album."""
+        bg = config.runtime_data.dashboard.background_settings
+        server = (bg.immich_server_url or "").strip().rstrip("/")
+        api_key = (bg.immich_api_key or "").strip()
+        album_name = (bg.immich_album_name or "").strip()
+
+        if not server.startswith(("http://", "https://")) or not api_key:
+            _LOGGER.warning("Immich background needs a server URL and an API key")
+            return None
+
+        path = Path(hass.config.config_dir, DOMAIN, save_path)
+        # Key the cache on server and album, so changing either fetches a new image
+        cache_key = hashlib.md5(f"{server}|{album_name}".encode()).hexdigest()[:8]
+        filename = (
+            f"downloaded_{config.entry_id.lower()}_{slugify(config.runtime_data.core.name)}"
+            f"_immich_{cache_key}.jpg"
+        )
+        image = Path(path, filename)
+
+        # Reuse the saved image while it is still within the rotation interval
+        max_age = bg.rotate_background_interval or 10
+        image_age = ImageProvider.get_file_last_modified_age(image)
+        if image_age is not None and (image_age + 0.5) <= max_age:
+            _LOGGER.debug(
+                "Reusing Immich background %s (%.1f minutes old)", image.name, image_age
+            )
+            return image
+
+        _LOGGER.debug("Fetching new random background from Immich")
+
+        search: dict = {"size": 1, "type": "IMAGE"}
+        if album_name:
+            album_id = ImageProvider._immich_album_id(server, api_key, album_name)
+            if album_id is None:
+                # Wrong album name: show the default background rather than a stale photo
+                return None
+            _LOGGER.debug("Immich album '%s' resolved to %s", album_name, album_id)
+            search["albumIds"] = [album_id]
+        else:
+            _LOGGER.debug("Immich background using the whole library")
+
+        # Step 1: pick a random asset
+        response = ImageProvider._immich_request(
+            "POST",
+            f"{server}/api/search/random",
+            api_key,
+            json=search,
+        )
+        assets = response.json() if response is not None else []
+        if not assets:
+            _LOGGER.warning("Immich returned no images for the background")
+            return image if image.exists() else None
+        asset_id = assets[0].get("id")
+        _LOGGER.info(
+            "Immich background asset %s selected (album: %s)",
+            asset_id,
+            album_name or "whole library",
+        )
+
+        # Step 2: download its preview image
+        response = ImageProvider._immich_request(
+            "GET",
+            f"{server}/api/assets/{asset_id}/thumbnail",
+            api_key,
+            params={"size": "preview"},
+        )
+        if response is None:
+            return image if image.exists() else None
+
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            with image.open(mode="wb") as file:
+                file.write(response.content)
+        except OSError as ex:
+            _LOGGER.warning("Unable to save Immich background image: %s", ex)
+            return image if image.exists() else None
+
+        return image
 
     @staticmethod
     def get_next_image_from_path(

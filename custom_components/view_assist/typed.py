@@ -75,6 +75,7 @@ class VABackgroundMode(StrEnum):
     LOCAL_RANDOM = "local_random"
     DOWNLOAD_RANDOM = "download"
     DOWNLOAD_URL = "custom_url"
+    IMMICH_RANDOM = "immich_random"
     LINKED = "link_to_entity"
 
 
@@ -117,6 +118,9 @@ class BackgroundConfig:
     rotate_background_path: str | None = None
     rotate_background_linked_entity: str | None = None
     rotate_background_interval: int | None = None
+    immich_server_url: str | None = None
+    immich_api_key: str | None = None
+    immich_album_name: str | None = None
 
 
 @dataclass
