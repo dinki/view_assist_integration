@@ -1,6 +1,7 @@
 import { timerCards } from "./timers.js?v=1.0.30";
+import { volumePopup } from "./volume_popup.js?v=1.0.32-rc15";
 
-const version = "1.0.32-rc13"
+const version = "1.0.32-rc15"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
 
 const INITIAL_LOAD_OVERLAY_ID = "view-assist-initial-load-overlay";
@@ -806,7 +807,14 @@ class ViewAssist {
         break;
       case "assist_state_change":
         if (!is_mimic) {
+          // Listening hides the volume popup
+          volumePopup.setListening(payload["state"] === "listening");
           this.show_assist_listening_overlay(payload["state"], payload["style"])
+        }
+        break;
+      case "volume_change":
+        if (!is_mimic) {
+          volumePopup.show(payload["volume"]);
         }
         break;
       default:

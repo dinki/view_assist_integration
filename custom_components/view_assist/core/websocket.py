@@ -33,7 +33,11 @@ _LOGGER = logging.getLogger(__name__)
 
 BROWSER_IDS = "browser_ids"
 WEBSOCKET_MANAGER = "websocket_manager"
-WEBSOCKET_EVENTS = [VAEventType.ASSIST_STATE_CHANGE, VAEventType.NAVIGATION]
+WEBSOCKET_EVENTS = [
+    VAEventType.ASSIST_STATE_CHANGE,
+    VAEventType.NAVIGATION,
+    VAEventType.VOLUME_CHANGE,
+]
 
 
 class WebsocketManager:
@@ -228,6 +232,7 @@ class WebsocketListenerHandler:
             VAEventType.STATUS_CHANGE,
             VAEventType.ASSIST_STATE_CHANGE,
             VAEventType.NAVIGATION,
+            VAEventType.VOLUME_CHANGE,
             VAEventType.RELOAD,
         ]:
             _LOGGER.debug(
