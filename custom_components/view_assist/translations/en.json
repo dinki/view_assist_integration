@@ -108,7 +108,7 @@
             },
             "data_description": {
               "background": "The default background image url",
-              "rotate_background_path": "A path under config/view_assist to load images from in local file modes. A url to load images from in url mode",
+              "rotate_background_path": "A path under config/view_assist for local modes, a direct image URL for URL mode, or an Immich public share URL for Immich mode",
               "rotate_background_linked_entity": "View Assist entity to link the background to",
               "rotate_background_interval": "Interval in minutes to rotate the background"
             }
@@ -243,6 +243,7 @@
         "local_random": "Random image from local file path",
         "download": "Random image from unsplash.com",
         "custom_url": "Image from custom url",
+        "immich_public_album": "Random image from Immich public album",
         "link_to_entity": "Mirror another View Assist device"
       }
     },

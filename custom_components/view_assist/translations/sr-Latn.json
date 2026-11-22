@@ -243,6 +243,7 @@
         "local_random": "Slučajna slika iz lokalne putanje",
         "download": "Slučajna slika sa unsplash.com",
         "custom_url": "Slika sa prilagođenog URL-a",
+        "immich_public_album": "Nasumična slika iz javnog Immich albuma",
         "link_to_entity": "Ogledalo drugog View Assist uređaja"
       }
     },
