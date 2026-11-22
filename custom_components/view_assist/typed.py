@@ -77,6 +77,7 @@ class VABackgroundMode(StrEnum):
     LOCAL_RANDOM = "local_random"
     DOWNLOAD_RANDOM = "download"
     DOWNLOAD_URL = "custom_url"
+    IMMICH_PUBLIC_ALBUM = "immich_public_album"
     LINKED = "link_to_entity"
 
 

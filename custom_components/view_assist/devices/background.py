@@ -7,6 +7,7 @@ from datetime import datetime as dt
 import logging
 from pathlib import Path
 import random
+from urllib.parse import urlparse
 
 import requests
 
@@ -55,6 +56,7 @@ class BackgroundImageManager:
         self.mode = VABackgroundMode.DEFAULT_BACKGROUND
         self.rotation_interval = 10  # Default to 10 minutes
         self.current_image_path: Path | None = None
+        self.current_immich_asset_id: str | None = None
         self._task = None
 
     async def async_setup(self) -> bool:
@@ -153,6 +155,8 @@ class BackgroundImageManager:
                 image_path = await self._get_download_image_path(RANDOM_IMAGE_URL)
             elif self.mode == VABackgroundMode.DOWNLOAD_URL:
                 image_path = await self._get_download_image_path(source_path)
+            elif self.mode == VABackgroundMode.IMMICH_PUBLIC_ALBUM:
+                image_path = await self._get_immich_public_album_image(source_path)
 
         if image_path is None:
             # If error getting image, revert to default
@@ -187,6 +191,22 @@ class BackgroundImageManager:
             self.config,
             url,
         )
+
+    async def _get_immich_public_album_image(
+        self, share_url: str
+    ) -> Path | None:
+        """Fetch a random image from a public Immich share link."""
+        image = await self.hass.async_add_executor_job(
+            ImageProvider.get_immich_public_album_image,
+            self.hass,
+            self.config,
+            share_url,
+            self.current_immich_asset_id,
+        )
+        if image:
+            image_path, self.current_immich_asset_id = image
+            return image_path
+        return None
 
     async def _handle_linked_image_change_event(self, event: VAEvent | None = None):
         """Handle image change events from linked entities."""
@@ -288,6 +308,128 @@ class ImageProvider:
 
         _LOGGER.warning("No existing images found for background")
         return None
+
+    @staticmethod
+    def get_immich_public_album_image(
+        hass: HomeAssistant,
+        config: VAConfigEntry,
+        share_url: str,
+        current_asset_id: str | None = None,
+    ) -> tuple[Path, str] | None:
+        """Fetch one image from an unauthenticated Immich public share."""
+        try:
+            parsed = urlparse(share_url)
+            if parsed.scheme not in ("http", "https") or not parsed.netloc:
+                _LOGGER.warning("Immich share URL must be an absolute http(s) URL")
+                return None
+
+            parts = [part for part in parsed.path.split("/") if part]
+            share_index = next(
+                (
+                    index
+                    for index in range(len(parts) - 2, -1, -1)
+                    if parts[index] in ("s", "share")
+                ),
+                -1,
+            )
+            if share_index < 0 or share_index + 1 >= len(parts):
+                _LOGGER.warning("Immich share URL must end in /s/<slug> or /share/<key>")
+                return None
+            share_type = parts[share_index]
+            share_key = parts[share_index + 1]
+            share_param = "slug" if share_type == "s" else "key"
+            base_path = "/" + "/".join(parts[:share_index]) if share_index else ""
+            base_url = f"{parsed.scheme}://{parsed.netloc}{base_path}"
+            session = requests.Session()
+
+            # The v3 public-share response identifies the shared album, while
+            # timeline endpoints expose its assets when called with the share key.
+            response = session.get(
+                f"{base_url}/api/shared-links/me",
+                params={share_param: share_key},
+                timeout=15,
+            )
+            response.raise_for_status()
+            share_data = response.json()
+            album_id = share_data.get("album", {}).get("id") or share_data.get("albumId")
+            assets = share_data.get("assets") or []
+
+            if not assets and album_id:
+                buckets_response = session.get(
+                    f"{base_url}/api/timeline/buckets",
+                    params={"albumId": album_id, share_param: share_key},
+                    timeout=15,
+                )
+                buckets_response.raise_for_status()
+                buckets = buckets_response.json()
+                bucket_list = (
+                    buckets.get("buckets", buckets)
+                    if isinstance(buckets, dict)
+                    else buckets
+                )
+                assets = []
+                random.shuffle(bucket_list)
+                for bucket in bucket_list:
+                    bucket_id = bucket.get("timeBucket") or bucket.get("bucket")
+                    if not bucket_id:
+                        continue
+                    bucket_response = session.get(
+                        f"{base_url}/api/timeline/bucket",
+                        params={
+                            "timeBucket": bucket_id,
+                            "albumId": album_id,
+                            share_param: share_key,
+                            "visibility": "timeline",
+                            "withPartners": "false",
+                            "withStacked": "false",
+                        },
+                        timeout=15,
+                    )
+                    bucket_response.raise_for_status()
+                    bucket_data = bucket_response.json()
+                    if isinstance(bucket_data, list):
+                        assets.extend(bucket_data)
+                    elif isinstance(bucket_data, dict):
+                        bucket_assets = bucket_data.get("id") or bucket_data.get("assets", [])
+                        if isinstance(bucket_assets, list):
+                            assets.extend(bucket_assets)
+                        elif bucket_assets:
+                            assets.append(bucket_assets)
+                    if assets:
+                        break
+
+            asset_ids = []
+            for asset in assets:
+                if isinstance(asset, str):
+                    asset_ids.append(asset)
+                elif (
+                    isinstance(asset, dict)
+                    and asset.get("id")
+                    and asset.get("type", "IMAGE") == "IMAGE"
+                ):
+                    asset_ids.append(asset["id"])
+            asset_ids = list(dict.fromkeys(asset_ids))
+            if not asset_ids:
+                _LOGGER.warning("No image assets found in Immich public share")
+                return None
+
+            candidates = [asset_id for asset_id in asset_ids if asset_id != current_asset_id]
+            asset_id = random.choice(candidates or asset_ids)
+            image_response = session.get(
+                f"{base_url}/api/assets/{asset_id}/thumbnail",
+                params={"size": "preview", share_param: share_key},
+                timeout=30,
+            )
+            image_response.raise_for_status()
+
+            path = Path(hass.config.config_dir, DOMAIN, IMAGE_PATH, "immich")
+            path.mkdir(parents=True, exist_ok=True)
+            image = path / f"{config.entry_id.lower()}.jpg"
+            image.write_bytes(image_response.content)
+            return image, asset_id
+        except (requests.RequestException, ValueError, OSError, KeyError, TypeError) as ex:
+            _LOGGER.warning("Unable to fetch image from Immich public share: %s", ex)
+            return None
 
     @staticmethod
     def get_next_image_from_path(

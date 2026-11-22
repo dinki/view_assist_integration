@@ -243,6 +243,7 @@
         "local_random": "Zufälliges Bild aus lokalem Dateipfad",
         "download": "Zufälliges Bild von unsplash.com",
         "custom_url": "Bild von benutzerdefinierter URL",
+        "immich_public_album": "Zufälliges Bild aus öffentlichem Immich-Album",
         "link_to_entity": "Anderes View Assist-Gerät spiegeln"
       }
     },
