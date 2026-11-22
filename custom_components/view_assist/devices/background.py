@@ -335,7 +335,9 @@ class ImageProvider:
             if share_index < 0 or share_index + 1 >= len(parts):
                 _LOGGER.warning("Immich share URL must end in /s/<slug> or /share/<key>")
                 return None
+            share_type = parts[share_index]
             share_key = parts[share_index + 1]
+            share_param = "slug" if share_type == "s" else "key"
             base_path = "/" + "/".join(parts[:share_index]) if share_index else ""
             base_url = f"{parsed.scheme}://{parsed.netloc}{base_path}"
             session = requests.Session()
@@ -344,7 +346,7 @@ class ImageProvider:
             # timeline endpoints expose its assets when called with the share key.
             response = session.get(
                 f"{base_url}/api/shared-links/me",
-                params={"key": share_key},
+                params={share_param: share_key},
                 timeout=15,
             )
             response.raise_for_status()
@@ -355,7 +357,7 @@ class ImageProvider:
             if not assets and album_id:
                 buckets_response = session.get(
                     f"{base_url}/api/timeline/buckets",
-                    params={"albumId": album_id, "key": share_key},
+                    params={"albumId": album_id, share_param: share_key},
                     timeout=15,
                 )
                 buckets_response.raise_for_status()
@@ -376,7 +378,7 @@ class ImageProvider:
                         params={
                             "timeBucket": bucket_id,
                             "albumId": album_id,
-                            "key": share_key,
+                            share_param: share_key,
                             "visibility": "timeline",
                             "withPartners": "false",
                             "withStacked": "false",
@@ -415,7 +417,7 @@ class ImageProvider:
             asset_id = random.choice(candidates or asset_ids)
             image_response = session.get(
                 f"{base_url}/api/assets/{asset_id}/thumbnail",
-                params={"size": "preview", "key": share_key},
+                params={"size": "preview", share_param: share_key},
                 timeout=30,
             )
             image_response.raise_for_status()
