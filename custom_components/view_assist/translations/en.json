@@ -159,7 +159,7 @@
               "screen_mode": "Show or hide the header and sidebar",
               "cycle_views": "List of items to show when in cycle mode",
               "navigation_transition": "Fade the screen out and back in when navigating between views",
-              "clock_style": "Choose the clock layout for this display.\n\n**Standard**\n\n![Standard clock](/local/viewassist/views/clock/standard.png)\n\n**Alternate**\n\n![Alternate clock](/local/viewassist/views/clock/alternate.png)",
+              "clock_style": "Choose the clock layout for this display. [Examples](https://dinki.github.io/View-Assist/docs/extend-functionality/views/clock)",
               "keep_timer_screen_on": "When a timer is running, show the timers view after inactivity instead of the usual screen."
             }
           }
