@@ -34,9 +34,9 @@ intents:
   ViewAssistListNames:
     data:
       - sentences:
-          - "what [todo | to do] lists do I have"
-          - "what are my [todo | to do] lists"
-          - "(tell me | list) my [todo | to do] lists"
+          - "what [todo | to do | to-do] list[s] do I have"
+          - "what are my [todo | to do | to-do] lists"
+          - "(tell me | list) my [todo | to do | to-do] lists"
 
 
 responses:
@@ -144,4 +144,5 @@ responses:
           You have 1 list named {{ lists[0] }}.
         {% else %}
           You have {{count}} lists named: {{ lists[:-1] | join(", ") + ' and ' + lists | last }}
+        {% endif %}
 
