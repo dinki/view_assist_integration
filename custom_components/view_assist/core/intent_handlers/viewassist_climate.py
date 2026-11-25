@@ -28,8 +28,8 @@ from homeassistant.components.climate import (
     ATTR_MIN_TEMP,
     DOMAIN as CLIMATE_DOMAIN,
     INTENT_SET_TEMPERATURE,
+    SERVICE_SET_TEMPERATURE,
     ClimateEntityFeature,
-    ClimateService,
     ClimateServiceArgument,
     HVACMode,
 )
@@ -113,7 +113,7 @@ class VAClimateSetTemperatureIntentHandler(IntentOverrideHandler):
 
             await hass.services.async_call(
                 CLIMATE_DOMAIN,
-                ClimateService.SET_TEMPERATURE,
+                SERVICE_SET_TEMPERATURE,
                 service_data={ClimateServiceArgument.TEMPERATURE: temperature},
                 target={ATTR_ENTITY_ID: state.entity_id},
                 blocking=True,
