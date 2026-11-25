@@ -63,6 +63,8 @@ JSMODULES = [
 # mins between checks for updated versions of dashboard and views
 VERSION_CHECK_INTERVAL = 120
 
+LIST_VIEW_FONT_SIZE = "4vw"
+
 
 class VAMode(StrEnum):
     """View Assist modes."""
@@ -310,10 +312,7 @@ INTENT_TO_VIEW_MAPPING = {
     CONF_CLIMATE: [
         intent.INTENT_GET_TEMPERATURE,
         "HassClimateSetTemperature",
-        "ViewAssistIncreaseThermostat",
-        "ViewAssistDecreaseThermostat",
-        "ViewAssistSetThermostat",
-        "ViewAssistShowThermostat",
+        "ViewAssistShowClimate",
     ],
     CONF_WEATHER: ["HassGetWeather"],
     "list": [
@@ -324,6 +323,7 @@ INTENT_TO_VIEW_MAPPING = {
         "HassListCompleteItem",
         "HassListRemoveItem",
         "ViewAssistListAdd",
+        "ViewAssistShowList",
         "ViewAssistShowAllList",
         "ViewAssistReadRestList",
     ],

@@ -1,0 +1,31 @@
+language: "en"
+expansion_rules:
+  show: "(show|display)"
+lists:
+  device:
+    wildcard: true
+
+intents:
+  ViewAssistShowMe:
+    data:
+      - sentences:
+          - "<show> [me] [my|the] {device}"
+responses:
+  intents:
+    ViewAssistShowMe:
+      default: >
+        {% set error = slots.error if slots.error is defined else none %}
+        {% set name = slots.name if slots.name is defined else none %}
+        {% if error == 'not_found' and name %}
+            Sorry, I could not find {{name}}.
+        {% elif error == 'not_found' %}
+            Sorry, I could not find what you requested.
+        {% elif error == 'multiple_domains' %}
+            Sorry, your request matched multiple types of device and I could not determine which one to show.
+        {% elif error == 'unsupported_domain' %}
+            Sorry, the requested type of device is not supported.
+        {% elif error == 'handler_not_found' %}
+            Sorry, I could not display the requested type of device.
+        {% else %}
+            OK
+        {% endif %}

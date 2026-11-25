@@ -293,7 +293,7 @@ class IntentHookHandler(IntentHandler):
 
     async def async_handle(self, intent_obj: Intent) -> IntentResponse:
         """Handle the intent with custom logic."""
-        _LOGGER.debug(
+        _LOGGER.info(
             "%s invoked with intent: %s",
             self.__class__.__name__,
             intent_to_dict(intent_obj),
@@ -319,10 +319,10 @@ class IntentHookHandler(IntentHandler):
         else:
             response = result
 
-        _LOGGER.debug(
+        _LOGGER.info(
             "%s response: %s",
             self.__class__.__name__,
-            intent_response_to_dict(response),
+            intent_response_to_dict(response) | {"view_data": view_data},
         )
 
         # Notify device of intent handling

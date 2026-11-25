@@ -10,7 +10,7 @@ import re
 from datetime import datetime
 from typing import override
 
-from homeassistant.core import State
+from homeassistant.core import State, HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.intent import Intent
 from homeassistant.util import dt as dt_util
@@ -39,7 +39,7 @@ def _friendly_name(state: State) -> str:
     return state.attributes.get("friendly_name") or state.name
 
 
-def _position_time(hass, state: State) -> datetime:
+def _position_time(hass: HomeAssistant, state: State) -> datetime:
     """Return when the person's position last updated, using the tracker when there is one."""
     source = state.attributes.get("source")
     if source and (tracker := hass.states.get(source)):
@@ -47,7 +47,7 @@ def _position_time(hass, state: State) -> datetime:
     return state.last_updated
 
 
-def _person_names(hass, state: State) -> list[str]:
+def _person_names(hass: HomeAssistant, state: State) -> list[str]:
     """Return the friendly name and any entity registry aliases for a person, normalised."""
     names = [_normalise(_friendly_name(state))]
     if entry := er.async_get(hass).async_get(state.entity_id):
@@ -61,7 +61,7 @@ def _person_names(hass, state: State) -> list[str]:
     return names
 
 
-def find_person(hass, spoken_name: str) -> State | None:
+def find_person(hass: HomeAssistant, spoken_name: str) -> State | None:
     """Return the person matching a friendly name or alias, exact matches first, then contains."""
     wanted = _normalise(spoken_name)
     if not wanted:
@@ -83,7 +83,7 @@ def find_person(hass, spoken_name: str) -> State | None:
     return max(candidates, key=lambda s: _position_time(hass, s))
 
 
-def _location(hass, state: State) -> tuple[bool, str, str | None]:
+def _location(hass: HomeAssistant, state: State) -> tuple[bool, str, str | None]:
     """Return (away, location text, geocoded sensor entity_id) for a person."""
     tracker = state.attributes.get("source") or ""
     geocoded = (
