@@ -1,0 +1,42 @@
+language: "en"
+expansion_rules:
+  camera: "(camera[s]|cam[s]|feed[s]|webcam[s])"
+
+intents:
+  ViewAssistDisplayCamera:
+    data:
+      - sentences:
+          - "<show> [me] [my|the] {area} <camera>"
+          - "<show> [me] all [my|the] <camera>"
+        name_domains:
+          - "camera"
+  ViewAssistCancelCamera:
+    data:
+      - sentences:
+          - "(cancel|stop) (my|the) <camera>"
+
+responses:
+  intents:
+    ViewAssistDisplayCamera:
+      default: >
+        {% set error = slots.error if slots.error is defined else none %}
+        {% set name = slots.name if slots.name is defined else none %}
+        {% set area = slots.area if slots.area is defined else none %}
+        {% set count = slots.count if slots.count is defined else 1 %}
+        {% set kind = slots.kind if slots.kind is defined else none %}
+
+        {% if error == 'not_found' and name %}
+            Sorry, I could not find a camera named {{name}}.
+        {% elif error == 'not_found' and area %}
+            There are no cameras in the {{area}} available.
+        {% else %}
+          {% if count > 1 %}
+            Displaying {{ name }} cameras.
+          {% elif kind == 'single' %}
+            Displaying the {{name}} camera.
+          {% else %}
+            Displaying all cameras.
+          {% endif %}
+        {% endif %}
+    ViewAssistCancelCamera:
+      default: OK

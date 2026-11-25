@@ -6,13 +6,11 @@ import voluptuous as vol
 
 from homeassistant.helpers import intent
 
-from ...const import DOMAIN  # noqa: TID252
-
-from . import IntentDeviceInfo
-from ...typed import VAConfigEntry
+from ...devices.navigation import NavigationManager  # noqa: TID252
+from . import IntentOverrideHandler
 
 
-class VASetChangeViewIntentHandler(intent.IntentHandler):
+class VASetChangeViewIntentHandler(IntentOverrideHandler):
     """Change View Assist View."""
 
     intent_type = "ViewAssistChangeView"
@@ -38,32 +36,18 @@ class VASetChangeViewIntentHandler(intent.IntentHandler):
 
         # Work out the satellite from the intent itself. The voice path does not
         # pass extra_data, so an entity_id from extra_data is used only if given.
-        device_info = IntentDeviceInfo(intent_obj)
-        entity_id = (
-            extra_data["entity_id"]
-            if extra_data and "entity_id" in extra_data
-            else device_info.entity_id
-        )
-        entry: VAConfigEntry = device_info.entry
+        device_info = self.get_device_info(intent_obj)
 
-        if entry is None:
+        if device_info.entry is None:
             response = intent_obj.create_response()
             response.async_set_speech("I could not find the satellite for that view.")
             return response
 
         # Retrieve the dashboard path now that the config entry is available
-        dashboard_path = entry.runtime_data.dashboard.dashboard
+        dashboard_path = device_info.entry.runtime_data.dashboard.dashboard
 
-        await hass.services.async_call(
-            DOMAIN,
-            "navigate",
-            {
-                "device": entity_id,
-                "path": f"{dashboard_path}/{view}"
-            },
-            blocking=True,
-            context=intent_obj.context,
-        )
+        nm = NavigationManager.get(hass, device_info.entry)
+        nm.browser_navigate(f"{dashboard_path}/{view}")
 
         response = intent_obj.create_response()
         response.async_set_speech_slots(

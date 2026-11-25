@@ -96,7 +96,8 @@ class DisplayManager(DeviceModule):
 
                     if view and sm.current_path != view:
                         if nm := NavigationManager.get(self._hass, self._config):
-                            nm.browser_navigate(view, view_data={})
+                            nm.browser_navigate(view)
+                        sm.clear_view_data()
 
     def _choose_inactivity_view(self, sm: StatusManager) -> str | None:
         """Handle navigation when inactivity timeout occurs."""

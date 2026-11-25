@@ -94,8 +94,6 @@ class Status:
     menu_active: bool = False
     last_command: str | None = None
     last_response: str | None = None
-    changed_entities: list[str] | None = None
-    view_data: dict[str, Any] | None = None
     hide_sidebar: bool = False
     hide_header: bool = False
     volume: int | None = None
@@ -108,6 +106,14 @@ class Status:
     last_activity: datetime | None = None
     current_activity_timeout: int | None = None
     extra_data: dict[str, Any] | None = None
+    # View related data
+    view_data: dict[str, Any] | None = None
+    title: str | None = None
+    message: str | None = None
+    message_font_size: int | None = None
+    changed_entities: list[str] | None = None
+    list: str | None = None
+    climate: str | list[str] | None = None
 
 
 class StatusStore:
@@ -129,9 +135,36 @@ class StatusStore:
 
         for attr in PERSISTED_ATTRIBUTES:
             if hasattr(status, attr):
+                # Clean extra data of any status keys
+                if attr == "extra_data":
+                    if extra_data := getattr(self, "extra_data", None):
+                        for key in extra_data:
+                            if hasattr(self, key):
+                                delattr(self, key)
                 persist_data[attr] = getattr(status, attr, None)
 
         await self.store.async_save(persist_data)
+
+
+class TemporaryMemory:
+    """Class to manage temporary memory for a device."""
+
+    def __init__(self) -> None:
+        """Initialize the temporary memory."""
+        self._memory: dict[str, Any] = {}
+
+    def memorise(self, key: str, value: Any) -> None:
+        """Memorise a temporary value."""
+        self._memory[key] = value
+
+    def recall(self, key: str) -> Any:
+        """Recall a temporary value."""
+        return self._memory.get(key)
+
+    def forget(self, key: str) -> None:
+        """Forget a temporary value."""
+        if key in self._memory:
+            del self._memory[key]
 
 
 class StatusManager(DeviceModule, Status):
@@ -152,6 +185,7 @@ class StatusManager(DeviceModule, Status):
         self._rt = config.runtime_data
         self._notify_cancel: CALLBACK_TYPE | None = None
         self._event_listeners: dict[str, list[CALLBACK_TYPE]] = {}
+        self.memory: TemporaryMemory = TemporaryMemory()
         self.force_activity_timeout_flag: bool = False
 
         # Device entry events
@@ -172,7 +206,7 @@ class StatusManager(DeviceModule, Status):
             "force_activity_timeout_flag",
             "last_activity",
         ]:
-            if self._initialised and self._on_change:
+            if self._initialised:
                 # Only set to false if false.  If True or None then set True
                 if self._on_change(name, value) == False:  # noqa: E712
                     cancel = True
@@ -410,15 +444,14 @@ class StatusManager(DeviceModule, Status):
                 event.payload,
             )
             payload = event.payload
-            if "intent" in payload:
+            if "intent" in payload and payload.get("intent"):
                 self.last_intent = payload.get("intent")
-            if "command" in payload:
+            if "command" in payload and payload.get("command"):
                 self.last_command = payload.get("command")
-            if "response" in payload:
+            if "response" in payload and payload.get("response"):
                 self.last_response = payload.get("response")
-            if "view_data" in payload:
-                self.view_data = payload.get("view_data")
-
+            if "view_data" in payload and payload.get("view_data"):
+                self.view_data: dict[str, Any] = payload.get("view_data")
             self.register_activity()
 
         # Handle view change update from websocket
@@ -439,6 +472,11 @@ class StatusManager(DeviceModule, Status):
             timeout = event.payload.get("timeout")
             if timeout is not None:
                 self.current_activity_timeout = timeout
+
+        elif event_type == VAEventType.STATUS_ITEM_CHANGE:
+            for attr, value in event.payload.items():
+                if hasattr(self, attr):
+                    setattr(self, attr, value)
 
     async def handle_set_state_action_call(self, data: dict[str, Any]) -> bool:
         """Handle a set state action call for the device."""
@@ -503,3 +541,21 @@ class StatusManager(DeviceModule, Status):
                 mm.add_items("dnd")
             else:
                 mm.remove_items("dnd")
+
+    def _on_set_view_data(self, view_data: dict[str, Any]) -> None:
+        """Set the view data for the device."""
+        if not view_data:
+            return
+        for key, value in view_data.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+    def clear_view_data(self) -> None:
+        """Clear the view data for the device."""
+        self.title = ""
+        self.message = ""
+        self.message_font_size = ""
+        self.changed_entities = []
+        self.list = ""
+        self.climate = ""
+        self.view_data = {}

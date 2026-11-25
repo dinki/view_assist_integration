@@ -44,6 +44,9 @@ class DeviceIntentsHandler(DeviceModule):
 
         self.current_conversation_id: str | None = None
 
+        self.has_intent_handler_response: bool = False
+        self.view_data = {}
+
         self.register_listener()
 
     def register_listener(self) -> None:
@@ -51,7 +54,6 @@ class DeviceIntentsHandler(DeviceModule):
         device_id = get_device_id_from_entity_id(
             self._hass, self._config.runtime_data.core.mic_device
         )
-        device_id = None
 
         if device_id:
             self._config.async_on_unload(
@@ -95,6 +97,11 @@ class DeviceIntentsHandler(DeviceModule):
         if not ("command" in payload or "intent" in payload or "response" in payload):
             return
 
+        if "command" in payload and "response" not in payload:
+            self.has_intent_handler_response = False
+        elif self.has_intent_handler_response:
+            return
+
         entity_cards = []
         todo_lists = []
         # Set up view data but remove if empty by end
@@ -116,7 +123,7 @@ class DeviceIntentsHandler(DeviceModule):
             view_data = {
                 "title": "Response"
                 if payload.get("intent") != "AIResponse"
-                else "AI Response",
+                else "Assist Response",
                 "message": response,
                 "message_font_size": message_font_size,
             }
@@ -181,21 +188,26 @@ class DeviceIntentsHandler(DeviceModule):
             )
 
         # Add view data to each response
-        payload["view_data"] = view_data
+        payload["view_data"] = view_data or {}
 
         entity_cards = []
-        todo_lists = []
 
         with contextlib.suppress(Exception):
-            entity_cards, todo_lists = self.build_success_cards(
+            entity_cards = self.build_entity_cards(
                 payload["result"]["data"]["data"] or {}
             )
 
-        entity_cards, todo_lists = self.build_success_cards(view_data or {})
-        payload["view_data"]["changed_entities"] = entity_cards or None
-        payload["view_data"]["list"] = todo_lists[0] if todo_lists else None
+        if entity_cards := self.build_entity_cards(view_data or {}):
+            payload["view_data"]["changed_entities"] = entity_cards or None
 
         payload["source"] = "intent handler"
+
+        if response is not None:
+            self.has_intent_handler_response = True
+        else:
+            self.has_intent_handler_response = False
+
+        _LOGGER.debug("Intent payload: %s", payload)
 
         async_dispatcher_send(
             self._hass,
@@ -203,8 +215,9 @@ class DeviceIntentsHandler(DeviceModule):
             VAEvent(VAEventType.INTENT_UPDATE, payload),
         )
 
-        # Do intent navigation based on the intent type
-        self.navigate_for_intent(intent_type)
+        # Do intent navigation based on the intent type if not an error
+        if response is not None and not response.error_code:
+            self.navigate_for_intent(intent_type)
 
     def navigate_for_intent(self, intent_type: str) -> None:
         """Navigate to the appropriate view for the given intent type."""
@@ -236,9 +249,7 @@ class DeviceIntentsHandler(DeviceModule):
         nm = NavigationManager.get(self._hass, self._config)
         nm.browser_navigate(path=path)
 
-    def build_success_cards(
-        self, data: dict[str, Any]
-    ) -> tuple[list[dict[str, Any]], list[str] | None]:
+    def build_entity_cards(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Build entity cards based on the provided data."""
         prefixes = (
             "light",
@@ -250,7 +261,6 @@ class DeviceIntentsHandler(DeviceModule):
         )
 
         entity_cards: list[dict[str, Any]] = []
-        todo_list: list[str] = []
 
         if data.get("success"):
             # Establish changes
@@ -265,10 +275,4 @@ class DeviceIntentsHandler(DeviceModule):
                 if str(entity.get("id", "")).startswith(prefixes)
             ]
 
-            todo_list = [
-                todos["id"]
-                for todos in data["success"]
-                if todos.get("id").startswith("todo")
-            ]
-
-        return entity_cards, todo_list
+        return entity_cards

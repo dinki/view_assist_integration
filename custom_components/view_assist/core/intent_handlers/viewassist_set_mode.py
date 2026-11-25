@@ -8,12 +8,8 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.intent import Intent, IntentResponse
 
 from ...const import DOMAIN, VAMode  # noqa: TID252
+from ...typed import VAEvent, VAEventType  # noqa: TID252
 from . import IntentOverrideHandler
-
-from ...typed import (  # noqa: TID252
-    VAEvent,
-    VAEventType,
-)
 
 
 class VASetModeIntentHandler(IntentOverrideHandler):
@@ -59,7 +55,7 @@ class VASetModeIntentHandler(IntentOverrideHandler):
         response = intent_obj.create_response()
         response.async_set_speech_slots(
             {
-                "mode": intent_obj.slots["mode"]["value"],
+                "mode": mode,
             }
         )
         return response

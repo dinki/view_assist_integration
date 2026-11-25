@@ -234,6 +234,7 @@ class VAEventType(StrEnum):
     VIEW_UPDATE = "view_update"
     SCREEN_ACTIVITY = "screen_activity"
     ALARM_SOUNDING = "alarm_sounding"
+    STATUS_ITEM_CHANGE = "status_item_change"
 
     INTENT_UPDATE = "intent_update"
     CONVERSATION_UPDATE = "conversation_update"

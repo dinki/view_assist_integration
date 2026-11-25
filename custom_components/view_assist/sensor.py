@@ -160,7 +160,9 @@ class ViewAssistSensor(SensorEntity):
             attrs["browser_connected"] = sm.browser_connected
             attrs["cameras"] = sm.cameras
             clock_style = sm.config.dashboard.display_settings.clock_style
-            attrs["clock_style"] = clock_style if clock_style in VA_CLOCK_STYLES else "standard"
+            attrs["clock_style"] = (
+                clock_style if clock_style in VA_CLOCK_STYLES else "standard"
+            )
             attrs["thermostats"] = sm.thermostats
             attrs["current_path"] = sm.current_path
             attrs["font_style"] = sm.config.dashboard.display_settings.font_style
@@ -182,13 +184,12 @@ class ViewAssistSensor(SensorEntity):
             attrs["view_timeout"] = sm.config.default.view_timeout
             attrs["weather_entity"] = sm.config.default.weather_entity
 
-            if sm.view_data:
-                attrs["view_data"] = sm.view_data
-                attrs["title"] = sm.view_data.get("title")
-                attrs["message"] = sm.view_data.get("message")
-                attrs["message_font_size"] = sm.view_data.get("message_font_size")
-                attrs["intent_entities"] = sm.view_data.get("changed_entities")
-                attrs["list"] = sm.view_data.get("list")
+            attrs["view_data"] = sm.view_data
+            attrs["title"] = sm.title
+            attrs["message"] = sm.message
+            attrs["message_font_size"] = sm.message_font_size
+            attrs["intent_entities"] = sm.changed_entities
+            attrs["list"] = sm.list
 
         return attrs
 
