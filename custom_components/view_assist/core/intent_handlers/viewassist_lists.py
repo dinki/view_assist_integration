@@ -258,7 +258,7 @@ class VAShowListIntentHandler(IntentOverrideHandler):
         items = [
             todo_item.summary
             for todo_item in target_list.todo_items
-            if not todo_item.completed
+            if todo_item.status != TodoItemStatus.COMPLETED
         ]
 
         response.async_set_speech_slots(
@@ -339,7 +339,7 @@ class VAReadRestListIntentHandler(IntentOverrideHandler):
         items = [
             todo_item.summary
             for todo_item in target_list.todo_items
-            if not todo_item.completed
+            if todo_item.status != TodoItemStatus.COMPLETED
         ]
 
         response.async_set_speech_slots(
