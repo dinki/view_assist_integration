@@ -314,7 +314,12 @@ INTENT_TO_VIEW_MAPPING = {
         "HassClimateSetTemperature",
         "ViewAssistShowClimate",
     ],
-    CONF_WEATHER: ["HassGetWeather"],
+    CONF_WEATHER: [
+        "HassGetWeather",
+        "ViewAssistWeatherCurrent",
+        "ViewAssistWeatherForecast",
+        "ViewAssistWeatherRain",
+    ],
     "list": [
         "get_items",
         "HassShoppingListAddItem",
