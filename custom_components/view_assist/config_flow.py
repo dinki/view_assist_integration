@@ -27,6 +27,9 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .assets import AssetClass, AssetsManager
@@ -68,6 +71,9 @@ from .const import (
     CONF_MUSICPLAYER_DEVICE,
     CONF_NAVIGATION_TRANSITION,
     CONF_ORIENTATION_SENSOR,
+    CONF_IMMICH_ALBUM_NAME,
+    CONF_IMMICH_API_KEY,
+    CONF_IMMICH_SERVER_URL,
     CONF_ROTATE_BACKGROUND_INTERVAL,
     CONF_ROTATE_BACKGROUND_LINKED_ENTITY,
     CONF_ROTATE_BACKGROUND_PATH,
@@ -235,6 +241,11 @@ async def get_dashboard_options_schema(
         vol.Optional(CONF_BACKGROUND): str,
         vol.Optional(CONF_ROTATE_BACKGROUND_PATH): str,
         vol.Optional(CONF_ROTATE_BACKGROUND_INTERVAL): int,
+        vol.Optional(CONF_IMMICH_SERVER_URL): str,
+        vol.Optional(CONF_IMMICH_API_KEY): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.PASSWORD)
+        ),
+        vol.Optional(CONF_IMMICH_ALBUM_NAME): str,
     }
 
     DISPLAY_SETTINGS = {  # noqa: N806

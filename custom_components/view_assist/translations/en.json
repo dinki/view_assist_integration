@@ -114,13 +114,19 @@
               "background": "Default background",
               "rotate_background_path": "Image path or url",
               "rotate_background_linked_entity": "Linked entity",
-              "rotate_background_interval": "Rotation interval"
+              "rotate_background_interval": "Rotation interval",
+              "immich_server_url": "Immich server URL",
+              "immich_api_key": "Immich API key",
+              "immich_album_name": "Immich album name (optional)"
             },
             "data_description": {
               "background": "The default background image url",
               "rotate_background_path": "A path under config/view_assist to load images from in local file modes. A url to load images from in url mode",
               "rotate_background_linked_entity": "View Assist entity to link the background to",
-              "rotate_background_interval": "Interval in minutes to rotate the background"
+              "rotate_background_interval": "Interval in minutes to rotate the background",
+              "immich_server_url": "Address and port of your Immich server, e.g. http://192.168.0.35:2283",
+              "immich_api_key": "API key from Immich with asset.read, asset.view and album.read permissions",
+              "immich_album_name": "Exact album name to choose photos from. Leave empty to use the whole library"
             }
           },
           "display_settings": {
@@ -153,7 +159,7 @@
               "screen_mode": "Show or hide the header and sidebar",
               "cycle_views": "List of items to show when in cycle mode",
               "navigation_transition": "Fade the screen out and back in when navigating between views",
-              "clock_style": "Choose the clock layout for this display.\n\n**Standard**\n\n![Standard clock](/local/viewassist/views/clock/standard.png)\n\n**Alternate**\n\n![Alternate clock](/local/viewassist/views/clock/alternate.png)",
+              "clock_style": "Choose the clock layout for this display. [Examples](https://dinki.github.io/View-Assist/docs/extend-functionality/views/clock)",
               "keep_timer_screen_on": "When a timer is running, show the timers view after inactivity instead of the usual screen."
             }
           }
@@ -273,7 +279,8 @@
         "local_random": "Random image from local file path",
         "download": "Random image from unsplash.com",
         "custom_url": "Image from custom url",
-        "link_to_entity": "Mirror another View Assist device"
+        "link_to_entity": "Mirror another View Assist device",
+        "immich_random": "Random photo from Immich server"
       }
     },
     "menu_icons_selector": {

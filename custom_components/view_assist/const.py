@@ -57,7 +57,7 @@ JSMODULES = [
     {
         "name": "View Assist Helper",
         "filename": "view_assist.js",
-        "version": "1.0.32-rc13",
+        "version": "1.0.32-rc15",
     },
 ]
 # mins between checks for updated versions of dashboard and views
@@ -121,6 +121,9 @@ CONF_BACKGROUND = "background"
 CONF_ROTATE_BACKGROUND_PATH = "rotate_background_path"
 CONF_ROTATE_BACKGROUND_LINKED_ENTITY = "rotate_background_linked_entity"
 CONF_ROTATE_BACKGROUND_INTERVAL = "rotate_background_interval"
+CONF_IMMICH_SERVER_URL = "immich_server_url"
+CONF_IMMICH_API_KEY = "immich_api_key"
+CONF_IMMICH_ALBUM_NAME = "immich_album_name"
 
 CONF_DISPLAY_SETTINGS = "display_settings"
 CONF_ASSIST_PROMPT = "assist_prompt"

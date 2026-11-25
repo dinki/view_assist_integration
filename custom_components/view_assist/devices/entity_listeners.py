@@ -87,6 +87,24 @@ class EntityListeners(DeviceModule):
                 )
             )
 
+        # Add volume listeners for the satellite's media and music players
+        if mediaplayer_device := self._rt.core.mediaplayer_device:
+            _LOGGER.debug("Listening for volume on media player %s", mediaplayer_device)
+            self.listeners.append(
+                VolumeChangeHandler(
+                    self._hass, self._config, mediaplayer_device, "mediaplayer"
+                )
+            )
+        if (musicplayer_device := self._rt.core.musicplayer_device) and (
+            musicplayer_device != self._rt.core.mediaplayer_device
+        ):
+            _LOGGER.debug("Listening for volume on music player %s", musicplayer_device)
+            self.listeners.append(
+                VolumeChangeHandler(
+                    self._hass, self._config, musicplayer_device, "musicplayer"
+                )
+            )
+
         return True
 
     async def async_unload(self) -> bool:
@@ -188,3 +206,57 @@ class EntityStateChangeHandler:
         return {
             "response": state.state,
         }
+
+
+class VolumeChangeHandler(EntityStateChangeHandler):
+    """Send a volume change event when a player's volume level changes.
+
+    A volume change is an attribute change, not a state change, so this handler
+    compares the volume level itself. The startup reading is ignored so nothing
+    pops up on boot or reconnect.
+    """
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        config: VAConfigEntry,
+        entity_id: str,
+        source: str,
+    ) -> None:
+        """Initialise."""
+        self.source = source
+        super().__init__(
+            hass,
+            config,
+            entity_id,
+            VAEventType.VOLUME_CHANGE,
+            "_get_volume_payload",
+        )
+
+    @staticmethod
+    def _get_volume_percent(state: State) -> int | None:
+        """Get the volume level as a whole percentage, or None if unavailable."""
+        level = state.attributes.get("volume_level")
+        if level is None:
+            return None
+        try:
+            return round(float(level) * 100)
+        except (TypeError, ValueError):
+            return None
+
+    def _validate_event(self, event: Event[EventStateChangedData]) -> bool:
+        """Only pass on a real change in volume level."""
+        if event.event_type == "initial_state":
+            return False
+        new_state = event.data.get("new_state")
+        old_state = event.data.get("old_state")
+        if not new_state or not old_state:
+            return False
+        new_volume = self._get_volume_percent(new_state)
+        if new_volume is None:
+            return False
+        return new_volume != self._get_volume_percent(old_state)
+
+    def _get_volume_payload(self, state: State) -> dict[str, Any]:
+        """Get the payload for a volume change event."""
+        return {"source": self.source, "volume": self._get_volume_percent(state)}
