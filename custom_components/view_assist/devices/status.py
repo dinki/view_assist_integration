@@ -556,6 +556,6 @@ class StatusManager(DeviceModule, Status):
         self.message = ""
         self.message_font_size = ""
         self.changed_entities = []
-        self.list = ""
-        self.climate = ""
+        # self.list = ""
+        # self.climate = ""
         self.view_data = {}
