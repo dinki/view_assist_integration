@@ -190,6 +190,7 @@ class ViewAssistSensor(SensorEntity):
             attrs["message_font_size"] = sm.message_font_size
             attrs["intent_entities"] = sm.changed_entities
             attrs["list"] = sm.list
+            attrs["climate"] = sm.climate
 
         return attrs
 
