@@ -99,8 +99,6 @@ class DeviceIntentsHandler(DeviceModule):
 
         if "command" in payload and "response" not in payload:
             self.has_intent_handler_response = False
-        elif self.has_intent_handler_response:
-            return
 
         entity_cards = []
         todo_lists = []
@@ -152,7 +150,7 @@ class DeviceIntentsHandler(DeviceModule):
             VAEvent(VAEventType.INTENT_UPDATE, payload),
         )
 
-        if "response" in payload:
+        if "response" in payload and not self.has_intent_handler_response:
             # if intent is blank set it to info so that it navigates to info page
             # and displays the response.  These are LLM responses only
             self.navigate_for_intent(payload["intent"])
