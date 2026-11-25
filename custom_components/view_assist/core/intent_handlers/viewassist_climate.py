@@ -134,7 +134,6 @@ class VAClimateSetTemperatureIntentHandler(IntentOverrideHandler):
                     "climate": [state.entity_id for state in match_result.states]
                 }
             )
-        response.async_set_speech_slots({"area": "office"})
         return response
 
 
@@ -160,7 +159,6 @@ class VAShowThermostatIntentHandler(IntentOverrideHandler):
     @override
     async def async_handle(self, intent_obj: Intent) -> IntentResponse:
         """Handle the intent."""
-        slots = self.async_validate_slots(intent_obj.slots)
 
         response = self.create_override_handler_response(intent_obj)
         device_info = self.get_device_info(intent_obj)
@@ -196,8 +194,11 @@ class VAShowThermostatIntentHandler(IntentOverrideHandler):
             ]
         )
         response.async_set_states(matched_states=match_result.states)
-        response.async_set_speech_slots(slots)
         response.async_set_view_data(
-            view_data={"climate": [state.entity_id for state in match_result.states]}
+            view_data={
+                "climate": match_result.states[0].entity_id
+                if match_result.states
+                else None
+            }
         )
         return response

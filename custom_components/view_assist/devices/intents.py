@@ -112,23 +112,29 @@ class DeviceIntentsHandler(DeviceModule):
         # set the view data to display
         if "response" in payload:
             response = payload["response"]
-            word_count = len(response.split())
-            message_font_size = ["10vw", "8vw", "6vw", "4vw"][min(word_count // 6, 3)]
+            view_data = {"message": response}
 
-            if not payload.get("intent"):
-                payload["intent"] = "AIResponse"
+            if not self.has_intent_handler_response:
+                word_count = len(response.split())
+                message_font_size = ["10vw", "8vw", "6vw", "4vw"][
+                    min(word_count // 6, 3)
+                ]
 
-            view_data = {
-                "title": "Response"
-                if payload.get("intent") != "AIResponse"
-                else "Assist Response",
-                "message": response,
-                "message_font_size": message_font_size,
-            }
+                if not payload.get("intent"):
+                    payload["intent"] = "AIResponse"
 
+                if not self.has_intent_handler_response:
+                    view_data.update(
+                        {
+                            "title": "Response"
+                            if payload.get("intent") != "AIResponse"
+                            else "Assist Response",
+                            "message_font_size": message_font_size,
+                        }
+                    )
             payload["view_data"].update(view_data)
 
-        if "result" in payload:
+        if "result" in payload and not self.has_intent_handler_response:
             with contextlib.suppress(Exception):
                 entity_cards, todo_lists = self.build_success_cards(
                     payload["result"]["data"]["data"] or {}
