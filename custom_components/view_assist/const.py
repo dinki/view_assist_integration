@@ -24,7 +24,7 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 DOMAIN = "view_assist"
 GITHUB_REPO = "dinki/View-Assist"
-GITHUB_BRANCH = "main"
+GITHUB_BRANCH = "dev-intent"
 GITHUB_DEV_BRANCH = "dev"
 GITHUB_TOKEN_FILE = "github.token"
 DASHBOARD_VIEWS_GITHUB_PATH = "View Assist dashboard and views"
