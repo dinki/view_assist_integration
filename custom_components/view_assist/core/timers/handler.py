@@ -73,7 +73,7 @@ class TimerHandler:
             for timer_id in stale_timers:
                 self.store.timers.pop(timer_id, None)
 
-            for timer in self.store.timers.values():
+            for timer in self.store.timers.copy().values():
                 _LOGGER.debug("Starting timer: %s, %s", timer.id, timer.name)
                 await self.start_timer(timer)
 
@@ -500,9 +500,7 @@ class TimerHandler:
             )
 
         elif timer.timer_class == TimerClass.COMMAND:
-            from homeassistant.components.conversation import (  # noqa: PLC0415
-                async_converse,
-            )
+            from homeassistant.components.conversation import async_converse  # noqa: PLC0415
 
             self.hass.async_create_background_task(
                 async_converse(
@@ -707,7 +705,7 @@ class TimerHandler:
         if timer := self.store.timers.get(timer_id):
             device_id = get_mic_device_id_from_entity_id(self.hass, timer.entity_id)
             tm: IntentTimerManager = self.hass.data[TIMER_DATA]
-            if timer := tm.timers.pop(timer_id):
+            if timer := tm.timers.pop(timer_id, None):
                 timer.finish()
                 if device_id in tm.handlers:
                     tm.handlers[device_id](TimerEventType.FINISHED, timer)
@@ -717,7 +715,7 @@ class TimerHandler:
         if timer := self.store.timers.get(timer_id):
             device_id = get_mic_device_id_from_entity_id(self.hass, timer.entity_id)
             tm: IntentTimerManager = self.hass.data[TIMER_DATA]
-            if timer := tm.timers.pop(timer_id):
+            if timer := tm.timers.pop(timer_id, None):
                 timer.cancel()
                 if device_id in tm.handlers:
                     tm.handlers[device_id](TimerEventType.CANCELLED, timer)
