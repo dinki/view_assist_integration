@@ -333,7 +333,7 @@ INTENT_TO_VIEW_MAPPING = {
         "ViewAssistReadRestList",
     ],
     "calendar": ["ViewAssistShowCalendar"],
-    "info": ["info", "HassBroadcast", "VAWhatDidYouSay", "AIResponse"],
+    "info": ["info", "HassBroadcast", "VAWhatDidYouSay", "AIResponse", "web_search_call"],
     "intent": ["HassTurnOn", "HassTurnOff"],
     "camera": ["ViewAssistDisplayCamera"],
 }
