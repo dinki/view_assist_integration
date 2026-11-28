@@ -112,6 +112,11 @@ class DeviceIntentsHandler(DeviceModule):
         # set the view data to display
         if "response" in payload:
             response = payload["response"]
+
+            # Capture a null response from an LLM and take no action from it.
+            if response == "*":
+                return
+
             view_data = {"message": response}
 
             if not self.has_intent_handler_response:
